@@ -28,6 +28,7 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showParameters, setShowParameters] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [parameters, setParameters] = useState({
     speechWeight: 30,
     bodyLanguageWeight: 25,
@@ -113,24 +114,358 @@ function App() {
     checkStatus();
   };
 
-  // Export to PDF function (placeholder)
+  // Generate PDF report
   const exportToPDF = async () => {
+    if (!results || !analysisId) return;
+
+    setIsGeneratingPDF(true);
     try {
-      // In a real implementation, you would send the results to a PDF generation service
-      // For now, we'll create a simple alert
-      alert('PDF export feature will be implemented. This would generate a comprehensive report with all analysis results.');
+      // Create PDF content with beautiful formatting
+      const generatePDFContent = () => {
+        const doc = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Discourse Analysis Report</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+              
+              body {
+                font-family: 'Inter', sans-serif;
+                line-height: 1.6;
+                color: #1f2937;
+                margin: 0;
+                padding: 40px;
+                background: white;
+              }
+              
+              .header {
+                text-align: center;
+                margin-bottom: 40px;
+                padding: 30px 0;
+                background: linear-gradient(135deg, #003D7C, #EF7C00);
+                color: white;
+                border-radius: 12px;
+                margin: -40px -40px 40px -40px;
+                padding: 60px 40px;
+              }
+              
+              .header h1 {
+                font-size: 2.5rem;
+                font-weight: 700;
+                margin: 0 0 10px 0;
+                letter-spacing: -0.025em;
+              }
+              
+              .header p {
+                font-size: 1.1rem;
+                opacity: 0.9;
+                margin: 0;
+              }
+              
+              .analysis-date {
+                text-align: center;
+                color: #6b7280;
+                margin-bottom: 30px;
+                font-size: 0.9rem;
+              }
+              
+              .overall-score {
+                text-align: center;
+                margin: 40px 0;
+                padding: 30px;
+                background: linear-gradient(135deg, #003D7C, #EF7C00);
+                color: white;
+                border-radius: 16px;
+              }
+              
+              .overall-score .score {
+                font-size: 4rem;
+                font-weight: 900;
+                margin: 0;
+              }
+              
+              .overall-score .label {
+                font-size: 1.2rem;
+                opacity: 0.9;
+              }
+              
+              .scores-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin: 40px 0;
+              }
+              
+              .score-card {
+                padding: 25px;
+                background: #f9fafb;
+                border-radius: 12px;
+                text-align: center;
+                border: 1px solid #e5e7eb;
+              }
+              
+              .score-card .score {
+                font-size: 2.5rem;
+                font-weight: 700;
+                color: #003D7C;
+                margin: 0 0 8px 0;
+              }
+              
+              .score-card .label {
+                color: #6b7280;
+                font-weight: 500;
+              }
+              
+              .section {
+                margin: 40px 0;
+                page-break-inside: avoid;
+              }
+              
+              .section-title {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #1f2937;
+                margin: 0 0 20px 0;
+                padding-bottom: 10px;
+                border-bottom: 3px solid #EF7C00;
+              }
+              
+              .feedback-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 30px;
+                margin: 30px 0;
+              }
+              
+              .feedback-section {
+                padding: 25px;
+                border-radius: 12px;
+                border-left: 4px solid;
+              }
+              
+              .strengths {
+                background: #ecfdf5;
+                border-left-color: #10b981;
+              }
+              
+              .improvements {
+                background: #fff4e6;
+                border-left-color: #EF7C00;
+              }
+              
+              .feedback-title {
+                font-size: 1.2rem;
+                font-weight: 600;
+                margin: 0 0 15px 0;
+              }
+              
+              .strengths .feedback-title {
+                color: #047857;
+              }
+              
+              .improvements .feedback-title {
+                color: #CC6600;
+              }
+              
+              .feedback-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+              }
+              
+              .feedback-item {
+                margin: 8px 0;
+                padding-left: 20px;
+                position: relative;
+                line-height: 1.5;
+              }
+              
+              .feedback-item::before {
+                content: '•';
+                position: absolute;
+                left: 0;
+                font-weight: bold;
+              }
+              
+              .strengths .feedback-item::before {
+                color: #10b981;
+              }
+              
+              .improvements .feedback-item::before {
+                color: #EF7C00;
+              }
+              
+              .calculation-section {
+                background: #f9fafb;
+                padding: 25px;
+                border-radius: 12px;
+                margin: 30px 0;
+                font-family: 'Monaco', 'Courier New', monospace;
+                font-size: 0.9rem;
+              }
+              
+              .calculation-title {
+                font-family: 'Inter', sans-serif;
+                font-size: 1.2rem;
+                font-weight: 600;
+                margin: 0 0 15px 0;
+                color: #1f2937;
+              }
+              
+              .calculation-line {
+                margin: 5px 0;
+                color: #4b5563;
+              }
+              
+              .calculation-total {
+                margin-top: 10px;
+                padding: 10px;
+                background: #e5e7eb;
+                border-radius: 6px;
+                font-weight: 700;
+                color: #1f2937;
+              }
+              
+              .footer {
+                margin-top: 60px;
+                text-align: center;
+                color: #6b7280;
+                font-size: 0.9rem;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 20px;
+              }
+              
+              @media print {
+                body { margin: 0; }
+                .header { margin: 0 0 40px 0; }
+                .section { page-break-inside: avoid; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>Discourse Analysis Report</h1>
+              <p>AI-Enhanced Pedagogical Assessment</p>
+            </div>
+            
+            <div class="analysis-date">
+              Generated on ${new Date().toLocaleDateString('en-GB', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
+            
+            <div class="overall-score">
+              <div class="score">${results.overall_score}/10</div>
+              <div class="label">Overall Teaching Score</div>
+            </div>
+            
+            <div class="scores-grid">
+              <div class="score-card">
+                <div class="score">${results.speech_analysis.score}/10</div>
+                <div class="label">Speech Analysis</div>
+              </div>
+              <div class="score-card">
+                <div class="score">${results.body_language.score}/10</div>
+                <div class="label">Body Language</div>
+              </div>
+              <div class="score-card">
+                <div class="score">${results.teaching_effectiveness.score}/10</div>
+                <div class="label">Teaching Effectiveness</div>
+              </div>
+              <div class="score-card">
+                <div class="score">${results.presentation_skills.score}/10</div>
+                <div class="label">Presentation Skills</div>
+              </div>
+            </div>
+            
+            <div class="section">
+              <h2 class="section-title">Feedback Summary</h2>
+              <div class="feedback-grid">
+                <div class="feedback-section strengths">
+                  <h3 class="feedback-title">Key Strengths</h3>
+                  <ul class="feedback-list">
+                    ${results.strengths.map(strength => `<li class="feedback-item">${strength}</li>`).join('')}
+                  </ul>
+                </div>
+                <div class="feedback-section improvements">
+                  <h3 class="feedback-title">Areas for Growth</h3>
+                  <ul class="feedback-list">
+                    ${results.improvement_suggestions.map(suggestion => `<li class="feedback-item">${suggestion}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div class="section">
+              <h2 class="section-title">Detailed Metrics</h2>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
+                  <h4 style="margin: 0 0 15px 0; color: #1f2937;">Speech Analysis</h4>
+                  <div>Speaking Rate: ${results.speech_analysis.speaking_rate?.toFixed(1) || 'N/A'} WPM</div>
+                  <div>Clarity Score: ${results.speech_analysis.clarity?.toFixed(1) || 'N/A'}/10</div>
+                  <div>Pace Score: ${results.speech_analysis.pace?.toFixed(1) || 'N/A'}/10</div>
+                  <div>Confidence: ${results.speech_analysis.confidence?.toFixed(1) || 'N/A'}/10</div>
+                </div>
+                <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
+                  <h4 style="margin: 0 0 15px 0; color: #1f2937;">Body Language</h4>
+                  <div>Eye Contact: ${results.body_language.eye_contact?.toFixed(1) || 'N/A'}/10</div>
+                  <div>Gestures: ${results.body_language.gestures?.toFixed(1) || 'N/A'}/10</div>
+                  <div>Posture: ${results.body_language.posture?.toFixed(1) || 'N/A'}/10</div>
+                  <div>Engagement: ${results.body_language.engagement?.toFixed(1) || 'N/A'}/10</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="section">
+              <div class="calculation-section">
+                <div class="calculation-title">Score Calculation</div>
+                <div class="calculation-line">Speech Analysis: ${results.speech_analysis.score}/10 × 30% = ${(results.speech_analysis.score * 0.3).toFixed(1)}</div>
+                <div class="calculation-line">Body Language: ${results.body_language.score}/10 × 25% = ${(results.body_language.score * 0.25).toFixed(1)}</div>
+                <div class="calculation-line">Teaching Effectiveness: ${results.teaching_effectiveness.score}/10 × 35% = ${(results.teaching_effectiveness.score * 0.35).toFixed(1)}</div>
+                <div class="calculation-line">Presentation Skills: ${results.presentation_skills.score}/10 × 10% = ${(results.presentation_skills.score * 0.1).toFixed(1)}</div>
+                <div class="calculation-total">Total Score: ${results.overall_score}/10</div>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>This report was generated using AI-powered discourse analysis technology.</p>
+              <p>National University of Singapore • Teaching & Learning Enhancement</p>
+            </div>
+          </body>
+          </html>
+        `;
+        return doc;
+      };
+
+      // Create and download PDF
+      const htmlContent = generatePDFContent();
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
       
-      // Future implementation could look like:
-      // const response = await axios.post(`${API_BASE_URL}/export-pdf`, { results });
-      // const blob = new Blob([response.data], { type: 'application/pdf' });
-      // const url = window.URL.createObjectURL(blob);
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = `discourse-analysis-${analysisId}.pdf`;
-      // a.click();
+      // Create a temporary link to download the HTML file
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `discourse-analysis-report-${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Show instructions for PDF conversion
+      setTimeout(() => {
+        alert(`Report downloaded as HTML file!\n\nTo convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save\n\nThis creates a beautifully formatted PDF report with all your analysis results.`);
+      }, 500);
+
     } catch (error) {
-      console.error('PDF export failed:', error);
+      console.error('PDF generation failed:', error);
       alert('PDF export failed. Please try again.');
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -159,10 +494,10 @@ function App() {
   // Processing steps configuration
   const processingSteps = [
     { id: 1, label: 'Extracting audio and video components', minProgress: 10, icon: <Upload size={12} /> },
-    { id: 2, label: 'Analyzing speech with Whisper AI', minProgress: 30, icon: <Mic size={12} /> },
-    { id: 3, label: 'Analyzing gestures with GPT-4 Vision', minProgress: 60, icon: <Eye size={12} /> },
+    { id: 2, label: 'Analysing speech with Whisper AI', minProgress: 30, icon: <Mic size={12} /> },
+    { id: 3, label: 'Analysing gestures with GPT-4 Vision', minProgress: 60, icon: <Eye size={12} /> },
     { id: 4, label: 'Generating pedagogical insights', minProgress: 80, icon: <Brain size={12} /> },
-    { id: 5, label: 'Finalizing analysis report', minProgress: 95, icon: <CheckCircle size={12} /> }
+    { id: 5, label: 'Finalising analysis report', minProgress: 95, icon: <CheckCircle size={12} /> }
   ];
 
   return (
@@ -175,9 +510,9 @@ function App() {
             <span>AI-POWERED DISCOURSE ANALYSIS</span>
             <ArrowRight size={16} />
           </div>
-          <h1 className="title">Think It. Record It. Analyze It.</h1>
+          <h1 className="title">Discourse Analysis with genAI</h1>
           <p className="subtitle">
-            Transform your teaching with AI-powered pedagogical insights and personalized feedback
+            Elevate your T&L delivery with AI-enhanced pedagogical insights and personalised feedback
           </p>
         </div>
 
@@ -195,7 +530,7 @@ function App() {
               {isDragActive ? (
                 <div>
                   <p className="upload-text">Drop your lecture video here</p>
-                  <p className="upload-subtext">Release to upload and analyze</p>
+                  <p className="upload-subtext">Release to upload and analyse</p>
                 </div>
               ) : (
                 <div>
@@ -256,8 +591,8 @@ function App() {
         {analysisStatus && analysisStatus.status === 'processing' && (
           <div className="progress-container">
             <div className="progress-header">
-              <div className="spinner" style={{ color: 'var(--primary-600)' }}></div>
-              <h3 className="progress-title">Analyzing Your Lecture</h3>
+              <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
+              <h3 className="progress-title">Analysing Your Lecture</h3>
             </div>
             
             <div className="progress-bar-container">
@@ -286,7 +621,7 @@ function App() {
                       </div>
                       <div>
                         {status === 'completed' && <span className="checkmark">✓</span>}
-                        {status === 'active' && <Clock size={16} style={{ color: 'var(--primary-600)' }} />}
+                        {status === 'active' && <Clock size={16} style={{ color: 'var(--nus-orange)' }} />}
                       </div>
                     </div>
                   );
@@ -303,9 +638,22 @@ function App() {
               <CheckCircle size={32} style={{ color: 'var(--success-500)' }} />
               <h2 className="results-title">Analysis Complete</h2>
               <div className="results-actions">
-                <button onClick={exportToPDF} className="export-button">
-                  <Download size={16} />
-                  Export PDF
+                <button 
+                  onClick={exportToPDF} 
+                  className={`export-button ${isGeneratingPDF ? 'pdf-generating' : ''}`}
+                  disabled={isGeneratingPDF}
+                >
+                  {isGeneratingPDF ? (
+                    <>
+                      <div className="spinner"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      Export PDF
+                    </>
+                  )}
                 </button>
                 <button 
                   onClick={() => setShowParameters(!showParameters)} 
@@ -379,7 +727,7 @@ function App() {
                           max="100" 
                         />
                       </td>
-                      <td>Content organization and pedagogical approach</td>
+                      <td>Content organisation and pedagogical approach</td>
                     </tr>
                     <tr>
                       <td>Presentation Skills</td>
@@ -534,10 +882,11 @@ function App() {
                   setAnalysisStatus(null);
                   setResults(null);
                   setShowParameters(false);
+                  setIsGeneratingPDF(false);
                 }}
                 className="reset-button"
               >
-                Analyze Another Video
+                Analyse Another Video
               </button>
             </div>
           </div>
