@@ -1,10 +1,24 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
-import { Upload, Play, CheckCircle, AlertCircle, BarChart3 } from 'lucide-react';
+import { 
+  Upload, 
+  Play, 
+  CheckCircle, 
+  AlertCircle, 
+  BarChart3, 
+  Download,
+  Settings,
+  Sparkles,
+  ArrowRight,
+  Clock,
+  Brain,
+  Eye,
+  Mic
+} from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = 'https://discourse-analysis-backend.up.railway.app/';
+const API_BASE_URL = 'https://discourse-analysis-backend.up.railway.app';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -13,6 +27,13 @@ function App() {
   const [results, setResults] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showParameters, setShowParameters] = useState(false);
+  const [parameters, setParameters] = useState({
+    speechWeight: 30,
+    bodyLanguageWeight: 25,
+    teachingWeight: 35,
+    presentationWeight: 10
+  });
 
   // Handle file drop
   const onDrop = useCallback((acceptedFiles) => {
@@ -51,7 +72,6 @@ function App() {
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
-          console.log(`Upload Progress: ${percentCompleted}%`);
         }
       });
       
@@ -70,28 +90,16 @@ function App() {
     }
   };
 
-  // Poll for analysis status with enhanced debugging
+  // Poll for analysis status
   const pollAnalysisStatus = async (id) => {
-    console.log(`Starting to poll analysis status for ID: ${id}`);
-    
     const checkStatus = async () => {
       try {
-        console.log(`Making request to: ${API_BASE_URL}/analysis-status/${id}`);
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
-        
-        // Detailed debugging
-        console.log(`[${new Date().toLocaleTimeString()}] Raw response:`, response);
-        console.log(`[${new Date().toLocaleTimeString()}] Response data:`, response.data);
-        console.log(`Progress: ${response.data.progress}%, Status: ${response.data.status}, Message: ${response.data.message}`);
-        
         setAnalysisStatus(response.data);
-        console.log(`Updated analysisStatus state to:`, response.data);
         
         if (response.data.status === 'completed') {
-          console.log('Analysis completed, setting results');
           setResults(response.data.results);
         } else if (response.data.status === 'processing') {
-          console.log('Still processing, checking again in 500ms');
           setTimeout(checkStatus, 500);
         } else if (response.data.status === 'error') {
           alert(`Analysis failed: ${response.data.message}`);
@@ -105,14 +113,25 @@ function App() {
     checkStatus();
   };
 
-  // Test function for manual progress testing
-  const testProgressDisplay = () => {
-    console.log('Manual test: Setting fake progress');
-    setAnalysisStatus({
-      status: 'processing',
-      progress: 50,
-      message: 'Test progress message'
-    });
+  // Export to PDF function (placeholder)
+  const exportToPDF = async () => {
+    try {
+      // In a real implementation, you would send the results to a PDF generation service
+      // For now, we'll create a simple alert
+      alert('PDF export feature will be implemented. This would generate a comprehensive report with all analysis results.');
+      
+      // Future implementation could look like:
+      // const response = await axios.post(`${API_BASE_URL}/export-pdf`, { results });
+      // const blob = new Blob([response.data], { type: 'application/pdf' });
+      // const url = window.URL.createObjectURL(blob);
+      // const a = document.createElement('a');
+      // a.href = url;
+      // a.download = `discourse-analysis-${analysisId}.pdf`;
+      // a.click();
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      alert('PDF export failed. Please try again.');
+    }
   };
 
   // Render score with color coding
@@ -123,102 +142,109 @@ function App() {
     else if (percentage >= 50) colorClass = 'text-yellow-500';
 
     return (
-      <div className="text-center p-4 bg-white rounded-lg shadow">
-        <div className={`text-3xl font-bold ${colorClass}`}>{score}/{max}</div>
-        <div className="text-gray-600 text-sm mt-1">{label}</div>
+      <div className="score-card">
+        <div className={`score-card-number ${colorClass.replace('text-', 'text-')}`}>{score}/{max}</div>
+        <div className="score-card-label">{label}</div>
       </div>
     );
   };
 
-  // Debug logging in render
-  console.log('Current analysisStatus state:', analysisStatus);
-  if (analysisStatus) {
-    console.log('Analysis status exists, progress:', analysisStatus.progress);
-  }
+  // Get processing step status
+  const getStepStatus = (progress, minProgress) => {
+    if (progress >= minProgress + 20) return 'completed';
+    if (progress >= minProgress) return 'active';
+    return 'pending';
+  };
+
+  // Processing steps configuration
+  const processingSteps = [
+    { id: 1, label: 'Extracting audio and video components', minProgress: 10, icon: <Upload size={12} /> },
+    { id: 2, label: 'Analyzing speech with Whisper AI', minProgress: 30, icon: <Mic size={12} /> },
+    { id: 3, label: 'Analyzing gestures with GPT-4 Vision', minProgress: 60, icon: <Eye size={12} /> },
+    { id: 4, label: 'Generating pedagogical insights', minProgress: 80, icon: <Brain size={12} /> },
+    { id: 5, label: 'Finalizing analysis report', minProgress: 95, icon: <CheckCircle size={12} /> }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+    <div className="app-background">
+      <div className="container">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Discourse Analysis Platform
-          </h1>
-          <p className="text-gray-600">
-            Upload your lecture video and get detailed pedagogical feedback
+        <div className="header">
+          <div className="announcement-banner">
+            <Sparkles size={16} />
+            <span>AI-POWERED DISCOURSE ANALYSIS</span>
+            <ArrowRight size={16} />
+          </div>
+          <h1 className="title">Think It. Record It. Analyze It.</h1>
+          <p className="subtitle">
+            Transform your teaching with AI-powered pedagogical insights and personalized feedback
           </p>
-        </div>
-
-        {/* Debug Test Button */}
-        <div className="text-center mb-4">
-          <button 
-            onClick={testProgressDisplay}
-            className="px-4 py-2 bg-yellow-500 text-white rounded"
-          >
-            Test Progress Display
-          </button>
         </div>
 
         {/* Upload Section */}
         {!analysisId && (
-          <div className="max-w-2xl mx-auto">
+          <div className="upload-container">
             <div
               {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors
-                ${isDragActive 
-                  ? 'border-blue-500 bg-blue-50' 
-                  : 'border-gray-300 bg-white hover:border-gray-400'
-                }`}
+              className={`upload-area ${isDragActive ? 'active' : ''}`}
             >
               <input {...getInputProps()} />
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <div className="upload-icon">
+                <Upload size={48} />
+              </div>
               {isDragActive ? (
-                <p className="text-blue-600">Drop the video file here...</p>
+                <div>
+                  <p className="upload-text">Drop your lecture video here</p>
+                  <p className="upload-subtext">Release to upload and analyze</p>
+                </div>
               ) : (
                 <div>
-                  <p className="text-gray-600 mb-2">
-                    Drag & drop a lecture video here, or click to select
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Supports MP4, AVI, MOV, MKV, WMV
+                  <p className="upload-text">Upload your lecture video</p>
+                  <p className="upload-subtext">
+                    Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 500MB
                   </p>
                 </div>
               )}
             </div>
 
             {file && (
-              <div className="mt-6 p-4 bg-white rounded-lg shadow">
-                <div className="flex items-center justify-between">
+              <div className="file-info">
+                <div className="file-details">
                   <div>
-                    <p className="font-medium text-gray-800">{file.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    <p className="file-name">{file.name}</p>
+                    <p className="file-size">
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB • Duration: Calculating...
                     </p>
                   </div>
                   <button
                     onClick={startAnalysis}
                     disabled={isUploading}
-                    className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="start-button"
                   >
                     {isUploading ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                      <>
+                        <div className="spinner"></div>
+                        Uploading {uploadProgress}%
+                      </>
                     ) : (
-                      <Play className="h-5 w-5 mr-2" />
+                      <>
+                        <Play size={20} />
+                        Start Analysis
+                      </>
                     )}
-                    {isUploading ? 'Uploading...' : 'Start Analysis'}
                   </button>
                 </div>
 
                 {/* Upload Progress Bar */}
                 {isUploading && (
-                  <div className="mt-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="upload-progress">
+                    <div className="progress-bar-container">
                       <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        className="progress-bar"
                         style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">Uploading: {uploadProgress}%</p>
+                    <p className="progress-text">Uploading: {uploadProgress}%</p>
                   </div>
                 )}
               </div>
@@ -228,50 +254,43 @@ function App() {
 
         {/* Analysis Progress */}
         {analysisStatus && analysisStatus.status === 'processing' && (
-          <div className="max-w-2xl mx-auto mt-8">
-            {/* Debug display */}
-            <div style={{background: 'yellow', padding: '10px', margin: '10px', fontSize: '12px'}}>
-              DEBUG: Status={analysisStatus.status}, Progress={analysisStatus.progress}%, Message={analysisStatus.message}
+          <div className="progress-container">
+            <div className="progress-header">
+              <div className="spinner" style={{ color: 'var(--primary-600)' }}></div>
+              <h3 className="progress-title">Analyzing Your Lecture</h3>
             </div>
             
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center mb-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mr-3"></div>
-                <h3 className="text-lg font-medium">Analyzing Your Lecture</h3>
-              </div>
-              
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                <div 
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${analysisStatus.progress}%` }}
-                ></div>
-              </div>
-              
-              <p className="text-gray-600">{analysisStatus.message}</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Progress: {analysisStatus.progress}%
-              </p>
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar"
+                style={{ width: `${analysisStatus.progress || 0}%` }}
+              ></div>
+            </div>
+            
+            <div className="progress-text">{analysisStatus.message}</div>
+            <div className="progress-percent">{analysisStatus.progress || 0}% Complete</div>
 
-              {/* Processing Steps */}
-              <div className="mt-4 p-4 bg-gray-50 rounded">
-                <h4 className="font-medium mb-2">Processing Steps:</h4>
-                <div className="space-y-1 text-sm">
-                  <div className={`${analysisStatus.progress >= 10 ? 'text-green-600' : 'text-gray-400'}`}>
-                    ✓ 1. Extracting audio and video components {analysisStatus.progress >= 10 ? '(Complete)' : ''}
-                  </div>
-                  <div className={`${analysisStatus.progress >= 30 ? 'text-green-600' : analysisStatus.progress >= 10 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    {analysisStatus.progress >= 30 ? '✓' : analysisStatus.progress >= 10 ? '⟳' : '○'} 2. Analyzing speech with Whisper AI {analysisStatus.progress >= 30 ? '(Complete)' : analysisStatus.progress >= 10 ? '(In Progress)' : ''}
-                  </div>
-                  <div className={`${analysisStatus.progress >= 60 ? 'text-green-600' : analysisStatus.progress >= 30 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    {analysisStatus.progress >= 60 ? '✓' : analysisStatus.progress >= 30 ? '⟳' : '○'} 3. Analyzing gestures with GPT-4 Vision {analysisStatus.progress >= 60 ? '(Complete)' : analysisStatus.progress >= 30 ? '(In Progress)' : ''}
-                  </div>
-                  <div className={`${analysisStatus.progress >= 80 ? 'text-green-600' : analysisStatus.progress >= 60 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    {analysisStatus.progress >= 80 ? '✓' : analysisStatus.progress >= 60 ? '⟳' : '○'} 4. Generating pedagogical insights {analysisStatus.progress >= 80 ? '(Complete)' : analysisStatus.progress >= 60 ? '(In Progress)' : ''}
-                  </div>
-                  <div className={`${analysisStatus.progress >= 95 ? 'text-green-600' : analysisStatus.progress >= 80 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    {analysisStatus.progress >= 95 ? '✓' : analysisStatus.progress >= 80 ? '⟳' : '○'} 5. Finalizing analysis report {analysisStatus.progress >= 95 ? '(Complete)' : analysisStatus.progress >= 80 ? '(In Progress)' : ''}
-                  </div>
-                </div>
+            {/* Enhanced Processing Steps */}
+            <div className="processing-steps">
+              <h4>Processing Pipeline</h4>
+              <div className="step-list">
+                {processingSteps.map((step) => {
+                  const status = getStepStatus(analysisStatus.progress || 0, step.minProgress);
+                  return (
+                    <div key={step.id} className={`step ${status}`}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div className="step-icon">
+                          {status === 'completed' ? '✓' : status === 'active' ? '⟳' : step.id}
+                        </div>
+                        <span>{step.label}</span>
+                      </div>
+                      <div>
+                        {status === 'completed' && <span className="checkmark">✓</span>}
+                        {status === 'active' && <Clock size={16} style={{ color: 'var(--primary-600)' }} />}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -279,127 +298,247 @@ function App() {
 
         {/* Results Dashboard */}
         {results && (
-          <div className="max-w-6xl mx-auto mt-8">
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <div className="flex items-center mb-6">
-                <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
-                <h2 className="text-2xl font-bold text-gray-800">Analysis Complete</h2>
+          <div className="results-container">
+            <div className="results-header">
+              <CheckCircle size={32} style={{ color: 'var(--success-500)' }} />
+              <h2 className="results-title">Analysis Complete</h2>
+              <div className="results-actions">
+                <button onClick={exportToPDF} className="export-button">
+                  <Download size={16} />
+                  Export PDF
+                </button>
+                <button 
+                  onClick={() => setShowParameters(!showParameters)} 
+                  className="parameter-button"
+                >
+                  <Settings size={16} />
+                  Parameters
+                </button>
               </div>
+            </div>
 
-              {/* Overall Score */}
-              <div className="text-center mb-8">
-                <div className="inline-block p-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg text-white">
-                  <div className="text-4xl font-bold">{results.overall_score}/10</div>
-                  <div className="text-blue-100">Overall Score</div>
+            {/* Parameter Adjustment Section */}
+            {showParameters && (
+              <div className="parameter-section">
+                <div className="parameter-header">
+                  <h3 className="parameter-title">Scoring Parameters</h3>
+                  <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                    Adjust the weightings used in score calculation (Currently for display only)
+                  </p>
                 </div>
+                <table className="parameter-table">
+                  <thead>
+                    <tr>
+                      <th>Component</th>
+                      <th>Current Weight (%)</th>
+                      <th>Adjust Weight</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Speech Analysis</td>
+                      <td>{parameters.speechWeight}%</td>
+                      <td>
+                        <input 
+                          type="number" 
+                          className="parameter-input"
+                          value={parameters.speechWeight}
+                          onChange={(e) => setParameters({...parameters, speechWeight: parseInt(e.target.value)})}
+                          min="0" 
+                          max="100" 
+                        />
+                      </td>
+                      <td>Voice clarity, pace, and speaking patterns</td>
+                    </tr>
+                    <tr>
+                      <td>Body Language</td>
+                      <td>{parameters.bodyLanguageWeight}%</td>
+                      <td>
+                        <input 
+                          type="number" 
+                          className="parameter-input"
+                          value={parameters.bodyLanguageWeight}
+                          onChange={(e) => setParameters({...parameters, bodyLanguageWeight: parseInt(e.target.value)})}
+                          min="0" 
+                          max="100" 
+                        />
+                      </td>
+                      <td>Gestures, posture, and visual engagement</td>
+                    </tr>
+                    <tr>
+                      <td>Teaching Effectiveness</td>
+                      <td>{parameters.teachingWeight}%</td>
+                      <td>
+                        <input 
+                          type="number" 
+                          className="parameter-input"
+                          value={parameters.teachingWeight}
+                          onChange={(e) => setParameters({...parameters, teachingWeight: parseInt(e.target.value)})}
+                          min="0" 
+                          max="100" 
+                        />
+                      </td>
+                      <td>Content organization and pedagogical approach</td>
+                    </tr>
+                    <tr>
+                      <td>Presentation Skills</td>
+                      <td>{parameters.presentationWeight}%</td>
+                      <td>
+                        <input 
+                          type="number" 
+                          className="parameter-input"
+                          value={parameters.presentationWeight}
+                          onChange={(e) => setParameters({...parameters, presentationWeight: parseInt(e.target.value)})}
+                          min="0" 
+                          max="100" 
+                        />
+                      </td>
+                      <td>Overall presentation and professionalism</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Overall Score */}
+            <div className="overall-score">
+              <div className="score-display">
+                <div className="score-number">{results.overall_score}/10</div>
+                <div className="score-label">Overall Teaching Score</div>
+              </div>
+            </div>
+
+            {/* Detailed Scores */}
+            <div className="scores-grid">
+              <ScoreDisplay 
+                score={results.speech_analysis.score} 
+                label="Speech Analysis" 
+              />
+              <ScoreDisplay 
+                score={results.body_language.score} 
+                label="Body Language" 
+              />
+              <ScoreDisplay 
+                score={results.teaching_effectiveness.score} 
+                label="Teaching Effectiveness" 
+              />
+              <ScoreDisplay 
+                score={results.presentation_skills.score} 
+                label="Presentation Skills" 
+              />
+            </div>
+
+            {/* Detailed Feedback */}
+            <div className="feedback-grid">
+              {/* Strengths */}
+              <div className="feedback-section strengths">
+                <h3 className="feedback-title">
+                  <CheckCircle size={20} />
+                  Key Strengths
+                </h3>
+                <ul className="feedback-list">
+                  {results.strengths.map((strength, index) => (
+                    <li key={index} className="feedback-item">
+                      <span className="feedback-bullet"></span>
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              {/* Detailed Scores */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <ScoreDisplay 
-                  score={results.speech_analysis.score} 
-                  label="Speech Analysis" 
-                />
-                <ScoreDisplay 
-                  score={results.body_language.score} 
-                  label="Body Language" 
-                />
-                <ScoreDisplay 
-                  score={results.teaching_effectiveness.score} 
-                  label="Teaching Effectiveness" 
-                />
-                <ScoreDisplay 
-                  score={results.presentation_skills.score} 
-                  label="Presentation Skills" 
-                />
+              {/* Improvements */}
+              <div className="feedback-section improvements">
+                <h3 className="feedback-title">
+                  <AlertCircle size={20} />
+                  Areas for Growth
+                </h3>
+                <ul className="feedback-list">
+                  {results.improvement_suggestions.map((suggestion, index) => (
+                    <li key={index} className="feedback-item">
+                      <span className="feedback-bullet"></span>
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
               </div>
+            </div>
 
-              {/* Detailed Feedback */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Strengths */}
-                <div className="bg-green-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Strengths
-                  </h3>
-                  <ul className="space-y-2">
-                    {results.strengths.map((strength, index) => (
-                      <li key={index} className="text-green-700 text-sm flex items-start">
-                        <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                        {strength}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Improvements */}
-                <div className="bg-amber-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-amber-800 mb-4 flex items-center">
-                    <AlertCircle className="h-5 w-5 mr-2" />
-                    Areas for Improvement
-                  </h3>
-                  <ul className="space-y-2">
-                    {results.improvement_suggestions.map((suggestion, index) => (
-                      <li key={index} className="text-amber-700 text-sm flex items-start">
-                        <span className="w-2 h-2 bg-amber-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Score Transparency Section */}
-              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-bold mb-4">Score Calculation Breakdown</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white p-4 rounded">
-                    <h4 className="font-medium mb-2">Overall Score: {results.overall_score}/10</h4>
-                    <div className="text-sm space-y-1">
-                      <div>Speech Analysis: {results.speech_analysis.score}/10 × 30% = {(results.speech_analysis.score * 0.3).toFixed(1)}</div>
-                      <div>Body Language: {results.body_language.score}/10 × 25% = {(results.body_language.score * 0.25).toFixed(1)}</div>
-                      <div>Teaching Effectiveness: {results.teaching_effectiveness.score}/10 × 35% = {(results.teaching_effectiveness.score * 0.35).toFixed(1)}</div>
-                      <div>Presentation Skills: {results.presentation_skills.score}/10 × 10% = {(results.presentation_skills.score * 0.1).toFixed(1)}</div>
-                      <hr className="my-2" />
-                      <div className="font-bold">Total: {results.overall_score}/10</div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded">
-                    <h4 className="font-medium mb-2">Speech Analysis Details</h4>
-                    <div className="text-sm space-y-1">
-                      <div>Speaking Rate: {results.speech_analysis.speaking_rate || 'N/A'} WPM</div>
-                      <div>Clarity Score: {results.speech_analysis.clarity?.toFixed(1) || 'N/A'}/10</div>
-                      <div>Pace Score: {results.speech_analysis.pace?.toFixed(1) || 'N/A'}/10</div>
-                      <div>Confidence Score: {results.speech_analysis.confidence?.toFixed(1) || 'N/A'}/10</div>
-                    </div>
+            {/* Score Transparency Section */}
+            <div className="score-transparency">
+              <h3 className="transparency-title">Score Calculation Transparency</h3>
+              <div className="transparency-grid">
+                <div className="transparency-section">
+                  <h4>Overall Score Breakdown</h4>
+                  <div className="calculation">
+                    <div>Speech Analysis: {results.speech_analysis.score}/10 × 30% = {(results.speech_analysis.score * 0.3).toFixed(1)}</div>
+                    <div>Body Language: {results.body_language.score}/10 × 25% = {(results.body_language.score * 0.25).toFixed(1)}</div>
+                    <div>Teaching Effectiveness: {results.teaching_effectiveness.score}/10 × 35% = {(results.teaching_effectiveness.score * 0.35).toFixed(1)}</div>
+                    <div>Presentation Skills: {results.presentation_skills.score}/10 × 10% = {(results.presentation_skills.score * 0.1).toFixed(1)}</div>
+                    <hr />
+                    <div className="total">Total: {results.overall_score}/10</div>
                   </div>
                 </div>
                 
-                <div className="mt-4">
-                  <details className="bg-white p-4 rounded">
-                    <summary className="cursor-pointer font-medium">View Complete Analysis Data</summary>
-                    <pre className="mt-4 text-xs overflow-auto bg-gray-100 p-4 rounded">
-                      {JSON.stringify(results, null, 2)}
-                    </pre>
-                  </details>
+                <div className="transparency-section">
+                  <h4>Speech Analysis Metrics</h4>
+                  <div className="metric-breakdown">
+                    <div>
+                      <span>Speaking Rate</span>
+                      <span>{results.speech_analysis.speaking_rate?.toFixed(1) || 'N/A'} WPM</span>
+                    </div>
+                    <div>
+                      <span>Clarity Score</span>
+                      <span>{results.speech_analysis.clarity?.toFixed(1) || 'N/A'}/10</span>
+                    </div>
+                    <div>
+                      <span>Pace Score</span>
+                      <span>{results.speech_analysis.pace?.toFixed(1) || 'N/A'}/10</span>
+                    </div>
+                    <div>
+                      <span>Confidence</span>
+                      <span>{results.speech_analysis.confidence?.toFixed(1) || 'N/A'}/10</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Reset Button */}
-              <div className="text-center mt-8">
-                <button
-                  onClick={() => {
-                    setFile(null);
-                    setAnalysisId(null);
-                    setAnalysisStatus(null);
-                    setResults(null);
-                  }}
-                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Analyze Another Video
-                </button>
+              
+              <div style={{ marginTop: '1.5rem' }}>
+                <details className="transparency-section">
+                  <summary style={{ cursor: 'pointer', fontWeight: '600', padding: '0.75rem' }}>
+                    View Complete Analysis Data
+                  </summary>
+                  <div className="raw-data">
+                    <pre style={{ 
+                      background: 'var(--gray-900)', 
+                      color: 'var(--gray-100)', 
+                      padding: '1rem', 
+                      borderRadius: '8px', 
+                      fontSize: '0.8rem', 
+                      overflow: 'auto',
+                      maxHeight: '400px'
+                    }}>
+                      {JSON.stringify(results, null, 2)}
+                    </pre>
+                  </div>
+                </details>
               </div>
+            </div>
+
+            {/* Reset Button */}
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => {
+                  setFile(null);
+                  setAnalysisId(null);
+                  setAnalysisStatus(null);
+                  setResults(null);
+                  setShowParameters(false);
+                }}
+                className="reset-button"
+              >
+                Analyze Another Video
+              </button>
             </div>
           </div>
         )}
