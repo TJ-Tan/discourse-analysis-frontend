@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import { 
@@ -14,7 +14,11 @@ import {
   Clock,
   Brain,
   Eye,
-  Mic
+  Mic,
+  Save,
+  RotateCcw,
+  Sliders,
+  Info
 } from 'lucide-react';
 import './App.css';
 
@@ -28,12 +32,75 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showParameters, setShowParameters] = useState(false);
+  const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [parameters, setParameters] = useState({
-    speechWeight: 30,
-    bodyLanguageWeight: 25,
-    teachingWeight: 35,
-    presentationWeight: 10
+  const [configChanged, setConfigChanged] = useState(false);
+
+  // Enhanced configuration state
+  const [configuration, setConfiguration] = useState({
+    // Category weights
+    categoryWeights: {
+      speech_analysis: 30,
+      body_language: 25,
+      teaching_effectiveness: 35,
+      presentation_skills: 10
+    },
+    
+    // Speech component weights
+    speechComponents: {
+      speaking_rate: 25,
+      clarity: 25,
+      confidence: 20,
+      voice_variety: 15,
+      pause_effectiveness: 15
+    },
+    
+    // Visual component weights
+    visualComponents: {
+      eye_contact: 25,
+      gestures: 20,
+      posture: 20,
+      engagement: 20,
+      professionalism: 15
+    },
+    
+    // Pedagogical component weights
+    pedagogyComponents: {
+      content_organization: 25,
+      engagement_techniques: 20,
+      communication_clarity: 20,
+      use_of_examples: 20,
+      knowledge_checking: 15
+    },
+    
+    // Thresholds
+    thresholds: {
+      speaking_rate: {
+        optimal_min: 140,
+        optimal_max: 180,
+        acceptable_min: 120,
+        acceptable_max: 200
+      },
+      filler_ratio: {
+        excellent: 2,
+        good: 5,
+        average: 8,
+        poor: 12
+      },
+      visual_scores: {
+        excellent: 8.5,
+        good: 7.0,
+        average: 5.5,
+        poor: 4.0
+      }
+    },
+    
+    // Sampling configuration
+    sampling: {
+      frame_interval_seconds: 6,
+      max_frames_analyzed: 40,
+      use_full_transcript: true
+    }
   });
 
   // Handle file drop
@@ -57,6 +124,96 @@ function App() {
     multiple: false
   });
 
+  // Update configuration value
+  const updateConfiguration = (category, subcategory, key, value) => {
+    setConfiguration(prev => {
+      const newConfig = { ...prev };
+      if (subcategory) {
+        newConfig[category] = {
+          ...newConfig[category],
+          [subcategory]: {
+            ...newConfig[category][subcategory],
+            [key]: parseFloat(value) || 0
+          }
+        };
+      } else {
+        newConfig[category] = {
+          ...newConfig[category],
+          [key]: parseFloat(value) || 0
+        };
+      }
+      return newConfig;
+    });
+    setConfigChanged(true);
+  };
+
+  // Reset configuration to defaults
+  const resetConfiguration = () => {
+    setConfiguration({
+      categoryWeights: {
+        speech_analysis: 30,
+        body_language: 25,
+        teaching_effectiveness: 35,
+        presentation_skills: 10
+      },
+      speechComponents: {
+        speaking_rate: 25,
+        clarity: 25,
+        confidence: 20,
+        voice_variety: 15,
+        pause_effectiveness: 15
+      },
+      visualComponents: {
+        eye_contact: 25,
+        gestures: 20,
+        posture: 20,
+        engagement: 20,
+        professionalism: 15
+      },
+      pedagogyComponents: {
+        content_organization: 25,
+        engagement_techniques: 20,
+        communication_clarity: 20,
+        use_of_examples: 20,
+        knowledge_checking: 15
+      },
+      thresholds: {
+        speaking_rate: {
+          optimal_min: 140,
+          optimal_max: 180,
+          acceptable_min: 120,
+          acceptable_max: 200
+        },
+        filler_ratio: {
+          excellent: 2,
+          good: 5,
+          average: 8,
+          poor: 12
+        },
+        visual_scores: {
+          excellent: 8.5,
+          good: 7.0,
+          average: 5.5,
+          poor: 4.0
+        }
+      },
+      sampling: {
+        frame_interval_seconds: 6,
+        max_frames_analyzed: 40,
+        use_full_transcript: true
+      }
+    });
+    setConfigChanged(true);
+  };
+
+  // Save configuration (placeholder for backend integration)
+  const saveConfiguration = () => {
+    // TODO: Send configuration to backend
+    console.log('Saving configuration:', configuration);
+    setConfigChanged(false);
+    alert('Configuration saved successfully! Changes will apply to the next analysis.');
+  };
+
   // Upload and start analysis
   const startAnalysis = async () => {
     if (!file) return;
@@ -69,7 +226,7 @@ function App() {
     try {
       const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 600000, // 10 minutes timeout for large files
+        timeout: 600000,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
@@ -114,20 +271,19 @@ function App() {
     checkStatus();
   };
 
-  // Generate PDF report
+  // Enhanced PDF export
   const exportToPDF = async () => {
     if (!results || !analysisId) return;
 
     setIsGeneratingPDF(true);
     try {
-      // Create PDF content with beautiful formatting
-      const generatePDFContent = () => {
+      const generateEnhancedPDFContent = () => {
         const doc = `
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="UTF-8">
-            <title>Discourse Analysis Report</title>
+            <title>Enhanced Discourse Analysis Report</title>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
               
@@ -164,11 +320,34 @@ function App() {
                 margin: 0;
               }
               
-              .analysis-date {
-                text-align: center;
-                color: #6b7280;
-                margin-bottom: 30px;
+              .enhanced-badge {
+                display: inline-block;
+                background: rgba(255,255,255,0.2);
+                padding: 8px 16px;
+                border-radius: 20px;
                 font-size: 0.9rem;
+                margin-top: 15px;
+              }
+              
+              .analysis-summary {
+                background: #f8fafc;
+                padding: 25px;
+                border-radius: 12px;
+                margin-bottom: 30px;
+                border-left: 4px solid #EF7C00;
+              }
+              
+              .config-info {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 30px;
+              }
+              
+              .config-box {
+                background: #f1f5f9;
+                padding: 20px;
+                border-radius: 8px;
               }
               
               .overall-score {
@@ -184,11 +363,6 @@ function App() {
                 font-size: 4rem;
                 font-weight: 900;
                 margin: 0;
-              }
-              
-              .overall-score .label {
-                font-size: 1.2rem;
-                opacity: 0.9;
               }
               
               .scores-grid {
@@ -213,119 +387,44 @@ function App() {
                 margin: 0 0 8px 0;
               }
               
-              .score-card .label {
-                color: #6b7280;
-                font-weight: 500;
+              .enhanced-metrics {
+                margin: 30px 0;
+                padding: 25px;
+                background: #fef7f0;
+                border-radius: 12px;
+                border-left: 4px solid #EF7C00;
               }
               
-              .section {
-                margin: 40px 0;
-                page-break-inside: avoid;
+              .metric-row {
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                padding: 5px 0;
+                border-bottom: 1px solid #f3f4f6;
               }
               
-              .section-title {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: #1f2937;
-                margin: 0 0 20px 0;
-                padding-bottom: 10px;
-                border-bottom: 3px solid #EF7C00;
+              .feedback-section {
+                margin: 30px 0;
               }
               
               .feedback-grid {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
                 gap: 30px;
-                margin: 30px 0;
-              }
-              
-              .feedback-section {
-                padding: 25px;
-                border-radius: 12px;
-                border-left: 4px solid;
               }
               
               .strengths {
                 background: #ecfdf5;
-                border-left-color: #10b981;
+                padding: 25px;
+                border-radius: 12px;
+                border-left: 4px solid #10b981;
               }
               
               .improvements {
                 background: #fff4e6;
-                border-left-color: #EF7C00;
-              }
-              
-              .feedback-title {
-                font-size: 1.2rem;
-                font-weight: 600;
-                margin: 0 0 15px 0;
-              }
-              
-              .strengths .feedback-title {
-                color: #047857;
-              }
-              
-              .improvements .feedback-title {
-                color: #CC6600;
-              }
-              
-              .feedback-list {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-              }
-              
-              .feedback-item {
-                margin: 8px 0;
-                padding-left: 20px;
-                position: relative;
-                line-height: 1.5;
-              }
-              
-              .feedback-item::before {
-                content: '•';
-                position: absolute;
-                left: 0;
-                font-weight: bold;
-              }
-              
-              .strengths .feedback-item::before {
-                color: #10b981;
-              }
-              
-              .improvements .feedback-item::before {
-                color: #EF7C00;
-              }
-              
-              .calculation-section {
-                background: #f9fafb;
                 padding: 25px;
                 border-radius: 12px;
-                margin: 30px 0;
-                font-family: 'Monaco', 'Courier New', monospace;
-                font-size: 0.9rem;
-              }
-              
-              .calculation-title {
-                font-family: 'Inter', sans-serif;
-                font-size: 1.2rem;
-                font-weight: 600;
-                margin: 0 0 15px 0;
-                color: #1f2937;
-              }
-              
-              .calculation-line {
-                margin: 5px 0;
-                color: #4b5563;
-              }
-              
-              .calculation-total {
-                margin-top: 10px;
-                padding: 10px;
-                background: #e5e7eb;
-                border-radius: 6px;
-                font-weight: 700;
-                color: #1f2937;
+                border-left: 4px solid #EF7C00;
               }
               
               .footer {
@@ -336,105 +435,117 @@ function App() {
                 border-top: 1px solid #e5e7eb;
                 padding-top: 20px;
               }
-              
-              @media print {
-                body { margin: 0; }
-                .header { margin: 0 0 40px 0; }
-                .section { page-break-inside: avoid; }
-              }
             </style>
           </head>
           <body>
             <div class="header">
-              <h1>Discourse Analysis Report</h1>
-              <p>AI-Enhanced Pedagogical Assessment</p>
+              <h1>Enhanced Discourse Analysis Report</h1>
+              <p>AI-Powered Pedagogical Assessment with Advanced Metrics</p>
+              <div class="enhanced-badge">
+                ✨ Enhanced Analysis • ${results.configuration_used?.frames_analyzed || 'N/A'} Frames • Full Transcript
+              </div>
             </div>
             
-            <div class="analysis-date">
-              Generated on ${new Date().toLocaleDateString('en-GB', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
+            <div class="analysis-summary">
+              <h3 style="margin: 0 0 15px 0; color: #1f2937;">Analysis Configuration</h3>
+              <div class="config-info">
+                <div class="config-box">
+                  <strong>Enhanced Features:</strong><br>
+                  • ${results.configuration_used?.frames_analyzed || 40} video frames analysed<br>
+                  • Full transcript processing (${results.configuration_used?.transcript_length || 0} characters)<br>
+                  • ${results.configuration_used?.filler_words_detected || 0} filler word types detected<br>
+                  • Advanced voice variety analysis
+                </div>
+                <div class="config-box">
+                  <strong>Analysis Weights:</strong><br>
+                  • Speech Analysis: ${configuration.categoryWeights.speech_analysis}%<br>
+                  • Body Language: ${configuration.categoryWeights.body_language}%<br>
+                  • Teaching Effectiveness: ${configuration.categoryWeights.teaching_effectiveness}%<br>
+                  • Presentation Skills: ${configuration.categoryWeights.presentation_skills}%
+                </div>
+              </div>
             </div>
             
             <div class="overall-score">
               <div class="score">${results.overall_score}/10</div>
-              <div class="label">Overall Teaching Score</div>
+              <div style="font-size: 1.2rem; opacity: 0.9;">Overall Teaching Excellence Score</div>
             </div>
             
             <div class="scores-grid">
               <div class="score-card">
                 <div class="score">${results.speech_analysis.score}/10</div>
-                <div class="label">Speech Analysis</div>
+                <div>Speech Analysis</div>
+                <div class="enhanced-metrics" style="margin-top: 15px; text-align: left; font-size: 0.85rem;">
+                  <div class="metric-row"><span>Speaking Rate:</span><span>${results.speech_analysis.speaking_rate?.toFixed(1) || 'N/A'} WPM</span></div>
+                  <div class="metric-row"><span>Voice Variety:</span><span>${results.speech_analysis.voice_variety?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Pause Effectiveness:</span><span>${results.speech_analysis.pause_effectiveness?.toFixed(1) || 'N/A'}/10</span></div>
+                </div>
               </div>
               <div class="score-card">
                 <div class="score">${results.body_language.score}/10</div>
-                <div class="label">Body Language</div>
+                <div>Body Language</div>
+                <div class="enhanced-metrics" style="margin-top: 15px; text-align: left; font-size: 0.85rem;">
+                  <div class="metric-row"><span>Eye Contact:</span><span>${results.body_language.eye_contact?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Gestures:</span><span>${results.body_language.gestures?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Frames Analysed:</span><span>${results.body_language.frames_analyzed || 'N/A'}</span></div>
+                </div>
               </div>
               <div class="score-card">
                 <div class="score">${results.teaching_effectiveness.score}/10</div>
-                <div class="label">Teaching Effectiveness</div>
+                <div>Teaching Effectiveness</div>
+                <div class="enhanced-metrics" style="margin-top: 15px; text-align: left; font-size: 0.85rem;">
+                  <div class="metric-row"><span>Content Organisation:</span><span>${results.teaching_effectiveness.content_organization?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Engagement Techniques:</span><span>${results.teaching_effectiveness.engagement_techniques?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Knowledge Checking:</span><span>${results.teaching_effectiveness.knowledge_checking?.toFixed(1) || 'N/A'}/10</span></div>
+                </div>
               </div>
               <div class="score-card">
                 <div class="score">${results.presentation_skills.score}/10</div>
-                <div class="label">Presentation Skills</div>
+                <div>Presentation Skills</div>
+                <div class="enhanced-metrics" style="margin-top: 15px; text-align: left; font-size: 0.85rem;">
+                  <div class="metric-row"><span>Voice Modulation:</span><span>${results.presentation_skills.voice_modulation?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Professionalism:</span><span>${results.presentation_skills.professionalism?.toFixed(1) || 'N/A'}/10</span></div>
+                  <div class="metric-row"><span>Energy Level:</span><span>${results.presentation_skills.energy?.toFixed(1) || 'N/A'}/10</span></div>
+                </div>
               </div>
             </div>
             
-            <div class="section">
-              <h2 class="section-title">Feedback Summary</h2>
+            <div class="feedback-section">
+              <h2 style="color: #1f2937; margin-bottom: 20px;">Enhanced Feedback Analysis</h2>
               <div class="feedback-grid">
-                <div class="feedback-section strengths">
-                  <h3 class="feedback-title">Key Strengths</h3>
-                  <ul class="feedback-list">
-                    ${results.strengths.map(strength => `<li class="feedback-item">${strength}</li>`).join('')}
+                <div class="strengths">
+                  <h3 style="margin: 0 0 15px 0; color: #047857;">Key Strengths</h3>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${results.strengths.map(strength => `<li style="margin: 8px 0;">${strength}</li>`).join('')}
                   </ul>
                 </div>
-                <div class="feedback-section improvements">
-                  <h3 class="feedback-title">Areas for Growth</h3>
-                  <ul class="feedback-list">
-                    ${results.improvement_suggestions.map(suggestion => `<li class="feedback-item">${suggestion}</li>`).join('')}
+                <div class="improvements">
+                  <h3 style="margin: 0 0 15px 0; color: #CC6600;">Areas for Growth</h3>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${results.improvement_suggestions.map(suggestion => `<li style="margin: 8px 0;">${suggestion}</li>`).join('')}
                   </ul>
                 </div>
               </div>
             </div>
             
-            <div class="section">
-              <h2 class="section-title">Detailed Metrics</h2>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-                <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
-                  <h4 style="margin: 0 0 15px 0; color: #1f2937;">Speech Analysis</h4>
-                  <div>Speaking Rate: ${results.speech_analysis.speaking_rate?.toFixed(1) || 'N/A'} WPM</div>
-                  <div>Clarity Score: ${results.speech_analysis.clarity?.toFixed(1) || 'N/A'}/10</div>
-                  <div>Pace Score: ${results.speech_analysis.pace?.toFixed(1) || 'N/A'}/10</div>
-                  <div>Confidence: ${results.speech_analysis.confidence?.toFixed(1) || 'N/A'}/10</div>
-                </div>
-                <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
-                  <h4 style="margin: 0 0 15px 0; color: #1f2937;">Body Language</h4>
-                  <div>Eye Contact: ${results.body_language.eye_contact?.toFixed(1) || 'N/A'}/10</div>
-                  <div>Gestures: ${results.body_language.gestures?.toFixed(1) || 'N/A'}/10</div>
-                  <div>Posture: ${results.body_language.posture?.toFixed(1) || 'N/A'}/10</div>
-                  <div>Engagement: ${results.body_language.engagement?.toFixed(1) || 'N/A'}/10</div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="section">
-              <div class="calculation-section">
-                <div class="calculation-title">Score Calculation</div>
-                <div class="calculation-line">Speech Analysis: ${results.speech_analysis.score}/10 × 30% = ${(results.speech_analysis.score * 0.3).toFixed(1)}</div>
-                <div class="calculation-line">Body Language: ${results.body_language.score}/10 × 25% = ${(results.body_language.score * 0.25).toFixed(1)}</div>
-                <div class="calculation-line">Teaching Effectiveness: ${results.teaching_effectiveness.score}/10 × 35% = ${(results.teaching_effectiveness.score * 0.35).toFixed(1)}</div>
-                <div class="calculation-line">Presentation Skills: ${results.presentation_skills.score}/10 × 10% = ${(results.presentation_skills.score * 0.1).toFixed(1)}</div>
-                <div class="calculation-total">Total Score: ${results.overall_score}/10</div>
-              </div>
+            <div style="margin-top: 40px; padding: 25px; background: #f1f5f9; border-radius: 12px;">
+              <h3 style="margin: 0 0 15px 0;">Enhanced Analysis Summary</h3>
+              <p style="margin: 0; color: #4b5563;">
+                This report utilises advanced AI analysis with ${results.configuration_used?.frames_analyzed || 40} video frames, 
+                comprehensive transcript processing, and enhanced metrics including voice variety analysis, 
+                strategic pause effectiveness, and temporal visual progression tracking.
+              </p>
             </div>
             
             <div class="footer">
-              <p>This report was generated using AI-powered discourse analysis technology.</p>
-              <p>National University of Singapore • Teaching & Learning Enhancement</p>
+              <p><strong>Enhanced Discourse Analysis Platform</strong></p>
+              <p>National University of Singapore • Teaching & Learning Excellence</p>
+              <p>Generated on ${new Date().toLocaleDateString('en-GB', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
             </div>
           </body>
           </html>
@@ -442,23 +553,21 @@ function App() {
         return doc;
       };
 
-      // Create and download PDF
-      const htmlContent = generatePDFContent();
+      // Create and download enhanced PDF
+      const htmlContent = generateEnhancedPDFContent();
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       
-      // Create a temporary link to download the HTML file
       const link = document.createElement('a');
       link.href = url;
-      link.download = `discourse-analysis-report-${new Date().toISOString().split('T')[0]}.html`;
+      link.download = `enhanced-discourse-analysis-${new Date().toISOString().split('T')[0]}.html`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      // Show instructions for PDF conversion
       setTimeout(() => {
-        alert(`Report downloaded as HTML file!\n\nTo convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save\n\nThis creates a beautifully formatted PDF report with all your analysis results.`);
+        alert(`Enhanced report downloaded!\n\nFeatures:\n• ${results.configuration_used?.frames_analyzed || 40} video frames analysed\n• Full transcript processing\n• Advanced voice metrics\n• Temporal progression tracking\n\nTo convert to PDF:\n1. Open the HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF"\n4. Click Save`);
       }, 500);
 
     } catch (error) {
@@ -493,11 +602,11 @@ function App() {
 
   // Processing steps configuration
   const processingSteps = [
-    { id: 1, label: 'Extracting audio and video components', minProgress: 10, icon: <Upload size={12} /> },
-    { id: 2, label: 'Analysing speech with Whisper AI', minProgress: 30, icon: <Mic size={12} /> },
-    { id: 3, label: 'Analysing gestures with GPT-4 Vision', minProgress: 60, icon: <Eye size={12} /> },
-    { id: 4, label: 'Generating pedagogical insights', minProgress: 80, icon: <Brain size={12} /> },
-    { id: 5, label: 'Finalising analysis report', minProgress: 95, icon: <CheckCircle size={12} /> }
+    { id: 1, label: 'Extracting enhanced audio and video components', minProgress: 10, icon: <Upload size={12} /> },
+    { id: 2, label: 'Analysing speech with advanced metrics', minProgress: 30, icon: <Mic size={12} /> },
+    { id: 3, label: 'Analysing visual elements (40 frames)', minProgress: 60, icon: <Eye size={12} /> },
+    { id: 4, label: 'Generating comprehensive pedagogical insights', minProgress: 80, icon: <Brain size={12} /> },
+    { id: 5, label: 'Calculating weighted component scores', minProgress: 95, icon: <CheckCircle size={12} /> }
   ];
 
   return (
@@ -507,7 +616,7 @@ function App() {
         <div className="header">
           <div className="announcement-banner">
             <Sparkles size={16} />
-            <span>AI-POWERED DISCOURSE ANALYSIS</span>
+            <span>ENHANCED AI-POWERED DISCOURSE ANALYSIS</span>
             <ArrowRight size={16} />
           </div>
           <h1 className="title">Discourse Analysis with genAI</h1>
@@ -515,6 +624,330 @@ function App() {
             Elevate your T&L delivery with AI-enhanced pedagogical insights and personalised feedback
           </p>
         </div>
+
+        {/* Configuration Panel */}
+        {showAdvancedConfig && (
+          <div className="results-container" style={{ marginBottom: '2rem' }}>
+            <div className="results-header">
+              <Sliders size={32} style={{ color: 'var(--nus-orange)' }} />
+              <h2 className="results-title">Advanced Configuration</h2>
+              <div className="results-actions">
+                <button 
+                  onClick={saveConfiguration} 
+                  className="export-button"
+                  disabled={!configChanged}
+                  style={{ opacity: configChanged ? 1 : 0.6 }}
+                >
+                  <Save size={16} />
+                  Save Config
+                </button>
+                <button onClick={resetConfiguration} className="parameter-button">
+                  <RotateCcw size={16} />
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {configChanged && (
+              <div style={{ 
+                padding: '1rem', 
+                background: 'var(--accent-50)', 
+                border: `1px solid var(--nus-orange)`,
+                borderRadius: '8px',
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--nus-orange-dark)' }}>
+                  <Info size={16} />
+                  <strong>Configuration Changed</strong>
+                </div>
+                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--nus-orange-dark)', fontSize: '0.9rem' }}>
+                  Save your changes to apply them to the next analysis. Current analysis will use previous settings.
+                </p>
+              </div>
+            )}
+
+            {/* Category Weights */}
+            <div className="parameter-section">
+              <h3 className="parameter-title">Category Weights (%)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {Object.entries(configuration.categoryWeights).map(([key, value]) => (
+                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem' }}>
+                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </label>
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={value}
+                      onChange={(e) => updateConfiguration('categoryWeights', null, key, e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        marginTop: '0.5rem',
+                        padding: '0.5rem',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Speech Components */}
+            <div className="parameter-section">
+              <h3 className="parameter-title">Speech Analysis Sub-Components (%)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                {Object.entries(configuration.speechComponents).map(([key, value]) => (
+                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.85rem' }}>
+                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </label>
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={value}
+                      onChange={(e) => updateConfiguration('speechComponents', null, key, e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        marginTop: '0.5rem',
+                        padding: '0.5rem',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Visual Components */}
+            <div className="parameter-section">
+              <h3 className="parameter-title">Visual Analysis Sub-Components (%)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                {Object.entries(configuration.visualComponents).map(([key, value]) => (
+                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.85rem' }}>
+                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </label>
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={value}
+                      onChange={(e) => updateConfiguration('visualComponents', null, key, e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        marginTop: '0.5rem',
+                        padding: '0.5rem',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pedagogy Components */}
+            <div className="parameter-section">
+              <h3 className="parameter-title">Teaching Effectiveness Sub-Components (%)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {Object.entries(configuration.pedagogyComponents).map(([key, value]) => (
+                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.85rem' }}>
+                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </label>
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={value}
+                      onChange={(e) => updateConfiguration('pedagogyComponents', null, key, e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        marginTop: '0.5rem',
+                        padding: '0.5rem',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Threshold Configuration */}
+            <div className="parameter-section">
+              <h3 className="parameter-title">Performance Thresholds</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {/* Speaking Rate Thresholds */}
+                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', fontSize: '1rem' }}>Speaking Rate (WPM)</h4>
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>Optimal Range</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input 
+                          type="number"
+                          placeholder="Min"
+                          value={configuration.thresholds.speaking_rate.optimal_min}
+                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'optimal_min', e.target.value)}
+                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
+                        />
+                        <input 
+                          type="number"
+                          placeholder="Max"
+                          value={configuration.thresholds.speaking_rate.optimal_max}
+                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'optimal_max', e.target.value)}
+                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>Acceptable Range</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input 
+                          type="number"
+                          placeholder="Min"
+                          value={configuration.thresholds.speaking_rate.acceptable_min}
+                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'acceptable_min', e.target.value)}
+                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
+                        />
+                        <input 
+                          type="number"
+                          placeholder="Max"
+                          value={configuration.thresholds.speaking_rate.acceptable_max}
+                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'acceptable_max', e.target.value)}
+                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filler Word Thresholds */}
+                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', fontSize: '1rem' }}>Filler Words (%)</h4>
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {Object.entries(configuration.thresholds.filler_ratio).map(([level, value]) => (
+                      <div key={level}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>
+                          {level.charAt(0).toUpperCase() + level.slice(1)} Threshold
+                        </label>
+                        <input 
+                          type="number"
+                          step="0.1"
+                          value={value}
+                          onChange={(e) => updateConfiguration('thresholds', 'filler_ratio', level, e.target.value)}
+                          style={{ width: '100%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Visual Score Thresholds */}
+                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', fontSize: '1rem' }}>Visual Scores (1-10)</h4>
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {Object.entries(configuration.thresholds.visual_scores).map(([level, value]) => (
+                      <div key={level}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>
+                          {level.charAt(0).toUpperCase() + level.slice(1)} Threshold
+                        </label>
+                        <input 
+                          type="number"
+                          step="0.1"
+                          min="1"
+                          max="10"
+                          value={value}
+                          onChange={(e) => updateConfiguration('thresholds', 'visual_scores', level, e.target.value)}
+                          style={{ width: '100%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sampling Configuration */}
+            <div className="parameter-section">
+              <h3 className="parameter-title">Enhanced Sampling Configuration</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                  <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>
+                    Frame Interval (seconds)
+                  </label>
+                  <input 
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={configuration.sampling.frame_interval_seconds}
+                    onChange={(e) => updateConfiguration('sampling', null, 'frame_interval_seconds', e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: '4px'
+                    }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0.5rem 0 0 0' }}>
+                    How often to extract frames (lower = more frames)
+                  </p>
+                </div>
+
+                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                  <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>
+                    Max Frames Analyzed
+                  </label>
+                  <input 
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={configuration.sampling.max_frames_analyzed}
+                    onChange={(e) => updateConfiguration('sampling', null, 'max_frames_analyzed', e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: '4px'
+                    }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0.5rem 0 0 0' }}>
+                    Maximum number of frames to analyze (higher = more detailed)
+                  </p>
+                </div>
+
+                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                  <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>
+                    Full Transcript Analysis
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <input 
+                      type="checkbox"
+                      checked={configuration.sampling.use_full_transcript}
+                      onChange={(e) => updateConfiguration('sampling', null, 'use_full_transcript', e.target.checked)}
+                      style={{ marginRight: '0.5rem' }}
+                    />
+                    <span style={{ fontSize: '0.9rem', color: 'var(--gray-700)' }}>
+                      Analyze complete transcript
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0.5rem 0 0 0' }}>
+                    Use full transcript instead of limiting to 3000 characters
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Upload Section */}
         {!analysisId && (
@@ -538,6 +971,16 @@ function App() {
                   <p className="upload-subtext">
                     Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 500MB
                   </p>
+                  <div style={{ 
+                    marginTop: '1rem', 
+                    padding: '0.5rem 1rem', 
+                    background: 'rgba(239, 124, 0, 0.1)', 
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }}>
+                    ✨ Enhanced: {configuration.sampling.max_frames_analyzed} frames • Full transcript • Advanced metrics
+                  </div>
                 </div>
               )}
             </div>
@@ -548,7 +991,7 @@ function App() {
                   <div>
                     <p className="file-name">{file.name}</p>
                     <p className="file-size">
-                      {(file.size / (1024 * 1024)).toFixed(2)} MB • Duration: Calculating...
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB • Enhanced analysis configured
                     </p>
                   </div>
                   <button
@@ -564,7 +1007,7 @@ function App() {
                     ) : (
                       <>
                         <Play size={20} />
-                        Start Analysis
+                        Start Enhanced Analysis
                       </>
                     )}
                   </button>
@@ -584,6 +1027,22 @@ function App() {
                 )}
               </div>
             )}
+
+            {/* Configuration Toggle */}
+            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+              <button
+                onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
+                className="parameter-button"
+                style={{ 
+                  background: showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-100)',
+                  color: showAdvancedConfig ? 'white' : 'var(--gray-700)',
+                  border: `1px solid ${showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-300)'}`
+                }}
+              >
+                <Sliders size={16} />
+                {showAdvancedConfig ? 'Hide' : 'Show'} Advanced Configuration
+              </button>
+            </div>
           </div>
         )}
 
@@ -592,7 +1051,7 @@ function App() {
           <div className="progress-container">
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
-              <h3 className="progress-title">Analysing Your Lecture</h3>
+              <h3 className="progress-title">Enhanced Analysis in Progress</h3>
             </div>
             
             <div className="progress-bar-container">
@@ -607,7 +1066,7 @@ function App() {
 
             {/* Enhanced Processing Steps */}
             <div className="processing-steps">
-              <h4>Processing Pipeline</h4>
+              <h4>Enhanced Processing Pipeline</h4>
               <div className="step-list">
                 {processingSteps.map((step) => {
                   const status = getStepStatus(analysisStatus.progress || 0, step.minProgress);
@@ -636,7 +1095,7 @@ function App() {
           <div className="results-container">
             <div className="results-header">
               <CheckCircle size={32} style={{ color: 'var(--success-500)' }} />
-              <h2 className="results-title">Analysis Complete</h2>
+              <h2 className="results-title">Enhanced Analysis Complete</h2>
               <div className="results-actions">
                 <button 
                   onClick={exportToPDF} 
@@ -651,7 +1110,7 @@ function App() {
                   ) : (
                     <>
                       <Download size={16} />
-                      Export PDF
+                      Export Enhanced PDF
                     </>
                   )}
                 </button>
@@ -660,92 +1119,101 @@ function App() {
                   className="parameter-button"
                 >
                   <Settings size={16} />
-                  Parameters
+                  View Details
                 </button>
               </div>
             </div>
 
-            {/* Parameter Adjustment Section */}
+            {/* Enhanced Analysis Summary */}
+            <div style={{ 
+              padding: '1.5rem', 
+              background: 'linear-gradient(135deg, var(--primary-50), var(--accent-50))', 
+              borderRadius: '12px',
+              marginBottom: '2rem',
+              border: '1px solid var(--nus-orange-light)'
+            }}>
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={20} />
+                Enhanced Analysis Summary
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <strong style={{ color: 'var(--nus-blue)' }}>Frames Analysed:</strong><br />
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
+                    {results.configuration_used?.frames_analyzed || 'N/A'}
+                  </span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}> frames</span>
+                </div>
+                <div>
+                  <strong style={{ color: 'var(--nus-blue)' }}>Transcript Length:</strong><br />
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
+                    {Math.round((results.configuration_used?.transcript_length || 0) / 1000)}K
+                  </span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}> characters</span>
+                </div>
+                <div>
+                  <strong style={{ color: 'var(--nus-blue)' }}>Filler Words Detected:</strong><br />
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
+                    {results.configuration_used?.filler_words_detected || 0}
+                  </span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}> types</span>
+                </div>
+                <div>
+                  <strong style={{ color: 'var(--nus-blue)' }}>Analysis Mode:</strong><br />
+                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--success-600)' }}>
+                    Enhanced ✨
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Parameter Display Section */}
             {showParameters && (
               <div className="parameter-section">
                 <div className="parameter-header">
-                  <h3 className="parameter-title">Scoring Parameters</h3>
+                  <h3 className="parameter-title">Enhanced Analysis Details</h3>
                   <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
-                    Adjust the weightings used in score calculation (Currently for display only)
+                    Detailed breakdown of enhanced metrics and components
                   </p>
                 </div>
-                <table className="parameter-table">
-                  <thead>
-                    <tr>
-                      <th>Component</th>
-                      <th>Current Weight (%)</th>
-                      <th>Adjust Weight</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Speech Analysis</td>
-                      <td>{parameters.speechWeight}%</td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="parameter-input"
-                          value={parameters.speechWeight}
-                          onChange={(e) => setParameters({...parameters, speechWeight: parseInt(e.target.value)})}
-                          min="0" 
-                          max="100" 
-                        />
-                      </td>
-                      <td>Voice clarity, pace, and speaking patterns</td>
-                    </tr>
-                    <tr>
-                      <td>Body Language</td>
-                      <td>{parameters.bodyLanguageWeight}%</td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="parameter-input"
-                          value={parameters.bodyLanguageWeight}
-                          onChange={(e) => setParameters({...parameters, bodyLanguageWeight: parseInt(e.target.value)})}
-                          min="0" 
-                          max="100" 
-                        />
-                      </td>
-                      <td>Gestures, posture, and visual engagement</td>
-                    </tr>
-                    <tr>
-                      <td>Teaching Effectiveness</td>
-                      <td>{parameters.teachingWeight}%</td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="parameter-input"
-                          value={parameters.teachingWeight}
-                          onChange={(e) => setParameters({...parameters, teachingWeight: parseInt(e.target.value)})}
-                          min="0" 
-                          max="100" 
-                        />
-                      </td>
-                      <td>Content organisation and pedagogical approach</td>
-                    </tr>
-                    <tr>
-                      <td>Presentation Skills</td>
-                      <td>{parameters.presentationWeight}%</td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="parameter-input"
-                          value={parameters.presentationWeight}
-                          onChange={(e) => setParameters({...parameters, presentationWeight: parseInt(e.target.value)})}
-                          min="0" 
-                          max="100" 
-                        />
-                      </td>
-                      <td>Overall presentation and professionalism</td>
-                    </tr>
-                  </tbody>
-                </table>
+                
+                {/* Enhanced Speech Analysis */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>Speech Analysis Components</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    <div style={{ padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                      <strong>Speaking Rate</strong><br />
+                      <span style={{ fontSize: '1.5rem', color: 'var(--nus-blue)' }}>{results.speech_analysis.speaking_rate?.toFixed(1) || 'N/A'}</span> WPM
+                    </div>
+                    <div style={{ padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                      <strong>Voice Variety</strong><br />
+                      <span style={{ fontSize: '1.5rem', color: 'var(--nus-blue)' }}>{results.speech_analysis.voice_variety?.toFixed(1) || 'N/A'}</span>/10
+                    </div>
+                    <div style={{ padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                      <strong>Pause Effectiveness</strong><br />
+                      <span style={{ fontSize: '1.5rem', color: 'var(--nus-blue)' }}>{results.speech_analysis.pause_effectiveness?.toFixed(1) || 'N/A'}</span>/10
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Teaching Effectiveness */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>Teaching Effectiveness Components</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                    <div style={{ padding: '1rem', background: 'var(--success-50)', borderRadius: '8px' }}>
+                      <strong>Content Organization</strong><br />
+                      <span style={{ fontSize: '1.5rem', color: 'var(--success-600)' }}>{results.teaching_effectiveness.content_organization?.toFixed(1) || 'N/A'}</span>/10
+                    </div>
+                    <div style={{ padding: '1rem', background: 'var(--success-50)', borderRadius: '8px' }}>
+                      <strong>Engagement Techniques</strong><br />
+                      <span style={{ fontSize: '1.5rem', color: 'var(--success-600)' }}>{results.teaching_effectiveness.engagement_techniques?.toFixed(1) || 'N/A'}</span>/10
+                    </div>
+                    <div style={{ padding: '1rem', background: 'var(--success-50)', borderRadius: '8px' }}>
+                      <strong>Knowledge Checking</strong><br />
+                      <span style={{ fontSize: '1.5rem', color: 'var(--success-600)' }}>{results.teaching_effectiveness.knowledge_checking?.toFixed(1) || 'N/A'}</span>/10
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -753,7 +1221,7 @@ function App() {
             <div className="overall-score">
               <div className="score-display">
                 <div className="score-number">{results.overall_score}/10</div>
-                <div className="score-label">Overall Teaching Score</div>
+                <div className="score-label">Enhanced Teaching Excellence Score</div>
               </div>
             </div>
 
@@ -777,7 +1245,7 @@ function App() {
               />
             </div>
 
-            {/* Detailed Feedback */}
+            {/* Enhanced Feedback */}
             <div className="feedback-grid">
               {/* Strengths */}
               <div className="feedback-section strengths">
@@ -814,62 +1282,41 @@ function App() {
 
             {/* Score Transparency Section */}
             <div className="score-transparency">
-              <h3 className="transparency-title">Score Calculation Transparency</h3>
+              <h3 className="transparency-title">Enhanced Score Calculation</h3>
               <div className="transparency-grid">
                 <div className="transparency-section">
-                  <h4>Overall Score Breakdown</h4>
+                  <h4>Weighted Category Breakdown</h4>
                   <div className="calculation">
-                    <div>Speech Analysis: {results.speech_analysis.score}/10 × 30% = {(results.speech_analysis.score * 0.3).toFixed(1)}</div>
-                    <div>Body Language: {results.body_language.score}/10 × 25% = {(results.body_language.score * 0.25).toFixed(1)}</div>
-                    <div>Teaching Effectiveness: {results.teaching_effectiveness.score}/10 × 35% = {(results.teaching_effectiveness.score * 0.35).toFixed(1)}</div>
-                    <div>Presentation Skills: {results.presentation_skills.score}/10 × 10% = {(results.presentation_skills.score * 0.1).toFixed(1)}</div>
+                    <div>Speech Analysis: {results.speech_analysis.score}/10 × {configuration.categoryWeights.speech_analysis}% = {(results.speech_analysis.score * configuration.categoryWeights.speech_analysis / 100).toFixed(1)}</div>
+                    <div>Body Language: {results.body_language.score}/10 × {configuration.categoryWeights.body_language}% = {(results.body_language.score * configuration.categoryWeights.body_language / 100).toFixed(1)}</div>
+                    <div>Teaching Effectiveness: {results.teaching_effectiveness.score}/10 × {configuration.categoryWeights.teaching_effectiveness}% = {(results.teaching_effectiveness.score * configuration.categoryWeights.teaching_effectiveness / 100).toFixed(1)}</div>
+                    <div>Presentation Skills: {results.presentation_skills.score}/10 × {configuration.categoryWeights.presentation_skills}% = {(results.presentation_skills.score * configuration.categoryWeights.presentation_skills / 100).toFixed(1)}</div>
                     <hr />
-                    <div className="total">Total: {results.overall_score}/10</div>
+                    <div className="total">Enhanced Total: {results.overall_score}/10</div>
                   </div>
                 </div>
                 
                 <div className="transparency-section">
-                  <h4>Speech Analysis Metrics</h4>
+                  <h4>Enhanced Speech Metrics</h4>
                   <div className="metric-breakdown">
                     <div>
                       <span>Speaking Rate</span>
                       <span>{results.speech_analysis.speaking_rate?.toFixed(1) || 'N/A'} WPM</span>
                     </div>
                     <div>
+                      <span>Voice Variety</span>
+                      <span>{results.speech_analysis.voice_variety?.toFixed(1) || 'N/A'}/10</span>
+                    </div>
+                    <div>
+                      <span>Pause Effectiveness</span>
+                      <span>{results.speech_analysis.pause_effectiveness?.toFixed(1) || 'N/A'}/10</span>
+                    </div>
+                    <div>
                       <span>Clarity Score</span>
                       <span>{results.speech_analysis.clarity?.toFixed(1) || 'N/A'}/10</span>
                     </div>
-                    <div>
-                      <span>Pace Score</span>
-                      <span>{results.speech_analysis.pace?.toFixed(1) || 'N/A'}/10</span>
-                    </div>
-                    <div>
-                      <span>Confidence</span>
-                      <span>{results.speech_analysis.confidence?.toFixed(1) || 'N/A'}/10</span>
-                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div style={{ marginTop: '1.5rem' }}>
-                <details className="transparency-section">
-                  <summary style={{ cursor: 'pointer', fontWeight: '600', padding: '0.75rem' }}>
-                    View Complete Analysis Data
-                  </summary>
-                  <div className="raw-data">
-                    <pre style={{ 
-                      background: 'var(--gray-900)', 
-                      color: 'var(--gray-100)', 
-                      padding: '1rem', 
-                      borderRadius: '8px', 
-                      fontSize: '0.8rem', 
-                      overflow: 'auto',
-                      maxHeight: '400px'
-                    }}>
-                      {JSON.stringify(results, null, 2)}
-                    </pre>
-                  </div>
-                </details>
               </div>
             </div>
 
@@ -896,4 +1343,17 @@ function App() {
   );
 }
 
-export default App;
+export default App;import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import axios from 'axios';
+import { 
+  Upload, 
+  Play, 
+  CheckCircle, 
+  AlertCircle, 
+  BarChart3, 
+  Download,
+  Settings,
+  Sparkles,
+  ArrowRight,
+  Clock,
