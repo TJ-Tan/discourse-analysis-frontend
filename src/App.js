@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import { 
@@ -206,9 +206,8 @@ function App() {
     setConfigChanged(true);
   };
 
-  // Save configuration (placeholder for backend integration)
+  // Save configuration
   const saveConfiguration = () => {
-    // TODO: Send configuration to backend
     console.log('Saving configuration:', configuration);
     setConfigChanged(false);
     alert('Configuration saved successfully! Changes will apply to the next analysis.');
@@ -723,160 +722,6 @@ function App() {
               </div>
             </div>
 
-            {/* Visual Components */}
-            <div className="parameter-section">
-              <h3 className="parameter-title">Visual Analysis Sub-Components (%)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-                {Object.entries(configuration.visualComponents).map(([key, value]) => (
-                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
-                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.85rem' }}>
-                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </label>
-                    <input 
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={value}
-                      onChange={(e) => updateConfiguration('visualComponents', null, key, e.target.value)}
-                      style={{ 
-                        width: '100%', 
-                        marginTop: '0.5rem',
-                        padding: '0.5rem',
-                        border: '1px solid var(--gray-300)',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem'
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pedagogy Components */}
-            <div className="parameter-section">
-              <h3 className="parameter-title">Teaching Effectiveness Sub-Components (%)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                {Object.entries(configuration.pedagogyComponents).map(([key, value]) => (
-                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
-                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.85rem' }}>
-                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </label>
-                    <input 
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={value}
-                      onChange={(e) => updateConfiguration('pedagogyComponents', null, key, e.target.value)}
-                      style={{ 
-                        width: '100%', 
-                        marginTop: '0.5rem',
-                        padding: '0.5rem',
-                        border: '1px solid var(--gray-300)',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem'
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Threshold Configuration */}
-            <div className="parameter-section">
-              <h3 className="parameter-title">Performance Thresholds</h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {/* Speaking Rate Thresholds */}
-                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', fontSize: '1rem' }}>Speaking Rate (WPM)</h4>
-                  <div style={{ display: 'grid', gap: '0.5rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>Optimal Range</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input 
-                          type="number"
-                          placeholder="Min"
-                          value={configuration.thresholds.speaking_rate.optimal_min}
-                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'optimal_min', e.target.value)}
-                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
-                        />
-                        <input 
-                          type="number"
-                          placeholder="Max"
-                          value={configuration.thresholds.speaking_rate.optimal_max}
-                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'optimal_max', e.target.value)}
-                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>Acceptable Range</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input 
-                          type="number"
-                          placeholder="Min"
-                          value={configuration.thresholds.speaking_rate.acceptable_min}
-                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'acceptable_min', e.target.value)}
-                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
-                        />
-                        <input 
-                          type="number"
-                          placeholder="Max"
-                          value={configuration.thresholds.speaking_rate.acceptable_max}
-                          onChange={(e) => updateConfiguration('thresholds', 'speaking_rate', 'acceptable_max', e.target.value)}
-                          style={{ width: '50%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Filler Word Thresholds */}
-                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', fontSize: '1rem' }}>Filler Words (%)</h4>
-                  <div style={{ display: 'grid', gap: '0.5rem' }}>
-                    {Object.entries(configuration.thresholds.filler_ratio).map(([level, value]) => (
-                      <div key={level}>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>
-                          {level.charAt(0).toUpperCase() + level.slice(1)} Threshold
-                        </label>
-                        <input 
-                          type="number"
-                          step="0.1"
-                          value={value}
-                          onChange={(e) => updateConfiguration('thresholds', 'filler_ratio', level, e.target.value)}
-                          style={{ width: '100%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Visual Score Thresholds */}
-                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', border: '1px solid var(--gray-200)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: 'var(--nus-blue)', fontSize: '1rem' }}>Visual Scores (1-10)</h4>
-                  <div style={{ display: 'grid', gap: '0.5rem' }}>
-                    {Object.entries(configuration.thresholds.visual_scores).map(([level, value]) => (
-                      <div key={level}>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>
-                          {level.charAt(0).toUpperCase() + level.slice(1)} Threshold
-                        </label>
-                        <input 
-                          type="number"
-                          step="0.1"
-                          min="1"
-                          max="10"
-                          value={value}
-                          onChange={(e) => updateConfiguration('thresholds', 'visual_scores', level, e.target.value)}
-                          style={{ width: '100%', padding: '0.4rem', border: '1px solid var(--gray-300)', borderRadius: '4px', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Sampling Configuration */}
             <div className="parameter-section">
               <h3 className="parameter-title">Enhanced Sampling Configuration</h3>
@@ -922,26 +767,6 @@ function App() {
                   />
                   <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0.5rem 0 0 0' }}>
                     Maximum number of frames to analyze (higher = more detailed)
-                  </p>
-                </div>
-
-                <div style={{ padding: '1.5rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
-                  <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>
-                    Full Transcript Analysis
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <input 
-                      type="checkbox"
-                      checked={configuration.sampling.use_full_transcript}
-                      onChange={(e) => updateConfiguration('sampling', null, 'use_full_transcript', e.target.checked)}
-                      style={{ marginRight: '0.5rem' }}
-                    />
-                    <span style={{ fontSize: '0.9rem', color: 'var(--gray-700)' }}>
-                      Analyze complete transcript
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)', margin: '0.5rem 0 0 0' }}>
-                    Use full transcript instead of limiting to 3000 characters
                   </p>
                 </div>
               </div>
@@ -1152,13 +977,6 @@ function App() {
                   <span style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}> characters</span>
                 </div>
                 <div>
-                  <strong style={{ color: 'var(--nus-blue)' }}>Filler Words Detected:</strong><br />
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
-                    {results.configuration_used?.filler_words_detected || 0}
-                  </span>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}> types</span>
-                </div>
-                <div>
                   <strong style={{ color: 'var(--nus-blue)' }}>Analysis Mode:</strong><br />
                   <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--success-600)' }}>
                     Enhanced ✨
@@ -1343,17 +1161,4 @@ function App() {
   );
 }
 
-export default App;import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import axios from 'axios';
-import { 
-  Upload, 
-  Play, 
-  CheckCircle, 
-  AlertCircle, 
-  BarChart3, 
-  Download,
-  Settings,
-  Sparkles,
-  ArrowRight,
-  Clock,
+export default App;
