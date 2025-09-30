@@ -615,7 +615,7 @@ function App() {
         <div className="header">
           <div className="announcement-banner">
             <Sparkles size={16} />
-            <span>ENHANCED AI-POWERED DISCOURSE ANALYSIS</span>
+            <span>AI Media Tools Developed by CTLT</span>
             <ArrowRight size={16} />
           </div>
           <h1 className="title">Discourse Analysis with genAI</h1>
