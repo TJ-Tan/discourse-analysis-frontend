@@ -234,6 +234,7 @@ function App() {
       
       setAnalysisId(response.data.analysis_id);
       setUploadProgress(100);
+      setIsUploading(false); // ADD THIS LINE - Clear uploading state
       pollAnalysisStatus(response.data.analysis_id);
     } catch (error) {
       console.error('Upload failed:', error);
@@ -242,8 +243,7 @@ function App() {
       } else {
         alert('Upload failed. Please try again.');
       }
-    } finally {
-      setIsUploading(false);
+      setIsUploading(false); // Make sure this is here too
     }
   };
 
@@ -252,6 +252,7 @@ function App() {
     const checkStatus = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
+        console.log('Status response:', response.data); // ADD THIS
         setAnalysisStatus(response.data);
         
         if (response.data.status === 'completed') {
@@ -266,7 +267,7 @@ function App() {
         setTimeout(checkStatus, 1000);
       }
     };
-    
+  
     checkStatus();
   };
 
