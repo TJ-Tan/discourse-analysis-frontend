@@ -872,7 +872,7 @@ function App() {
           </div>
         )}
 
-        {/* Analysis Progress */}
+        {/* Analysis Progress - Detailed Step-by-Step */}
         {analysisStatus && analysisStatus.status === 'processing' && (
           <div className="progress-container">
             <div className="progress-header">
@@ -880,37 +880,100 @@ function App() {
               <h3 className="progress-title">Enhanced Analysis in Progress</h3>
             </div>
             
+            {/* Overall Progress */}
             <div className="progress-bar-container">
               <div 
                 className="progress-bar"
                 style={{ width: `${analysisStatus.progress || 0}%` }}
               ></div>
             </div>
-            
-            <div className="progress-text">{analysisStatus.message}</div>
             <div className="progress-percent">{analysisStatus.progress || 0}% Complete</div>
 
-            {/* Enhanced Processing Steps */}
-            <div className="processing-steps">
-              <h4>Enhanced Processing Pipeline</h4>
-              <div className="step-list">
-                {processingSteps.map((step) => {
-                  const status = getStepStatus(analysisStatus.progress || 0, step.minProgress);
-                  return (
-                    <div key={step.id} className={`step ${status}`}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div className="step-icon">
-                          {status === 'completed' ? '✓' : status === 'active' ? '⟳' : step.id}
-                        </div>
-                        <span>{step.label}</span>
-                      </div>
-                      <div>
-                        {status === 'completed' && <span className="checkmark">✓</span>}
-                        {status === 'active' && <Clock size={16} style={{ color: 'var(--nus-orange)' }} />}
-                      </div>
-                    </div>
-                  );
-                })}
+            {/* Detailed Step-by-Step Progress */}
+            <div className="detailed-steps">
+              {/* Step 1: Extraction */}
+              <div className={`detail-step ${analysisStatus.progress >= 10 ? 'active' : 'pending'} ${analysisStatus.progress >= 25 ? 'completed' : ''}`}>
+                <div className="step-header">
+                  <div className="step-number">1</div>
+                  <div className="step-title">Extracting Audio & Video Components</div>
+                  {analysisStatus.progress >= 25 && <CheckCircle size={20} className="step-check" />}
+                </div>
+                {analysisStatus.progress >= 10 && analysisStatus.progress < 25 && (
+                  <div className="step-progress-bar">
+                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 10) / 15) * 100}%`}}></div>
+                  </div>
+                )}
+                {analysisStatus.details?.step1 && (
+                  <div className="step-results">
+                    <div className="result-item">📹 Video Duration: {analysisStatus.details.step1.duration}</div>
+                    <div className="result-item">🖼️ Frames Extracted: {analysisStatus.details.step1.frames_extracted}</div>
+                    <div className="result-item">🎵 Audio: {analysisStatus.details.step1.audio_format}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Speech Analysis */}
+              <div className={`detail-step ${analysisStatus.progress >= 25 ? 'active' : 'pending'} ${analysisStatus.progress >= 55 ? 'completed' : ''}`}>
+                <div className="step-header">
+                  <div className="step-number">2</div>
+                  <div className="step-title">Analyzing Speech with Whisper AI</div>
+                  {analysisStatus.progress >= 55 && <CheckCircle size={20} className="step-check" />}
+                </div>
+                {analysisStatus.progress >= 25 && analysisStatus.progress < 55 && (
+                  <div className="step-progress-bar">
+                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 25) / 30) * 100}%`}}></div>
+                  </div>
+                )}
+                {analysisStatus.details?.step2 && (
+                  <div className="step-results">
+                    <div className="result-item">📝 Transcript: {analysisStatus.details.step2.transcript_length} characters</div>
+                    <div className="result-item">💬 Word Count: {analysisStatus.details.step2.word_count} words</div>
+                    <div className="result-item">🎤 Speaking Rate: {analysisStatus.details.step2.speaking_rate}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 3: Visual Analysis */}
+              <div className={`detail-step ${analysisStatus.progress >= 55 ? 'active' : 'pending'} ${analysisStatus.progress >= 75 ? 'completed' : ''}`}>
+                <div className="step-header">
+                  <div className="step-number">3</div>
+                  <div className="step-title">Analyzing Visual Elements (31 frames)</div>
+                  {analysisStatus.progress >= 75 && <CheckCircle size={20} className="step-check" />}
+                </div>
+                {analysisStatus.progress >= 55 && analysisStatus.progress < 75 && (
+                  <div className="step-progress-bar">
+                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 55) / 20) * 100}%`}}></div>
+                    <div className="mini-progress-text">Frame {Math.floor(((analysisStatus.progress - 55) / 20) * 31)}/31</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 4: Pedagogical Analysis */}
+              <div className={`detail-step ${analysisStatus.progress >= 75 ? 'active' : 'pending'} ${analysisStatus.progress >= 90 ? 'completed' : ''}`}>
+                <div className="step-header">
+                  <div className="step-number">4</div>
+                  <div className="step-title">Generating Pedagogical Insights</div>
+                  {analysisStatus.progress >= 90 && <CheckCircle size={20} className="step-check" />}
+                </div>
+                {analysisStatus.progress >= 75 && analysisStatus.progress < 90 && (
+                  <div className="step-progress-bar">
+                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 75) / 15) * 100}%`}}></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 5: Final Calculation */}
+              <div className={`detail-step ${analysisStatus.progress >= 90 ? 'active' : 'pending'} ${analysisStatus.progress >= 100 ? 'completed' : ''}`}>
+                <div className="step-header">
+                  <div className="step-number">5</div>
+                  <div className="step-title">Calculating Final Scores</div>
+                  {analysisStatus.progress >= 100 && <CheckCircle size={20} className="step-check" />}
+                </div>
+                {analysisStatus.progress >= 90 && analysisStatus.progress < 100 && (
+                  <div className="step-progress-bar">
+                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 90) / 10) * 100}%`}}></div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
