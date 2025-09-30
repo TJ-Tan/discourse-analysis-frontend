@@ -776,7 +776,7 @@ function App() {
         )}
 
         {/* Upload Section */}
-        {!analysisId && (
+        {(!analysisId || !analysisStatus) && !results && (
           <div className="upload-container">
             <div
               {...getRootProps()}
