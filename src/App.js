@@ -776,7 +776,7 @@ function App() {
         )}
 
         {/* Upload Section */}
-        {(!analysisId || !analysisStatus) && !results && (
+        {(!analysisId && !analysisStatus) && !results && (
           <div className="upload-container">
             <div
               {...getRootProps()}
@@ -873,7 +873,7 @@ function App() {
         )}
 
         {/* Analysis Progress - Detailed Step-by-Step */}
-        {analysisStatus && analysisStatus.status === 'processing' && (
+        {analysisStatus && analysisStatus.status === 'processing' && !results && (
           <div className="progress-container">
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
