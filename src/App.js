@@ -235,6 +235,14 @@ function App() {
       setAnalysisId(response.data.analysis_id);
       setUploadProgress(100);
       setIsUploading(false); // ADD THIS LINE - Clear uploading state
+
+      // Immediately set initial status to show progress UI
+      setAnalysisStatus({
+        status: 'processing',
+        progress: 5,
+        message: 'Starting analysis...'
+      });
+
       pollAnalysisStatus(response.data.analysis_id);
     } catch (error) {
       console.error('Upload failed:', error);
