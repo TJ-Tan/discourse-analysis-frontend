@@ -292,34 +292,43 @@ function App() {
 
   // Poll for analysis status
   const pollAnalysisStatus = async (id) => {
-  const checkStatus = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
-      console.log('Status response:', response.data);
-      
-      // Force state update using callback form
-      setAnalysisStatus(prevStatus => ({
-        ...response.data,
-        timestamp: Date.now() // Force React to recognize this as new
-      }));
-      
-      if (response.data.status === 'completed') {
-        setResults(response.data.results);
-        return; // Stop polling
-      } else if (response.data.status === 'processing') {
-        setTimeout(checkStatus, 500);
-      } else if (response.data.status === 'error') {
-        alert(`Analysis failed: ${response.data.message}`);
-        return; // Stop polling
+    let pollCount = 0;
+    
+    const checkStatus = async () => {
+      try {
+        pollCount++;
+        const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
+        console.log(`Poll #${pollCount} - Status response:`, response.data);
+        
+        // Create a completely new object to force React to detect the change
+        const newStatus = {
+          status: response.data.status,
+          progress: response.data.progress || 0,
+          message: response.data.message || '',
+          timestamp: Date.now() // Force React to see this as different
+        };
+        
+        console.log('Setting new status:', newStatus);
+        setAnalysisStatus(newStatus);
+        
+        if (response.data.status === 'completed') {
+          console.log('Analysis complete! Setting results...');
+          setResults(response.data.results);
+          return; // Stop polling
+        } else if (response.data.status === 'processing') {
+          setTimeout(checkStatus, 1000); // Poll every 1 second
+        } else if (response.data.status === 'error') {
+          alert(`Analysis failed: ${response.data.message}`);
+          return;
+        }
+      } catch (error) {
+        console.error('Status check failed:', error);
+        setTimeout(checkStatus, 2000); // Retry after 2 seconds on error
       }
-    } catch (error) {
-      console.error('Status check failed:', error);
-      setTimeout(checkStatus, 1000);
-    }
-  };
+    };
 
-  checkStatus();
-};
+    checkStatus();
+  };
 
   // Enhanced PDF export
   const exportToPDF = async () => {
