@@ -275,29 +275,6 @@ function App() {
       setIsUploading(false);
     }
   };
-      
-      setAnalysisId(response.data.analysis_id);
-      setUploadProgress(100);
-      setIsUploading(false); // ADD THIS LINE - Clear uploading state
-
-      // Immediately set initial status to show progress UI
-      setAnalysisStatus({
-        status: 'processing',
-        progress: 5,
-        message: 'Starting analysis...'
-      });
-
-      pollAnalysisStatus(response.data.analysis_id);
-    } catch (error) {
-      console.error('Upload failed:', error);
-      if (error.code === 'ECONNABORTED') {
-        alert('Upload timeout. Please try with a smaller file or check your connection.');
-      } else {
-        alert('Upload failed. Please try again.');
-      }
-      setIsUploading(false); // Make sure this is here too
-    }
-  };
 
   // Poll for analysis status
   const pollAnalysisStatus = async (id) => {
