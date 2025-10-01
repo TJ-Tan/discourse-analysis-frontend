@@ -229,6 +229,9 @@ function App() {
     if (!file) return;
 
     console.log('=== STARTING ANALYSIS ===');
+    console.log('File size:', file.size, 'bytes');
+    console.log('File type:', file.type);
+
     setIsUploading(true);
     setUploadProgress(0);
     const formData = new FormData();
@@ -236,17 +239,21 @@ function App() {
 
     try {
       console.log('Uploading file...');
+      console.log('Making request to:', `${API_BASE_URL}/upload-video`);
+
       const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 600000,
+        timeout: 600000, // 10 minutess
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
+          console.log('Upload progress:', percentCompleted + '%', `(${progressEvent.loaded}/${progressEvent.total} bytes)`);
         }
       });
       
-      console.log('Upload complete, response:', response.data);
-      console.log('Setting analysisId:', response.data.analysis_id);
+      console.log('✅ Upload complete! Response:', response.data);
+      console.log('Analysis ID:', response.data.analysis_id);
+
       setAnalysisId(response.data.analysis_id);
       
       console.log('Setting uploadProgress to 100');
@@ -266,11 +273,18 @@ function App() {
       pollAnalysisStatus(response.data.analysis_id);
 
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('❌ Upload failed!');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Error response:', error.response);
+
       if (error.code === 'ECONNABORTED') {
         alert('Upload timeout. Please try with a smaller file or check your connection.');
+      } else if (error.response) {
+        alert(`Upload failed: ${error.response.data?.detail || error.response.statusText}`);
       } else {
-        alert('Upload failed. Please try again.');
+        alert(`Upload failed: ${error.message}`);
       }
       setIsUploading(false);
     }
