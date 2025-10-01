@@ -35,7 +35,7 @@ function App() {
   const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
-  
+
   console.log('=== RENDER STATE ===', { 
     analysisId, 
     analysisStatusExists: !!analysisStatus,
@@ -263,16 +263,18 @@ function App() {
       });
 
       console.log('Starting polling...');
+      pollAnalysisStatus(response.data.analysis_id);
 
-    try {
-      const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 600000,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
-        }
-      });
+    } catch (error) {
+      console.error('Upload failed:', error);
+      if (error.code === 'ECONNABORTED') {
+        alert('Upload timeout. Please try with a smaller file or check your connection.');
+      } else {
+        alert('Upload failed. Please try again.');
+      }
+      setIsUploading(false);
+    }
+  };
       
       setAnalysisId(response.data.analysis_id);
       setUploadProgress(100);
