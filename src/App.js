@@ -35,6 +35,17 @@ function App() {
   const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
+  
+  console.log('=== RENDER STATE ===', { 
+    analysisId, 
+    analysisStatusExists: !!analysisStatus,
+    analysisStatusValue: analysisStatus?.status,
+    analysisProgress: analysisStatus?.progress,
+    resultsExist: !!results,
+    showUploadSection: !analysisId && !analysisStatus && !results,
+    showProgressSection: analysisId && analysisStatus && analysisStatus.status === 'processing' && !results,
+    showResultsSection: !!results
+  });
 
   // Enhanced configuration state
   const [configuration, setConfiguration] = useState({
@@ -217,10 +228,41 @@ function App() {
   const startAnalysis = async () => {
     if (!file) return;
 
+    console.log('=== STARTING ANALYSIS ===');
     setIsUploading(true);
     setUploadProgress(0);
     const formData = new FormData();
     formData.append('file', file);
+
+    try {
+      console.log('Uploading file...');
+      const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 600000,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+      
+      console.log('Upload complete, response:', response.data);
+      console.log('Setting analysisId:', response.data.analysis_id);
+      setAnalysisId(response.data.analysis_id);
+      
+      console.log('Setting uploadProgress to 100');
+      setUploadProgress(100);
+      
+      console.log('Setting isUploading to false');
+      setIsUploading(false);
+
+      console.log('Setting initial analysisStatus');
+      setAnalysisStatus({
+        status: 'processing',
+        progress: 5,
+        message: 'Starting analysis...'
+      });
+
+      console.log('Starting polling...');
 
     try {
       const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
