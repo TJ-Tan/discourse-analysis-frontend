@@ -895,7 +895,7 @@ function App() {
                     <div className="progress-bar-container">
                       <div 
                         className="progress-bar"
-                        style={{ width: `${analysisStatus.progress || 0}%` }}
+                        style={{ width: `${analysisStatus?.progress || 0}%` }}
                       ></div>
                     </div>
                     <p className="progress-text">Uploading: {uploadProgress}%</p>
@@ -934,23 +934,23 @@ function App() {
             <div className="progress-bar-container">
               <div 
                 className="progress-bar"
-                style={{ width: `${analysisStatus.progress || 0}%` }}
+                style={{ width: `${analysisStatus?.progress || 0}%` }}
               ></div>
             </div>
-            <div className="progress-percent">{analysisStatus.progress || 0}% Complete</div>
+            <div className="progress-percent">{analysisStatus?.progress || 0}% Complete</div>
 
             {/* Detailed Step-by-Step Progress */}
             <div className="detailed-steps">
               {/* Step 1: Extraction */}
-              <div className={`detail-step ${analysisStatus.progress >= 10 ? 'active' : 'pending'} ${analysisStatus.progress >= 25 ? 'completed' : ''}`}>
+              <div className={`detail-step ${analysisStatus?.progress >= 10 ? 'active' : 'pending'} ${analysisStatus?.progress >= 25 ? 'completed' : ''}`}>
                 <div className="step-header">
                   <div className="step-number">1</div>
                   <div className="step-title">Extracting Audio & Video Components</div>
-                  {analysisStatus.progress >= 25 && <CheckCircle size={20} className="step-check" />}
+                  {analysisStatus?.progress >= 25 && <CheckCircle size={20} className="step-check" />}
                 </div>
-                {analysisStatus.progress >= 10 && analysisStatus.progress < 25 && (
+                {analysisStatus?.progress >= 10 && analysisStatus?.progress < 25 && (
                   <div className="step-progress-bar">
-                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 10) / 15) * 100}%`}}></div>
+                    <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 10) / 15) * 100}%`}}></div>
                   </div>
                 )}
                 {analysisStatus.details?.step1 && (
@@ -963,15 +963,15 @@ function App() {
               </div>
 
               {/* Step 2: Speech Analysis */}
-              <div className={`detail-step ${analysisStatus.progress >= 25 ? 'active' : 'pending'} ${analysisStatus.progress >= 55 ? 'completed' : ''}`}>
+              <div className={`detail-step ${analysisStatus?.progress >= 25 ? 'active' : 'pending'} ${analysisStatus?.progress >= 55 ? 'completed' : ''}`}>
                 <div className="step-header">
                   <div className="step-number">2</div>
                   <div className="step-title">Analyzing Speech with Whisper AI</div>
-                  {analysisStatus.progress >= 55 && <CheckCircle size={20} className="step-check" />}
+                  {analysisStatus?.progress >= 55 && <CheckCircle size={20} className="step-check" />}
                 </div>
-                {analysisStatus.progress >= 25 && analysisStatus.progress < 55 && (
+                {analysisStatus?.progress >= 25 && analysisStatus?.progress < 55 && (
                   <div className="step-progress-bar">
-                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 25) / 30) * 100}%`}}></div>
+                    <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 25) / 30) * 100}%`}}></div>
                   </div>
                 )}
                 {analysisStatus.details?.step2 && (
@@ -984,44 +984,44 @@ function App() {
               </div>
 
               {/* Step 3: Visual Analysis */}
-              <div className={`detail-step ${analysisStatus.progress >= 55 ? 'active' : 'pending'} ${analysisStatus.progress >= 75 ? 'completed' : ''}`}>
+              <div className={`detail-step ${analysisStatus?.progress >= 55 ? 'active' : 'pending'} ${analysisStatus?.progress >= 75 ? 'completed' : ''}`}>
                 <div className="step-header">
                   <div className="step-number">3</div>
                   <div className="step-title">Analyzing Visual Elements (31 frames)</div>
-                  {analysisStatus.progress >= 75 && <CheckCircle size={20} className="step-check" />}
+                  {analysisStatus?.progress >= 75 && <CheckCircle size={20} className="step-check" />}
                 </div>
-                {analysisStatus.progress >= 55 && analysisStatus.progress < 75 && (
+                {analysisStatus?.progress >= 55 && analysisStatus?.progress < 75 && (
                   <div className="step-progress-bar">
-                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 55) / 20) * 100}%`}}></div>
-                    <div className="mini-progress-text">Frame {Math.floor(((analysisStatus.progress - 55) / 20) * 31)}/31</div>
+                    <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 55) / 20) * 100}%`}}></div>
+                    <div className="mini-progress-text">Frame {Math.floor(((analysisStatus?.progress - 55) / 20) * 31)}/31</div>
                   </div>
                 )}
               </div>
 
               {/* Step 4: Pedagogical Analysis */}
-              <div className={`detail-step ${analysisStatus.progress >= 75 ? 'active' : 'pending'} ${analysisStatus.progress >= 90 ? 'completed' : ''}`}>
+              <div className={`detail-step ${analysisStatus?.progress >= 75 ? 'active' : 'pending'} ${analysisStatus?.progress >= 90 ? 'completed' : ''}`}>
                 <div className="step-header">
                   <div className="step-number">4</div>
                   <div className="step-title">Generating Pedagogical Insights</div>
-                  {analysisStatus.progress >= 90 && <CheckCircle size={20} className="step-check" />}
+                  {analysisStatus?.progress >= 90 && <CheckCircle size={20} className="step-check" />}
                 </div>
-                {analysisStatus.progress >= 75 && analysisStatus.progress < 90 && (
+                {analysisStatus?.progress >= 75 && analysisStatus?.progress < 90 && (
                   <div className="step-progress-bar">
-                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 75) / 15) * 100}%`}}></div>
+                    <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 75) / 15) * 100}%`}}></div>
                   </div>
                 )}
               </div>
 
               {/* Step 5: Final Calculation */}
-              <div className={`detail-step ${analysisStatus.progress >= 90 ? 'active' : 'pending'} ${analysisStatus.progress >= 100 ? 'completed' : ''}`}>
+              <div className={`detail-step ${analysisStatus?.progress >= 90 ? 'active' : 'pending'} ${analysisStatus?.progress >= 100 ? 'completed' : ''}`}>
                 <div className="step-header">
                   <div className="step-number">5</div>
                   <div className="step-title">Calculating Final Scores</div>
-                  {analysisStatus.progress >= 100 && <CheckCircle size={20} className="step-check" />}
+                  {analysisStatus?.progress >= 100 && <CheckCircle size={20} className="step-check" />}
                 </div>
-                {analysisStatus.progress >= 90 && analysisStatus.progress < 100 && (
+                {analysisStatus?.progress >= 90 && analysisStatus?.progress < 100 && (
                   <div className="step-progress-bar">
-                    <div className="mini-progress" style={{width: `${((analysisStatus.progress - 90) / 10) * 100}%`}}></div>
+                    <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 90) / 10) * 100}%`}}></div>
                   </div>
                 )}
               </div>
