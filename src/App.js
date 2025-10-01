@@ -292,27 +292,34 @@ function App() {
 
   // Poll for analysis status
   const pollAnalysisStatus = async (id) => {
-    const checkStatus = async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
-        console.log('Status response:', response.data); // ADD THIS
-        setAnalysisStatus(response.data);
-        
-        if (response.data.status === 'completed') {
-          setResults(response.data.results);
-        } else if (response.data.status === 'processing') {
-          setTimeout(checkStatus, 500);
-        } else if (response.data.status === 'error') {
-          alert(`Analysis failed: ${response.data.message}`);
-        }
-      } catch (error) {
-        console.error('Status check failed:', error);
-        setTimeout(checkStatus, 1000);
+  const checkStatus = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
+      console.log('Status response:', response.data);
+      
+      // Force state update using callback form
+      setAnalysisStatus(prevStatus => ({
+        ...response.data,
+        timestamp: Date.now() // Force React to recognize this as new
+      }));
+      
+      if (response.data.status === 'completed') {
+        setResults(response.data.results);
+        return; // Stop polling
+      } else if (response.data.status === 'processing') {
+        setTimeout(checkStatus, 500);
+      } else if (response.data.status === 'error') {
+        alert(`Analysis failed: ${response.data.message}`);
+        return; // Stop polling
       }
-    };
-  
-    checkStatus();
+    } catch (error) {
+      console.error('Status check failed:', error);
+      setTimeout(checkStatus, 1000);
+    }
   };
+
+  checkStatus();
+};
 
   // Enhanced PDF export
   const exportToPDF = async () => {
@@ -888,7 +895,7 @@ function App() {
                     <div className="progress-bar-container">
                       <div 
                         className="progress-bar"
-                        style={{ width: `${uploadProgress}%` }}
+                        style={{ width: `${analysisStatus.progress || 0}%` }}
                       ></div>
                     </div>
                     <p className="progress-text">Uploading: {uploadProgress}%</p>
