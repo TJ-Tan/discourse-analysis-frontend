@@ -47,6 +47,11 @@ function App() {
     showResultsSection: !!results
   });
 
+  // ADD THIS NEW LOG:
+  if (analysisStatus) {
+    console.log('🔍 analysisStatus FULL OBJECT:', analysisStatus);
+  }
+
   // Enhanced configuration state
   const [configuration, setConfiguration] = useState({
     // Category weights
@@ -932,8 +937,8 @@ function App() {
         )}
 
         {/* Analysis Progress - Detailed Step-by-Step */}
-        {analysisId && analysisStatus && analysisStatus.status === 'processing' && !results && (
-          <div className="progress-container">
+        {analysisId && analysisStatus && analysisStatus?.status === 'processing' && !results && (
+          <div className="progress-container" key={analysisStatus?.timestamp}>
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
               <h3 className="progress-title">Enhanced Analysis in Progress</h3>
