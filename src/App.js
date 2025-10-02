@@ -36,6 +36,8 @@ function App() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
 
+  console.log('FILE LOADED VERSION 2');
+  
   console.log('=== RENDER STATE ===', { 
     analysisId, 
     analysisStatusExists: !!analysisStatus,
@@ -324,10 +326,12 @@ function App() {
 
   // Poll for analysis status
   const pollAnalysisStatus = async (id) => {
+    console.log('🔵 ENTERED pollAnalysisStatus, id:', id);
     let pollCount = 0;
-    let pollInterval = null; // Declare outside
+    let pollInterval = null;
     
     const checkStatus = async () => {
+      console.log('🟢 ENTERED checkStatus');
       try {
         // Clear simulated progress when real data arrives
         if (window.progressSimulator) {
@@ -369,6 +373,10 @@ function App() {
     // Initial check immediately
     const shouldStop = await checkStatus();
     
+    console.log('🟡 About to call checkStatus for first time');
+    const shouldStop = await checkStatus();
+    console.log('🟡 checkStatus returned:', shouldStop);
+
     // Only start interval if not already complete
     if (!shouldStop) {
       pollInterval = setInterval(async () => {
