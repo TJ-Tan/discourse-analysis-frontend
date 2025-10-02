@@ -276,7 +276,15 @@ function App() {
       setUploadProgress(100);
       setIsUploading(false);
 
-      // Start polling immediately without setting initial status
+      // Set initial status to show analysis is starting
+      setAnalysisStatus({
+        status: 'processing',
+        progress: 0,
+        message: 'Starting enhanced analysis...',
+        timestamp: Date.now()
+      });
+
+      // Start polling immediately
       console.log('Starting polling for ID:', newAnalysisId);
       pollAnalysisStatus(newAnalysisId);
 
