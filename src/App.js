@@ -982,11 +982,11 @@ function App() {
                     <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 10) / 15) * 100}%`}}></div>
                   </div>
                 )}
-                {analysisStatus.details?.step1 && (
+                {analysisStatus?.details?.step1 && (
                   <div className="step-results">
-                    <div className="result-item">📹 Video Duration: {analysisStatus.details.step1.duration}</div>
-                    <div className="result-item">🖼️ Frames Extracted: {analysisStatus.details.step1.frames_extracted}</div>
-                    <div className="result-item">🎵 Audio: {analysisStatus.details.step1.audio_format}</div>
+                    <div className="result-item">📹 Video Duration: {analysisStatus?.details.step1.duration}</div>
+                    <div className="result-item">🖼️ Frames Extracted: {analysisStatus?.details.step1.frames_extracted}</div>
+                    <div className="result-item">🎵 Audio: {analysisStatus?.details.step1.audio_format}</div>
                   </div>
                 )}
               </div>
@@ -1003,11 +1003,11 @@ function App() {
                     <div className="mini-progress" style={{width: `${((analysisStatus?.progress - 25) / 30) * 100}%`}}></div>
                   </div>
                 )}
-                {analysisStatus.details?.step2 && (
+                {analysisStatus?.details?.step2 && (
                   <div className="step-results">
-                    <div className="result-item">📝 Transcript: {analysisStatus.details.step2.transcript_length} characters</div>
-                    <div className="result-item">💬 Word Count: {analysisStatus.details.step2.word_count} words</div>
-                    <div className="result-item">🎤 Speaking Rate: {analysisStatus.details.step2.speaking_rate}</div>
+                    <div className="result-item">📝 Transcript: {analysisStatus?.details.step2.transcript_length} characters</div>
+                    <div className="result-item">💬 Word Count: {analysisStatus?.details.step2.word_count} words</div>
+                    <div className="result-item">🎤 Speaking Rate: {analysisStatus?.details.step2.speaking_rate}</div>
                   </div>
                 )}
               </div>
