@@ -952,7 +952,7 @@ function App() {
         )}
 
         {/* Analysis Progress - Detailed Step-by-Step */}
-        {analysisId && analysisStatus && analysisStatus?.status === 'processing' && !results && (
+        {analysisId && !results && (
           <div className="progress-container" key={analysisStatus?.timestamp}>
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
