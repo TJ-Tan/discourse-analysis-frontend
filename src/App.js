@@ -365,7 +365,9 @@ function App() {
         }
         return false;
       } catch (error) {
-        console.error('Status check failed:', error);
+        console.error('❌ Status check failed:', error);
+        console.error('❌ Error details:', error.message);
+        console.error('❌ Error response:', error.response);  
         return false;
       }
     };
