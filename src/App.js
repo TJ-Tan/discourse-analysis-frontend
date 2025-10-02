@@ -924,7 +924,7 @@ function App() {
                     <div className="progress-bar-container">
                       <div 
                         className="progress-bar"
-                        style={{ width: `${analysisStatus?.progress || 0}%` }}
+                        style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
                     <p className="progress-text">Uploading: {uploadProgress}%</p>
