@@ -276,18 +276,9 @@ function App() {
       setUploadProgress(100);
       setIsUploading(false);
 
-      setTimeout(() => {
-        console.log('Setting initial analysisStatus...');
-        setAnalysisStatus({
-          status: 'processing',
-          progress: 5,
-          message: 'Starting analysis...',
-          timestamp: Date.now()
-        });
-        
-        console.log('Starting polling for ID:', newAnalysisId);
-        pollAnalysisStatus(newAnalysisId);
-      }, 100);
+      // Start polling immediately without setting initial status
+      console.log('Starting polling for ID:', newAnalysisId);
+      pollAnalysisStatus(newAnalysisId);
 
     } catch (error) {
       console.error('❌ Upload failed!');
