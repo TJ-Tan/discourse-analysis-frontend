@@ -284,6 +284,22 @@ function App() {
         timestamp: Date.now()
       });
 
+      // Simulate progress updates while waiting for backend
+      let simulatedProgress = 0;
+      const progressSimulator = setInterval(() => {
+        simulatedProgress += 5;
+        if (simulatedProgress < 95) {
+          setAnalysisStatus(prev => ({
+            ...prev,
+            progress: simulatedProgress,
+            message: `Processing... ${simulatedProgress}%`
+          }));
+        }
+      }, 2000); // Update every 2 seconds
+      
+      // Store interval ID to clear it when real progress arrives
+      window.progressSimulator = progressSimulator;
+      
       // Start polling immediately
       console.log('Starting polling for ID:', newAnalysisId);
       pollAnalysisStatus(newAnalysisId);
@@ -313,6 +329,12 @@ function App() {
     
     const checkStatus = async () => {
       try {
+        // Clear simulated progress when real data arrives
+        if (window.progressSimulator) {
+          clearInterval(window.progressSimulator);
+          window.progressSimulator = null;
+        }
+
         pollCount++;
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
         console.log(`Poll #${pollCount} - Status response:`, response.data);
