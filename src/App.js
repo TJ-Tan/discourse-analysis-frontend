@@ -37,7 +37,7 @@ function App() {
   const [configChanged, setConfigChanged] = useState(false);
 
   console.log('FILE LOADED VERSION 2');
-  
+
   console.log('=== RENDER STATE ===', { 
     analysisId, 
     analysisStatusExists: !!analysisStatus,
@@ -371,8 +371,6 @@ function App() {
     };
 
     // Initial check immediately
-    const shouldStop = await checkStatus();
-    
     console.log('🟡 About to call checkStatus for first time');
     const shouldStop = await checkStatus();
     console.log('🟡 checkStatus returned:', shouldStop);
