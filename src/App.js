@@ -259,23 +259,25 @@ function App() {
       console.log('✅ Upload complete! Response:', response.data);
       console.log('Analysis ID:', response.data.analysis_id);
 
-      setAnalysisId(response.data.analysis_id);
-      
-      console.log('Setting uploadProgress to 100');
+      const newAnalysisId = response.data.analysis_id;
+
+      // Set all states in sequence
+      setAnalysisId(newAnalysisId);
       setUploadProgress(100);
-      
-      console.log('Setting isUploading to false');
       setIsUploading(false);
 
-      console.log('Setting initial analysisStatus');
-      setAnalysisStatus({
-        status: 'processing',
-        progress: 5,
-        message: 'Starting analysis...'
-      });
-
-      console.log('Starting polling...');
-      pollAnalysisStatus(response.data.analysis_id);
+      // Set initial status with a slight delay to ensure state updates
+      setTimeout(() => {
+        setAnalysisStatus({
+          status: 'processing',
+          progress: 5,
+          message: 'Starting analysis...',
+          timestamp: Date.now()
+        });
+        
+        console.log('Starting polling for ID:', newAnalysisId);
+        pollAnalysisStatus(newAnalysisId);
+      }, 100);
 
     } catch (error) {
       console.error('❌ Upload failed!');
