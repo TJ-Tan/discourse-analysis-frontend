@@ -256,18 +256,28 @@ function App() {
         }
       });
       
+      console.log('=== UPLOAD FINISHED ===');
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
+
+      if (!response.data || !response.data.analysis_id) {
+        console.error('❌ No analysis_id in response!');
+        alert('Upload succeeded but no analysis ID received. Please try again.');
+        setIsUploading(false);
+        return;
+      }
+
       console.log('✅ Upload complete! Response:', response.data);
       console.log('Analysis ID:', response.data.analysis_id);
 
       const newAnalysisId = response.data.analysis_id;
 
-      // Set all states in sequence
       setAnalysisId(newAnalysisId);
       setUploadProgress(100);
       setIsUploading(false);
 
-      // Set initial status with a slight delay to ensure state updates
       setTimeout(() => {
+        console.log('Setting initial analysisStatus...');
         setAnalysisStatus({
           status: 'processing',
           progress: 5,
