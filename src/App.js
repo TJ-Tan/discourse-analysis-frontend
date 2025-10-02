@@ -278,31 +278,7 @@ function App() {
       setUploadProgress(100);
       setIsUploading(false);
 
-      // Set initial status to show analysis is starting
-      setAnalysisStatus({
-        status: 'processing',
-        progress: 10, // ← Now starts at 10% immediately!
-        message: 'Extracting audio and video components...',
-        timestamp: Date.now()
-      });
-
-      // Simulate progress updates while waiting for backend
-      let simulatedProgress = 10;
-      const progressSimulator = setInterval(() => {
-        simulatedProgress += 5;
-        if (simulatedProgress < 95) {
-          setAnalysisStatus(prev => ({
-            ...prev,
-            progress: simulatedProgress,
-            message: `Processing... ${simulatedProgress}%`
-          }));
-        }
-      }, 2000); // Update every 2 seconds
-      
-      // Store interval ID to clear it when real progress arrives
-      window.progressSimulator = progressSimulator;
-      
-      // Start polling immediately
+      // Just start polling immediately - backend will send real progress
       console.log('Starting polling for ID:', newAnalysisId);
       pollAnalysisStatus(newAnalysisId);
 
@@ -333,11 +309,6 @@ function App() {
     const checkStatus = async () => {
       console.log('🟢 ENTERED checkStatus');
       try {
-        // Clear simulated progress when real data arrives
-        if (window.progressSimulator) {
-          clearInterval(window.progressSimulator);
-          window.progressSimulator = null;
-        }
 
         pollCount++;
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
