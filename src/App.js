@@ -279,13 +279,13 @@ function App() {
       // Set initial status to show analysis is starting
       setAnalysisStatus({
         status: 'processing',
-        progress: 0,
-        message: 'Starting enhanced analysis...',
+        progress: 10, // ← Now starts at 10% immediately!
+        message: 'Extracting audio and video components...',
         timestamp: Date.now()
       });
 
       // Simulate progress updates while waiting for backend
-      let simulatedProgress = 0;
+      let simulatedProgress = 10;
       const progressSimulator = setInterval(() => {
         simulatedProgress += 5;
         if (simulatedProgress < 95) {
