@@ -308,54 +308,56 @@ function App() {
   };
 
   // Poll for analysis status
-  // Poll for analysis status
-const pollAnalysisStatus = async (id) => {
-  let pollCount = 0;
-  
-  const checkStatus = async () => {
-    try {
-      pollCount++;
-      const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
-      console.log(`Poll #${pollCount} - Status response:`, response.data);
-      
-      const newStatus = {
-        status: response.data.status,
-        progress: response.data.progress || 0,
-        message: response.data.message || '',
-        timestamp: Date.now()
-      };
-      
-      console.log('Setting new status:', newStatus);
-      setAnalysisStatus(newStatus);
-      
-      if (response.data.status === 'completed') {
-        console.log('Analysis complete! Setting results...');
-        setResults(response.data.results);
-        clearInterval(pollInterval); // Stop polling
-        return true;
-      } else if (response.data.status === 'error') {
-        alert(`Analysis failed: ${response.data.message}`);
-        clearInterval(pollInterval); // Stop polling
-        return true;
+  const pollAnalysisStatus = async (id) => {
+    let pollCount = 0;
+    let pollInterval = null; // Declare outside
+    
+    const checkStatus = async () => {
+      try {
+        pollCount++;
+        const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
+        console.log(`Poll #${pollCount} - Status response:`, response.data);
+        
+        const newStatus = {
+          status: response.data.status,
+          progress: response.data.progress || 0,
+          message: response.data.message || '',
+          timestamp: Date.now()
+        };
+        
+        console.log('Setting new status:', newStatus);
+        setAnalysisStatus(newStatus);
+        
+        if (response.data.status === 'completed') {
+          console.log('Analysis complete! Setting results...');
+          setResults(response.data.results);
+          if (pollInterval) clearInterval(pollInterval);
+          return true;
+        } else if (response.data.status === 'error') {
+          alert(`Analysis failed: ${response.data.message}`);
+          if (pollInterval) clearInterval(pollInterval);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Status check failed:', error);
+        return false;
       }
-      return false;
-    } catch (error) {
-      console.error('Status check failed:', error);
-      return false;
+    };
+
+    // Initial check immediately
+    const shouldStop = await checkStatus();
+    
+    // Only start interval if not already complete
+    if (!shouldStop) {
+      pollInterval = setInterval(async () => {
+        const done = await checkStatus();
+        if (done && pollInterval) {
+          clearInterval(pollInterval);
+        }
+      }, 300); // Poll every 300ms for faster updates
     }
   };
-
-  // Initial check
-  await checkStatus();
-  
-  // Set up interval for continuous polling
-  const pollInterval = setInterval(async () => {
-    const shouldStop = await checkStatus();
-    if (shouldStop) {
-      clearInterval(pollInterval);
-    }
-  }, 500); // Poll every 500ms
-};
 
   // Enhanced PDF export
   const exportToPDF = async () => {
