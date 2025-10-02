@@ -1638,3 +1638,143 @@ body {
     padding: 0.4rem 0.8rem;
   }
 }
+
+/* Add these styles to your App.css */
+
+/* Pulse animation for live indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* Custom scrollbar for log container */
+.log-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Log message styling */
+.log-message {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #334155;
+  transition: background-color 0.3s ease;
+}
+
+.log-message:last-child {
+  border-bottom: none;
+}
+
+.log-message:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  padding-left: 0.5rem;
+  margin-left: -0.5rem;
+  border-radius: 4px;
+}
+
+/* Log timestamp */
+.log-timestamp {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Log progress indicator */
+.log-progress {
+  color: #3b82f6;
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+.log-progress.complete {
+  color: #10b981;
+}
+
+/* Log text */
+.log-text {
+  margin-left: 0.5rem;
+  color: #f1f5f9;
+}
+
+/* Live indicator dot */
+.live-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+/* Server logs container */
+.server-logs-container {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #1e293b;
+  border-radius: 12px;
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.server-logs-header {
+  margin: 0 0 1rem 0;
+  color: #f1f5f9;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.server-logs-content {
+  flex: 1;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #e2e8f0;
+  padding-right: 0.5rem;
+}
+
+/* Empty state */
+.log-empty-state {
+  color: #94a3b8;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .server-logs-container {
+    max-height: 300px;
+    padding: 1rem;
+  }
+
+  .server-logs-content {
+    font-size: 0.75rem;
+  }
+}
