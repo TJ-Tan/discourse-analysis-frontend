@@ -262,6 +262,13 @@ function App() {
         pollCount++;
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
         
+        // DEBUG: Log the entire response
+        console.log('📡 Poll #' + pollCount + ' Response:', response.data);
+        console.log('📝 Has log_messages?', 'log_messages' in response.data);
+        console.log('📝 log_messages type:', typeof response.data.log_messages);
+        console.log('📝 log_messages length:', response.data.log_messages?.length);
+        console.log('📝 log_messages content:', response.data.log_messages);
+        
         const newStatus = {
           status: response.data.status,
           progress: response.data.progress || 0,
@@ -273,7 +280,10 @@ function App() {
         
         // Update log messages if available
         if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
+          console.log('✅ Setting log messages:', response.data.log_messages.length);
           setLogMessages(response.data.log_messages);
+        } else {
+          console.log('❌ No valid log_messages array found');
         }
         
         if (response.data.status === 'completed') {
@@ -287,7 +297,7 @@ function App() {
         }
         return false;
       } catch (error) {
-        console.error('Status check failed:', error);
+        console.error('❌ Status check failed:', error);
         return false;
       }
     };
