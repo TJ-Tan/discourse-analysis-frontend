@@ -234,11 +234,14 @@ function App() {
       }
 
       const newAnalysisId = response.data.analysis_id;
+      
+      // Start polling IMMEDIATELY before state updates
+      pollAnalysisStatus(newAnalysisId);
+      
+      // Then update state
       setAnalysisId(newAnalysisId);
       setUploadProgress(100);
       setIsUploading(false);
-
-      pollAnalysisStatus(newAnalysisId);
 
     } catch (error) {
       if (error.code === 'ECONNABORTED') {
@@ -287,12 +290,20 @@ function App() {
         }
         
         if (response.data.status === 'completed') {
+          console.log('🏁 Analysis completed, stopping poll');
           setResults(response.data.results);
-          if (pollInterval) clearInterval(pollInterval);
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
           return true;
         } else if (response.data.status === 'error') {
+          console.log('❌ Analysis error, stopping poll');
           alert(`Analysis failed: ${response.data.message}`);
-          if (pollInterval) clearInterval(pollInterval);
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
           return true;
         }
         return false;
@@ -302,15 +313,21 @@ function App() {
       }
     };
 
-    const shouldStop = await checkStatus();
-
-    if (!shouldStop) {
-      pollInterval = setInterval(async () => {
-        const done = await checkStatus();
-        if (done && pollInterval) {
-          clearInterval(pollInterval);
-        }
-      }, 300);
+    // Start interval IMMEDIATELY, don't wait for first check
+    console.log('🚀 Starting polling for analysis:', id);
+    pollInterval = setInterval(async () => {
+      const done = await checkStatus();
+      if (done && pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }, 200); // Poll every 200ms for faster updates
+    
+    // Also do initial check immediately
+    const initialCheck = await checkStatus();
+    if (initialCheck && pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
     }
   };
 
