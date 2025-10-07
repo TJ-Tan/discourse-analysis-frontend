@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = 'https://discourse-analysis-backend.up.railway.app';
+const API_BASE_URL = 'discourse-analysis-duplicated-production.up.railway.app';
 
 function App() {
   const [file, setFile] = useState(null);
