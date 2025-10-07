@@ -255,85 +255,49 @@ function App() {
     }
   };
 
-  // Poll for analysis status
+  // Poll for analysis status - Simple version that just fetches every 2 seconds
   const pollAnalysisStatus = async (id) => {
     let pollCount = 0;
-    let pollInterval = null;
-    let shouldStop = false; // Flag to stop polling
     
-    const checkStatus = async () => {
-      if (shouldStop) return true; // Already stopped
-      
+    console.log('🚀 Starting simple polling every 2 seconds for:', id);
+    
+    const pollInterval = setInterval(async () => {
       try {
         pollCount++;
+        console.log(`📡 Poll #${pollCount} at ${new Date().toLocaleTimeString()}`);
+        
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
         
-        // DEBUG: Log the entire response
-        console.log('📡 Poll #' + pollCount + ' Response:', response.data);
-        console.log('📝 log_messages length:', response.data.log_messages?.length);
-        
-        const newStatus = {
+        // Always update status
+        setAnalysisStatus({
           status: response.data.status,
           progress: response.data.progress || 0,
           message: response.data.message || '',
           timestamp: Date.now()
-        };
+        });
         
-        setAnalysisStatus(newStatus);
-        
-        // Update log messages if available
+        // Always update log messages if they exist
         if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
-          console.log('✅ Setting log messages:', response.data.log_messages.length);
+          console.log(`✅ Got ${response.data.log_messages.length} log messages`);
           setLogMessages(response.data.log_messages);
         }
         
+        // Check if completed
         if (response.data.status === 'completed') {
-          console.log('🏁 Analysis completed, stopping poll');
-          shouldStop = true;
+          console.log('🏁 Analysis completed!');
           setResults(response.data.results);
-          if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-          }
-          return true;
+          clearInterval(pollInterval);
         } else if (response.data.status === 'error') {
-          console.log('❌ Analysis error, stopping poll');
-          shouldStop = true;
+          console.log('❌ Analysis error!');
           alert(`Analysis failed: ${response.data.message}`);
-          if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-          }
-          return true;
+          clearInterval(pollInterval);
         }
-        return false;
+        
       } catch (error) {
-        console.error('❌ Poll failed (will retry):', error.message);
-        return false; // Don't stop on errors, keep polling
+        console.error('❌ Poll failed:', error.message);
+        // Don't stop polling on error, just try again next time
       }
-    };
-
-    // Start polling immediately
-    console.log('🚀 Starting polling for analysis:', id);
-    
-    // First poll immediately
-    const initialCheck = await checkStatus();
-    if (initialCheck) {
-      return; // Already complete
-    }
-    
-    // Then start interval for subsequent polls
-    pollInterval = setInterval(async () => {
-      if (shouldStop) {
-        clearInterval(pollInterval);
-        return;
-      }
-      const done = await checkStatus();
-      if (done && pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-      }
-    }, 500); // Poll every 500ms
+    }, 2000); // Poll every 2 seconds
   };
 
   // Enhanced PDF export
