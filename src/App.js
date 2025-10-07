@@ -267,10 +267,7 @@ function App() {
         
         // DEBUG: Log the entire response
         console.log('📡 Poll #' + pollCount + ' Response:', response.data);
-        console.log('📝 Has log_messages?', 'log_messages' in response.data);
-        console.log('📝 log_messages type:', typeof response.data.log_messages);
         console.log('📝 log_messages length:', response.data.log_messages?.length);
-        console.log('📝 log_messages content:', response.data.log_messages);
         
         const newStatus = {
           status: response.data.status,
@@ -285,8 +282,6 @@ function App() {
         if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
           console.log('✅ Setting log messages:', response.data.log_messages.length);
           setLogMessages(response.data.log_messages);
-        } else {
-          console.log('❌ No valid log_messages array found');
         }
         
         if (response.data.status === 'completed') {
@@ -308,22 +303,27 @@ function App() {
         }
         return false;
       } catch (error) {
-        console.error('❌ Status check failed:', error);
-        return false;
+        console.error('❌ Poll failed (will retry):', error.message);
+        return false; // Don't stop on errors, keep polling
       }
     };
 
-    // Start interval IMMEDIATELY, don't wait for first check
+    // Wait a bit for backend to initialize, then start polling
     console.log('🚀 Starting polling for analysis:', id);
+    
+    // Small delay to let backend initialize
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Start interval
     pollInterval = setInterval(async () => {
       const done = await checkStatus();
       if (done && pollInterval) {
         clearInterval(pollInterval);
         pollInterval = null;
       }
-    }, 200); // Poll every 200ms for faster updates
+    }, 500); // Poll every 500ms
     
-    // Also do initial check immediately
+    // Also do initial check
     const initialCheck = await checkStatus();
     if (initialCheck && pollInterval) {
       clearInterval(pollInterval);
