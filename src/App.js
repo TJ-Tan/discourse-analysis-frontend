@@ -276,8 +276,10 @@ function App() {
         
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
         
-        console.log('📦 Response data:', response.data);
-        console.log('📝 log_messages array:', response.data.log_messages);
+        // TEMP: Log the ENTIRE response to see what we get
+        console.log('📦 FULL Response:', JSON.stringify(response.data, null, 2));
+        console.log('📝 log_messages exists?', 'log_messages' in response.data);
+        console.log('📝 log_messages value:', response.data.log_messages);
         console.log('📊 Number of messages:', response.data.log_messages?.length || 0);
         
         // Always update status
