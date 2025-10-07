@@ -259,8 +259,11 @@ function App() {
   const pollAnalysisStatus = async (id) => {
     let pollCount = 0;
     let pollInterval = null;
+    let shouldStop = false; // Flag to stop polling
     
     const checkStatus = async () => {
+      if (shouldStop) return true; // Already stopped
+      
       try {
         pollCount++;
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
@@ -286,6 +289,7 @@ function App() {
         
         if (response.data.status === 'completed') {
           console.log('🏁 Analysis completed, stopping poll');
+          shouldStop = true;
           setResults(response.data.results);
           if (pollInterval) {
             clearInterval(pollInterval);
@@ -294,6 +298,7 @@ function App() {
           return true;
         } else if (response.data.status === 'error') {
           console.log('❌ Analysis error, stopping poll');
+          shouldStop = true;
           alert(`Analysis failed: ${response.data.message}`);
           if (pollInterval) {
             clearInterval(pollInterval);
@@ -308,27 +313,27 @@ function App() {
       }
     };
 
-    // Wait a bit for backend to initialize, then start polling
+    // Start polling immediately
     console.log('🚀 Starting polling for analysis:', id);
     
-    // Small delay to let backend initialize
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // First poll immediately
+    const initialCheck = await checkStatus();
+    if (initialCheck) {
+      return; // Already complete
+    }
     
-    // Start interval
+    // Then start interval for subsequent polls
     pollInterval = setInterval(async () => {
+      if (shouldStop) {
+        clearInterval(pollInterval);
+        return;
+      }
       const done = await checkStatus();
       if (done && pollInterval) {
         clearInterval(pollInterval);
         pollInterval = null;
       }
     }, 500); // Poll every 500ms
-    
-    // Also do initial check
-    const initialCheck = await checkStatus();
-    if (initialCheck && pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-    }
   };
 
   // Enhanced PDF export
