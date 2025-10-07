@@ -650,7 +650,7 @@ function App() {
 
         {/* Analysis Progress with Real-time Logs */}
         {analysisId && !results && (
-          <div className="progress-container" key={analysisStatus?.timestamp}>
+          <div className="progress-container" >
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
               <h3 className="progress-title">Enhanced Analysis in Progress</h3>
