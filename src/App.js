@@ -33,6 +33,14 @@ function App() {
   const [logMessages, setLogMessages] = useState([]);
   const logContainerRef = useRef(null);
 
+  // Debug: Log whenever logMessages changes
+  useEffect(() => {
+    console.log('🔄 logMessages state updated, length:', logMessages.length);
+    if (logMessages.length > 0) {
+      console.log('📝 Current log messages in state:', logMessages);
+    }
+  }, [logMessages]);
+
   // Auto-scroll to bottom when new log messages arrive
   useEffect(() => {
     if (logContainerRef.current) {
@@ -268,6 +276,10 @@ function App() {
         
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
         
+        console.log('📦 Response data:', response.data);
+        console.log('📝 log_messages array:', response.data.log_messages);
+        console.log('📊 Number of messages:', response.data.log_messages?.length || 0);
+        
         // Always update status
         setAnalysisStatus({
           status: response.data.status,
@@ -278,8 +290,15 @@ function App() {
         
         // Always update log messages if they exist
         if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
-          console.log(`✅ Got ${response.data.log_messages.length} log messages`);
+          console.log(`✅ Setting ${response.data.log_messages.length} log messages to state`);
+          console.log('📋 First 3 messages:', response.data.log_messages.slice(0, 3));
           setLogMessages(response.data.log_messages);
+          
+          // Force a small delay to ensure state updates
+          await new Promise(resolve => setTimeout(resolve, 10));
+          console.log('✓ State update should be complete');
+        } else {
+          console.warn('⚠️ No log_messages in response');
         }
         
         // Check if completed
