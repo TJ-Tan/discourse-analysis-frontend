@@ -240,11 +240,15 @@ function App() {
         setIsUploading(false);
         return;
       }
-
-      const newAnalysisId = response.data.analysis_id;
       
       // Start polling IMMEDIATELY before state updates
-      pollAnalysisStatus(newAnalysisId);
+      const newAnalysisId = response.data.analysis_id;
+      
+      // Connect WebSocket for real-time updates
+      connectWebSocket(newAnalysisId);
+      
+      // Then update state
+      setAnalysisId(newAnalysisId);
       
       // Then update state
       setAnalysisId(newAnalysisId);
@@ -263,62 +267,81 @@ function App() {
     }
   };
 
-  // Poll for analysis status - Simple version that just fetches every 2 seconds
-  const pollAnalysisStatus = async (id) => {
-    let pollCount = 0;
+  // WebSocket connection for real-time updates
+  const connectWebSocket = (id) => {
+    console.log('🔌 Connecting WebSocket for:', id);
     
-    console.log('🚀 Starting simple polling every 2 seconds for:', id);
+    // Close existing connection if any
+    if (window.currentWebSocket) {
+      window.currentWebSocket.close();
+    }
     
-    const pollInterval = setInterval(async () => {
+    // Create WebSocket connection
+    const wsUrl = `wss://discourse-analysis-backend.up.railway.app/ws/${id}`.replace('https://', 'wss://').replace('http://', 'ws://');
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected');
+    };
+    
+    ws.onmessage = (event) => {
       try {
-        pollCount++;
-        console.log(`📡 Poll #${pollCount} at ${new Date().toLocaleTimeString()}`);
+        const message = JSON.parse(event.data);
+        console.log('📨 WebSocket message:', message);
         
-        const response = await axios.get(`${API_BASE_URL}/analysis-status/${analysisIdid}`);
-        
-        // TEMP: Log the ENTIRE response to see what we get
-        console.log('📦 FULL Response:', JSON.stringify(response.data, null, 2));
-        console.log('📝 log_messages exists?', 'log_messages' in response.data);
-        console.log('📝 log_messages value:', response.data.log_messages);
-        console.log('📊 Number of messages:', response.data.log_messages?.length || 0);
-        
-        // Always update status
-        setAnalysisStatus({
-          status: response.data.status,
-          progress: response.data.progress || 0,
-          message: response.data.message || '',
-          timestamp: Date.now()
-        });
-        
-        // Always update log messages if they exist
-        if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
-          console.log(`✅ Setting ${response.data.log_messages.length} log messages to state`);
-          console.log('📋 First 3 messages:', response.data.log_messages.slice(0, 3));
-          setLogMessages(response.data.log_messages);
+        if (message.type === 'progress_update') {
+          setAnalysisStatus({
+            status: message.data.status,
+            progress: message.data.progress,
+            message: message.data.message,
+            timestamp: Date.now()
+          });
           
-          // Force a small delay to ensure state updates
-          await new Promise(resolve => setTimeout(resolve, 10));
-          console.log('✓ State update should be complete');
-        } else {
-          console.warn('⚠️ No log_messages in response');
+          // Add to log messages
+          if (message.data.log_entry) {
+            setLogMessages(prev => [...prev, message.data.log_entry]);
+          }
+        } else if (message.type === 'analysis_complete') {
+          console.log('🏁 Analysis completed via WebSocket');
+          setResults(message.data.results);
+          setAnalysisStatus({
+            status: 'completed',
+            progress: 100,
+            message: 'Analysis complete!',
+            timestamp: Date.now()
+          });
+          ws.close();
+        } else if (message.type === 'status_update') {
+          // Initial status
+          setAnalysisStatus({
+            status: message.data.status,
+            progress: message.data.progress || 0,
+            message: message.data.message || '',
+            timestamp: Date.now()
+          });
+          
+          if (message.data.log_messages) {
+            setLogMessages(message.data.log_messages);
+          }
+          
+          if (message.data.results) {
+            setResults(message.data.results);
+          }
         }
-        
-        // Check if completed
-        if (response.data.status === 'completed') {
-          console.log('🏁 Analysis completed!');
-          setResults(response.data.results);
-          clearInterval(pollInterval);
-        } else if (response.data.status === 'error') {
-          console.log('❌ Analysis error!');
-          alert(`Analysis failed: ${response.data.message}`);
-          clearInterval(pollInterval);
-        }
-        
       } catch (error) {
-        console.error('❌ Poll failed:', error.message);
-        // Don't stop polling on error, just try again next time
+        console.error('❌ WebSocket message parse error:', error);
       }
-    }, 2000); // Poll every 2 seconds
+    };
+    
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('🔌 WebSocket closed');
+    };
+    
+    window.currentWebSocket = ws;
   };
 
   // Enhanced PDF export
