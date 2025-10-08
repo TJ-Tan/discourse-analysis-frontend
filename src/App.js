@@ -819,7 +819,7 @@ function App() {
           </div>
         )}
 
-        {/* Results Dashboard */}
+        {/* Results Dashboard with Detailed Breakdown */}
         {results && (
           <div className="results-container">
             <div className="results-header">
@@ -848,7 +848,7 @@ function App() {
                   className="parameter-button"
                 >
                   <Settings size={16} />
-                  View Details
+                  {showParameters ? 'Hide' : 'Show'} Details
                 </button>
               </div>
             </div>
@@ -881,7 +881,239 @@ function App() {
               />
             </div>
 
-            {/* Feedback */}
+            {/* Detailed Metrics Breakdown */}
+            <div style={{ 
+              marginTop: '2rem', 
+              padding: '2rem', 
+              background: 'linear-gradient(135deg, var(--primary-50), var(--accent-50))',
+              borderRadius: '16px',
+              border: '1px solid var(--gray-200)'
+            }}>
+              <h3 style={{ 
+                margin: '0 0 1.5rem 0', 
+                color: 'var(--nus-blue)', 
+                fontSize: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <Info size={24} />
+                Detailed Analysis Metrics
+              </h3>
+
+              {/* Speech Metrics */}
+              <div style={{ 
+                background: 'white', 
+                padding: '1.5rem', 
+                borderRadius: '12px', 
+                marginBottom: '1.5rem',
+                border: '1px solid var(--gray-200)'
+              }}>
+                <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                  🎤 Speech Analysis Details
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <strong>Total Words:</strong> {results.speech_analysis.raw_metrics?.total_words || 0}
+                  </div>
+                  <div>
+                    <strong>Duration:</strong> {results.speech_analysis.raw_metrics?.duration_minutes || 0} min
+                  </div>
+                  <div>
+                    <strong>Speaking Rate:</strong> {results.speech_analysis.raw_metrics?.words_per_minute || 0} WPM
+                  </div>
+                  <div>
+                    <strong>Filler Words:</strong> {results.speech_analysis.raw_metrics?.filler_word_count || 0} ({results.speech_analysis.raw_metrics?.filler_ratio_percentage || 0}%)
+                  </div>
+                  <div>
+                    <strong>Voice Variety:</strong> {results.speech_analysis.raw_metrics?.voice_variety_index || 0}
+                  </div>
+                  <div>
+                    <strong>Pause Effectiveness:</strong> {results.speech_analysis.raw_metrics?.pause_effectiveness_index || 0}
+                  </div>
+                  <div>
+                    <strong>Speaking Time:</strong> {results.speech_analysis.raw_metrics?.speaking_time_ratio || 0}%
+                  </div>
+                  <div>
+                    <strong>Transcription Accuracy:</strong> {results.speech_analysis.raw_metrics?.transcription_confidence || 0}%
+                  </div>
+                </div>
+                
+                {/* Filler Words Detail */}
+                {results.detailed_insights?.filler_word_analysis && results.detailed_insights.filler_word_analysis.length > 0 && (
+                  <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
+                    <strong>Filler Words Detected:</strong>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {results.detailed_insights.filler_word_analysis.map((filler, idx) => (
+                        <span key={idx} style={{ 
+                          padding: '0.25rem 0.75rem', 
+                          background: 'var(--accent-100)', 
+                          borderRadius: '12px',
+                          fontSize: '0.85rem',
+                          color: 'var(--nus-orange-dark)'
+                        }}>
+                          "{filler.word}" ({filler.count}×)
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Visual Metrics */}
+              <div style={{ 
+                background: 'white', 
+                padding: '1.5rem', 
+                borderRadius: '12px', 
+                marginBottom: '1.5rem',
+                border: '1px solid var(--gray-200)'
+              }}>
+                <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                  👁️ Visual Analysis Details
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <strong>Frames Analyzed:</strong> {results.body_language.raw_metrics?.total_frames_extracted || 0}
+                  </div>
+                  <div>
+                    <strong>Frame Interval:</strong> {results.body_language.raw_metrics?.frame_interval_seconds || 0}s
+                  </div>
+                  <div>
+                    <strong>Eye Contact Score:</strong> {results.body_language.raw_metrics?.eye_contact_raw || 0}/10
+                  </div>
+                  <div>
+                    <strong>Gestures Score:</strong> {results.body_language.raw_metrics?.gestures_raw || 0}/10
+                  </div>
+                  <div>
+                    <strong>Posture Score:</strong> {results.body_language.raw_metrics?.posture_raw || 0}/10
+                  </div>
+                  <div>
+                    <strong>Engagement Score:</strong> {results.body_language.raw_metrics?.engagement_raw || 0}/10
+                  </div>
+                  <div>
+                    <strong>Professionalism:</strong> {results.body_language.raw_metrics?.professionalism_raw || 0}/10
+                  </div>
+                </div>
+              </div>
+
+              {/* Score Calculation Breakdown */}
+              <div style={{ 
+                background: 'white', 
+                padding: '1.5rem', 
+                borderRadius: '12px',
+                border: '1px solid var(--gray-200)'
+              }}>
+                <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                  🧮 Score Calculation Breakdown
+                </h4>
+                
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                  <strong>Formula:</strong>
+                  <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                    {results.calculation_breakdown?.final_calculation?.formula}
+                  </div>
+                  <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--nus-blue)' }}>
+                    = {results.calculation_breakdown?.final_calculation?.calculation}
+                  </div>
+                  <div style={{ marginTop: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
+                    = {results.calculation_breakdown?.final_calculation?.result}/10
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {results.calculation_breakdown?.component_scores && Object.entries(results.calculation_breakdown.component_scores).map(([key, data]) => (
+                    <div key={key} style={{ 
+                      padding: '1rem', 
+                      background: 'var(--gray-50)', 
+                      borderRadius: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <strong>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</strong>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)', marginTop: '0.25rem' }}>
+                          Score: {data.score} × Weight: {(data.weight * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
+                        {data.contribution.toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Real-time Server Logs (KEEP VISIBLE) */}
+            <div style={{
+              marginTop: '2rem',
+              padding: '1.5rem',
+              background: '#1e293b',
+              borderRadius: '12px',
+              maxHeight: '400px',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 1rem 0', 
+                color: '#f1f5f9',
+                fontSize: '1rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <CheckCircle size={16} style={{ color: '#10b981' }} />
+                Processing Log History
+              </h4>
+              
+              <div 
+                ref={logContainerRef}
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+                  fontSize: '0.85rem',
+                  lineHeight: '1.6',
+                  color: '#e2e8f0',
+                  paddingRight: '0.5rem'
+                }}
+              >
+                {logMessages.length === 0 ? (
+                  <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                    No processing logs available
+                  </div>
+                ) : (
+                  logMessages.map((log, index) => (
+                    <div 
+                      key={index} 
+                      style={{ 
+                        marginBottom: '0.5rem',
+                        paddingBottom: '0.5rem',
+                        borderBottom: '1px solid #334155'
+                      }}
+                    >
+                      <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                        [{new Date(log.timestamp).toLocaleTimeString()}]
+                      </span>
+                      <span style={{ 
+                        color: log.progress >= 100 ? '#10b981' : '#3b82f6',
+                        marginLeft: '0.5rem'
+                      }}>
+                        [{log.progress}%]
+                      </span>
+                      <span style={{ marginLeft: '0.5rem', color: '#f1f5f9' }}>
+                        {log.message}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Feedback Grid */}
             <div className="feedback-grid">
               <div className="feedback-section strengths">
                 <h3 className="feedback-title">
@@ -933,9 +1165,5 @@ function App() {
             </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
 
 export default App;
