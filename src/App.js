@@ -654,7 +654,8 @@ function App() {
               {isDragActive ? (
                 <div>
                   <p className="upload-text">Drop your lecture video here</p>
-                  <p className="upload-subtext">Release to upload and analyse</p>
+                  <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 1 hour, 500MB • Analyzes 100 frames
+                  </p></p>
                 </div>
               ) : (
                 <div>
@@ -861,8 +862,8 @@ function App() {
               </div>
             </div>
 
-            {/* Detailed Scores */}
-            <div className="scores-grid">
+            {/* Detailed Scores - Now with 5 categories */}
+            <div className="scores-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
               <ScoreDisplay 
                 score={results.speech_analysis.score} 
                 label="Speech Analysis" 
@@ -874,6 +875,10 @@ function App() {
               <ScoreDisplay 
                 score={results.teaching_effectiveness.score} 
                 label="Teaching Effectiveness" 
+              />
+              <ScoreDisplay 
+                score={results.interaction_engagement?.score || 7} 
+                label="Interaction & Engagement" 
               />
               <ScoreDisplay 
                 score={results.presentation_skills.score} 
@@ -900,6 +905,449 @@ function App() {
                 <Info size={24} />
                 Detailed Analysis Metrics
               </h3>
+
+            {/* Full Transcript with Timecodes */}
+            <div style={{ 
+              marginTop: '2rem', 
+              padding: '2rem', 
+              background: 'white',
+              borderRadius: '16px',
+              border: '1px solid var(--gray-200)'
+            }}>
+              <h3 style={{ 
+                margin: '0 0 1.5rem 0', 
+                color: 'var(--nus-blue)', 
+                fontSize: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                📝 Full Lecture Transcript
+              </h3>
+              
+              <div style={{ 
+                marginBottom: '1rem', 
+                padding: '0.75rem', 
+                background: 'var(--primary-50)', 
+                borderRadius: '8px',
+                display: 'flex',
+                gap: '2rem',
+                fontSize: '0.9rem'
+              }}>
+                <div><strong>Duration:</strong> {results.full_transcript?.duration_formatted || '00:00'}</div>
+                <div><strong>Words:</strong> {results.full_transcript?.word_count || 0}</div>
+                <div><strong>Frames Analyzed:</strong> {results.configuration_used?.frames_analyzed || 0}</div>
+              </div>
+
+              <div style={{ 
+                maxHeight: '400px', 
+                overflowY: 'auto', 
+                padding: '1.5rem',
+                background: 'var(--gray-50)',
+                borderRadius: '12px',
+                fontFamily: "'Inter', sans-serif",
+                lineHeight: '2',
+                fontSize: '0.95rem'
+              }}>
+                {results.full_transcript?.timecoded_words && results.full_transcript.timecoded_words.length > 0 ? (
+                  results.full_transcript.timecoded_words.map((wordData, idx) => (
+                    <span key={idx} style={{ marginRight: '0.3rem' }}>
+                      {idx % 15 === 0 && (
+                        <span style={{ 
+                          display: 'inline-block',
+                          marginRight: '0.5rem',
+                          padding: '0.1rem 0.4rem',
+                          background: 'var(--nus-blue)',
+                          color: 'white',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          verticalAlign: 'middle'
+                        }}>
+                          {wordData.timestamp}
+                        </span>
+                      )}
+                      {wordData.word}
+                    </span>
+                  ))
+                ) : (
+                  <div style={{ color: 'var(--gray-500)', fontStyle: 'italic' }}>
+                    {results.full_transcript?.text || 'Transcript not available'}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Interaction & Engagement Analysis */}
+            {results.interaction_engagement && (
+              <div style={{ 
+                marginTop: '2rem', 
+                padding: '2rem', 
+                background: 'linear-gradient(135deg, var(--success-50), var(--primary-50))',
+                borderRadius: '16px',
+                border: '1px solid var(--gray-200)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 1.5rem 0', 
+                  color: 'var(--nus-blue)', 
+                  fontSize: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  🤝 Interaction & Engagement Analysis
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Total Questions:</strong> {results.interaction_engagement.total_questions}
+                  </div>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Interaction Frequency:</strong> {results.interaction_engagement.interaction_frequency}/10
+                  </div>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Question Quality:</strong> {results.interaction_engagement.question_quality}/10
+                  </div>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Cognitive Level:</strong> {results.interaction_engagement.cognitive_level}
+                  </div>
+                </div>
+
+                {/* High-Level Questions with Timecodes */}
+                {results.interaction_engagement.high_level_questions && results.interaction_engagement.high_level_questions.length > 0 && (
+                  <div style={{ 
+                    background: 'white', 
+                    padding: '1.5rem', 
+                    borderRadius: '12px',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                      💡 High-Level Questions Detected
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {results.interaction_engagement.high_level_questions.map((question, idx) => (
+                        <div key={idx} style={{ 
+                          padding: '1rem', 
+                          background: 'var(--primary-50)', 
+                          borderRadius: '8px',
+                          borderLeft: '4px solid var(--nus-orange)'
+                        }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.75rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <span style={{ 
+                              padding: '0.25rem 0.75rem', 
+                              background: 'var(--nus-orange)', 
+                              color: 'white',
+                              borderRadius: '12px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600'
+                            }}>
+                              {question.precise_timestamp || question.approx_time}
+                            </span>
+                            <span style={{ 
+                              padding: '0.25rem 0.75rem', 
+                              background: 'var(--success-100)', 
+                              color: 'var(--success-700)',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              {question.type || 'High-Level Question'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.95rem', color: 'var(--gray-700)' }}>
+                            "{question.question}"
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interaction Moments */}
+                {results.interaction_engagement.interaction_moments && results.interaction_engagement.interaction_moments.length > 0 && (
+                  <div style={{ 
+                    background: 'white', 
+                    padding: '1.5rem', 
+                    borderRadius: '12px'
+                  }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                      👥 Student Interaction Moments
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {results.interaction_engagement.interaction_moments.map((moment, idx) => (
+                        <div key={idx} style={{ 
+                          padding: '1rem', 
+                          background: 'var(--success-50)', 
+                          borderRadius: '8px',
+                          borderLeft: '4px solid var(--success-500)'
+                        }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.75rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <span style={{ 
+                              padding: '0.25rem 0.75rem', 
+                              background: 'var(--success-500)', 
+                              color: 'white',
+                              borderRadius: '12px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600'
+                            }}>
+                              {moment.precise_timestamp || moment.approx_time}
+                            </span>
+                            <span style={{ 
+                              padding: '0.25rem 0.75rem', 
+                              background: 'var(--primary-100)', 
+                              color: 'var(--primary-700)',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              {moment.type || 'Interaction'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.95rem', color: 'var(--gray-700)' }}>
+                            {moment.moment}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Filler Words with Timecodes */}
+            {results.filler_words_detailed && results.filler_words_detailed.timecoded_occurrences && results.filler_words_detailed.timecoded_occurrences.length > 0 && (
+              <div style={{ 
+                marginTop: '2rem', 
+                padding: '2rem', 
+                background: 'white',
+                borderRadius: '16px',
+                border: '1px solid var(--gray-200)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 1.5rem 0', 
+                  color: 'var(--nus-blue)', 
+                  fontSize: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  🔍 Filler Words Analysis
+                </h3>
+
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--accent-50)', borderRadius: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                    <div>
+                      <strong>Total Filler Words:</strong> {results.filler_words_detailed.total_count}
+                    </div>
+                    <div>
+                      <strong>Filler Ratio:</strong> {results.filler_words_detailed.ratio_percentage}%
+                    </div>
+                  </div>
+                </div>
+
+                <h4 style={{ color: 'var(--gray-700)', marginBottom: '1rem' }}>
+                  Filler Word Occurrences (with timestamps)
+                </h4>
+                
+                <div style={{ 
+                  maxHeight: '300px', 
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  background: 'var(--gray-50)',
+                  borderRadius: '8px'
+                }}>
+                  {results.filler_words_detailed.timecoded_occurrences.map((filler, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '0.5rem 1rem', 
+                      background: 'var(--accent-100)', 
+                      borderRadius: '8px',
+                      border: '1px solid var(--nus-orange-light)',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <span style={{ 
+                        padding: '0.15rem 0.5rem',
+                        background: 'var(--nus-orange)',
+                        color: 'white',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
+                        {filler.timestamp}
+                      </span>
+                      <span style={{ color: 'var(--nus-orange-dark)', fontWeight: '600' }}>
+                        "{filler.word}"
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Comprehensive Summary */}
+            {results.comprehensive_summary && (
+              <div style={{ 
+                marginTop: '2rem', 
+                padding: '2.5rem', 
+                background: 'linear-gradient(135deg, var(--primary-50), var(--accent-50))',
+                borderRadius: '16px',
+                border: '2px solid var(--nus-orange)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 2rem 0', 
+                  color: 'var(--nus-blue)', 
+                  fontSize: '1.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  borderBottom: '2px solid var(--nus-orange)',
+                  paddingBottom: '1rem'
+                }}>
+                  📊 Comprehensive Teaching Evaluation
+                </h3>
+
+                {/* Overall Summary */}
+                <div style={{ 
+                  padding: '1.5rem', 
+                  background: 'white', 
+                  borderRadius: '12px',
+                  marginBottom: '2rem',
+                  borderLeft: '4px solid var(--nus-orange)'
+                }}>
+                  <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>Overall Assessment</h4>
+                  <p style={{ fontSize: '1rem', lineHeight: '1.8', color: 'var(--gray-700)', margin: 0 }}>
+                    {results.comprehensive_summary.overall_summary}
+                  </p>
+                </div>
+
+                {/* Three-Part Review */}
+                <div style={{ display: 'grid', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px' }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      📚 Content Review
+                    </h4>
+                    <p style={{ fontSize: '0.95rem', lineHeight: '1.7', color: 'var(--gray-700)', margin: 0 }}>
+                      {results.comprehensive_summary.content_review}
+                    </p>
+                  </div>
+
+                  <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px' }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🎭 Presentation Review
+                    </h4>
+                    <p style={{ fontSize: '0.95rem', lineHeight: '1.7', color: 'var(--gray-700)', margin: 0 }}>
+                      {results.comprehensive_summary.presentation_review}
+                    </p>
+                  </div>
+
+                  <div style={{ padding: '1.5rem', background: 'white', borderRadius: '12px' }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🧠 Cognitive Skills Review
+                    </h4>
+                    <p style={{ fontSize: '0.95rem', lineHeight: '1.7', color: 'var(--gray-700)', margin: 0 }}>
+                      {results.comprehensive_summary.cognitive_skills_review}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Key Evidence from Transcript */}
+                {results.comprehensive_summary.key_evidence && results.comprehensive_summary.key_evidence.length > 0 && (
+                  <div style={{ 
+                    padding: '1.5rem', 
+                    background: 'white', 
+                    borderRadius: '12px',
+                    marginBottom: '2rem'
+                  }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      💎 Key Evidence from Lecture
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {results.comprehensive_summary.key_evidence.map((evidence, idx) => (
+                        <div key={idx} style={{ 
+                          padding: '1rem 1.5rem', 
+                          background: 'var(--primary-50)', 
+                          borderRadius: '8px',
+                          borderLeft: '4px solid var(--success-500)',
+                          position: 'relative'
+                        }}>
+                          <div style={{ 
+                            position: 'absolute',
+                            top: '0.75rem',
+                            right: '1rem',
+                            padding: '0.25rem 0.75rem',
+                            background: 'var(--success-500)',
+                            color: 'white',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}>
+                            Evidence #{idx + 1}
+                          </div>
+                          <p style={{ 
+                            fontSize: '0.95rem', 
+                            fontStyle: 'italic', 
+                            color: 'var(--gray-700)',
+                            margin: '0 0 0.75rem 0',
+                            paddingRight: '5rem'
+                          }}>
+                            "{evidence.quote || evidence}"
+                          </p>
+                          {evidence.context && (
+                            <p style={{ 
+                              fontSize: '0.85rem', 
+                              color: 'var(--gray-600)', 
+                              margin: 0 
+                            }}>
+                              Context: {evidence.context}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Specific Recommendations */}
+                {results.comprehensive_summary.specific_recommendations && results.comprehensive_summary.specific_recommendations.length > 0 && (
+                  <div style={{ 
+                    padding: '1.5rem', 
+                    background: 'white', 
+                    borderRadius: '12px'
+                  }}>
+                    <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🎯 Specific Recommendations
+                    </h4>
+                    <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                      {results.comprehensive_summary.specific_recommendations.map((rec, idx) => (
+                        <li key={idx} style={{ 
+                          fontSize: '0.95rem', 
+                          lineHeight: '1.7', 
+                          color: 'var(--gray-700)',
+                          marginBottom: '0.75rem'
+                        }}>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
               {/* Speech Metrics */}
               <div style={{ 
