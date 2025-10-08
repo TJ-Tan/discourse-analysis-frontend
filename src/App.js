@@ -655,7 +655,7 @@ function App() {
                 <div>
                   <p className="upload-text">Drop your lecture video here</p>
                   <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 1 hour, 500MB • Analyzes 100 frames
-                  </p></p>
+                  </p>
                 </div>
               ) : (
                 <div>
