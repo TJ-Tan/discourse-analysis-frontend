@@ -274,7 +274,7 @@ function App() {
         pollCount++;
         console.log(`📡 Poll #${pollCount} at ${new Date().toLocaleTimeString()}`);
         
-        const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
+        const response = await axios.get(`${API_BASE_URL}/analysis-status/${analysisIdid}`);
         
         // TEMP: Log the ENTIRE response to see what we get
         console.log('📦 FULL Response:', JSON.stringify(response.data, null, 2));
