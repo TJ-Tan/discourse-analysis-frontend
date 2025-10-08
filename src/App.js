@@ -340,32 +340,50 @@ function App() {
   // Fallback polling function (used when SSE fails)
   const pollAnalysisStatus = async (id) => {
     let pollCount = 0;
+    let consecutiveNoChange = 0;
+    let lastProgress = 0;
     
-    console.log('📡 Starting fallback polling every 2 seconds for:', id);
+    console.log('📡 Starting intelligent polling for:', id);
     
     const pollInterval = setInterval(async () => {
       try {
         pollCount++;
-        console.log(`📡 Poll #${pollCount} at ${new Date().toLocaleTimeString()}`);
+        
+        // Poll faster during active processing (every 0.5s), slower when idle (every 2s)
+        const shouldPoll = pollCount % (consecutiveNoChange > 3 ? 4 : 1) === 0;
+        
+        if (!shouldPoll) return;
+        
+        console.log(`📡 Poll #${pollCount}`);
         
         const response = await axios.get(`${API_BASE_URL}/analysis-status/${id}`);
+        
+        const currentProgress = response.data.progress || 0;
+        
+        // Track if progress is changing
+        if (currentProgress === lastProgress) {
+          consecutiveNoChange++;
+        } else {
+          consecutiveNoChange = 0;
+          lastProgress = currentProgress;
+        }
         
         // Update status
         setAnalysisStatus({
           status: response.data.status,
-          progress: response.data.progress || 0,
+          progress: currentProgress,
           message: response.data.message || '',
           timestamp: Date.now()
         });
         
-        // Update log messages if they exist
+        // Update log messages
         if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
           setLogMessages(response.data.log_messages);
         }
         
-        // Check if completed
+        // Check completion
         if (response.data.status === 'completed') {
-          console.log('🏁 Analysis completed via polling');
+          console.log('🏁 Analysis completed');
           setResults(response.data.results);
           clearInterval(pollInterval);
         } else if (response.data.status === 'error') {
@@ -376,9 +394,8 @@ function App() {
         
       } catch (error) {
         console.error('❌ Poll failed:', error.message);
-        // Don't stop polling on error, just try again next time
       }
-    }, 2000); // Poll every 2 seconds
+    }, 500); // Poll every 500ms (twice per second)
   };
 
   // Enhanced PDF export
