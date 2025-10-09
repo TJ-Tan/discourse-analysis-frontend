@@ -22,7 +22,12 @@ const API_BASE_URL = 'https://discourse-analysis-backend.up.railway.app';
 function App() {
   const [file, setFile] = useState(null);
   const [analysisId, setAnalysisId] = useState(null);
-  const [analysisStatus, setAnalysisStatus] = useState(null);
+  const [analysisStatus, setAnalysisStatus] = useState({
+    status: 'idle',
+    progress: 0,
+    message: 'Ready to start analysis',
+    timestamp: Date.now()
+  });
   const [results, setResults] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -321,18 +326,29 @@ function App() {
           setLogMessages(prev => [...prev, message.data]);
         } else if (message.type === 'status') {
           // Status update with smooth progress animation
-          console.log(`📊 Progress update: ${message.data.progress}% - ${message.data.message}`);
-          setAnalysisStatus(prev => ({
-            status: message.data.status,
-            progress: message.data.progress,
-            message: message.data.message,
-            timestamp: Date.now(),
-            previousProgress: prev.progress || 0
-          }));
+          console.log(`📊 Progress update: ${message.data?.progress || 0}% - ${message.data?.message || 'No message'}`);
+          
+          // Validate message data before processing
+          if (!message.data) {
+            console.warn('⚠️ Status message missing data:', message);
+            return;
+          }
+          
+          setAnalysisStatus(prev => {
+            // Safely handle null/undefined prev state
+            const safePrev = prev || {};
+            return {
+              status: message.data.status || 'processing',
+              progress: message.data.progress || 0,
+              message: message.data.message || '',
+              timestamp: Date.now(),
+              previousProgress: safePrev.progress || 0
+            };
+          });
         } else if (message.type === 'complete') {
           // Analysis complete
           console.log('🏁 Analysis completed');
-          setResults(message.data.results);
+          setResults(message.data?.results);
           setAnalysisStatus({
             status: 'completed',
             progress: 100,
@@ -341,17 +357,19 @@ function App() {
           });
           eventSource.close();
         } else if (message.type === 'error') {
-          console.error('❌ Analysis error');
+          console.error('❌ Analysis error:', message.data);
           setAnalysisStatus({
             status: 'error',
             progress: 0,
-            message: message.data.message || 'Analysis failed',
+            message: message.data?.message || 'Analysis failed',
             timestamp: Date.now()
           });
           eventSource.close();
+        } else if (message.type === 'connected') {
+          console.log('✅ SSE Connection confirmed');
         }
       } catch (error) {
-        console.error('❌ Message parse error:', error);
+        console.error('❌ Message parse error:', error, 'Raw data:', event.data);
       }
     };
     
@@ -768,10 +786,10 @@ function App() {
             <div className="progress-bar-container">
               <div 
                 className="progress-bar"
-                style={{ width: `${Math.round(animatedProgress)}%` }}
+                style={{ width: `${Math.round(animatedProgress || 0)}%` }}
               ></div>
             </div>
-            <div className="progress-percent">{Math.round(animatedProgress)}% Complete</div>
+            <div className="progress-percent">{Math.round(animatedProgress || 0)}% Complete</div>
 
             {/* Real-time Server Logs */}
             <div style={{
