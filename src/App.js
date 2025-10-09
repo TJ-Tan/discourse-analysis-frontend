@@ -61,14 +61,14 @@ function App() {
       // Clear existing bokeh
       bokehContainer.innerHTML = '';
 
-      // Create multiple bokeh elements with variation
-      const bokehCount = 15;
+      // Create multiple bokeh elements with BIGGER variation
+      const bokehCount = 20;
       for (let i = 0; i < bokehCount; i++) {
         const bokeh = document.createElement('div');
         bokeh.className = 'bokeh';
         
-        // Random size variation (20px to 80px)
-        const size = Math.random() * 60 + 20;
+        // MUCH BIGGER size variation (10px to 150px)
+        const size = Math.random() * 140 + 10;
         bokeh.style.width = `${size}px`;
         bokeh.style.height = `${size}px`;
         
@@ -76,34 +76,38 @@ function App() {
         bokeh.style.left = `${Math.random() * 100}%`;
         bokeh.style.top = `${Math.random() * 100}%`;
         
-        // Random blur variation (2px to 8px)
-        const blur = Math.random() * 6 + 2;
+        // BIGGER blur variation (1px to 15px)
+        const blur = Math.random() * 14 + 1;
         bokeh.style.filter = `blur(${blur}px)`;
         
-        // Random opacity variation (0.1 to 0.4)
-        const opacity = Math.random() * 0.3 + 0.1;
+        // BIGGER opacity variation (0.05 to 0.6)
+        const opacity = Math.random() * 0.55 + 0.05;
         bokeh.style.opacity = opacity;
         
-        // Random color variation
+        // EXPANDED color variation with lighter tones
         const colors = [
-          'rgba(59, 130, 246, 0.3)',   // Blue
-          'rgba(147, 51, 234, 0.3)',   // Purple
-          'rgba(236, 72, 153, 0.3)',   // Pink
-          'rgba(34, 197, 94, 0.3)',    // Green
-          'rgba(245, 158, 11, 0.3)',   // Yellow
-          'rgba(239, 68, 68, 0.3)'     // Red
+          'rgba(255, 255, 255, 0.4)',     // White
+          'rgba(173, 216, 230, 0.4)',      // Light Blue
+          'rgba(211, 211, 211, 0.4)',      // Light Grey
+          'rgba(255, 218, 185, 0.4)',      // Light Orange
+          'rgba(255, 255, 224, 0.4)',     // Light Yellow
+          'rgba(221, 160, 221, 0.4)',     // Light Purple
+          'rgba(255, 182, 193, 0.4)',     // Light Pink
+          'rgba(144, 238, 144, 0.4)',     // Light Green
+          'rgba(255, 228, 196, 0.4)',     // Light Peach
+          'rgba(230, 230, 250, 0.4)'     // Lavender
         ];
         bokeh.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
         
-        // Random animation duration (8s to 20s)
-        const duration = Math.random() * 12 + 8;
+        // MUCH BIGGER animation duration variation (5s to 30s)
+        const duration = Math.random() * 25 + 5;
         bokeh.style.animationDuration = `${duration}s`;
         
         // Random animation delay
-        const delay = Math.random() * 5;
+        const delay = Math.random() * 10;
         bokeh.style.animationDelay = `${delay}s`;
         
-        // Add subtle movement animation
+        // Add movement animation with different speeds
         bokeh.style.animation = `bokehFloat ${duration}s ease-in-out infinite`;
         
         bokehContainer.appendChild(bokeh);
@@ -396,6 +400,20 @@ function App() {
           window.currentEventSource.close();
         }
         
+        // Reset to initial state after a short delay
+        setTimeout(() => {
+          setAnalysisId(null);
+          setAnalysisStatus({
+            status: 'idle',
+            progress: 0,
+            message: 'Ready to start analysis',
+            timestamp: Date.now()
+          });
+          setLogMessages([]);
+          setResults(null);
+          setIsStopping(false);
+        }, 2000); // 2 second delay to show "stopped" state
+        
         console.log('✅ Analysis stopped successfully');
       }
     } catch (error) {
@@ -407,8 +425,20 @@ function App() {
         message: 'Analysis stopped (connection may be lost)',
         timestamp: Date.now()
       });
-    } finally {
-      setIsStopping(false);
+      
+      // Reset to initial state after a short delay
+      setTimeout(() => {
+        setAnalysisId(null);
+        setAnalysisStatus({
+          status: 'idle',
+          progress: 0,
+          message: 'Ready to start analysis',
+          timestamp: Date.now()
+        });
+        setLogMessages([]);
+        setResults(null);
+        setIsStopping(false);
+      }, 2000);
     }
   };
 
@@ -652,7 +682,7 @@ function App() {
             </div>
             
             <div class="overall-score">
-              <div class="score">${results.overall_score}/10</div>
+              <div class="score">${Math.round(results.overall_score * 10) / 10}/10</div>
               <div style="font-size: 1.2rem; opacity: 0.9;">Overall Teaching Excellence Score</div>
             </div>
             
@@ -953,6 +983,25 @@ function App() {
               </div>
             )}
             
+            {/* Stopped Status */}
+            {analysisStatus?.status === 'stopped' && (
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '1px solid #ef4444',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                <h4 style={{ color: '#dc2626', margin: '0 0 8px 0' }}>
+                  ⏹️ Analysis stopped
+                </h4>
+                <p style={{ color: '#dc2626', margin: '0' }}>
+                  Returning to initial state...
+                </p>
+              </div>
+            )}
+            
             {/* Overall Progress */}
             <div className="progress-bar-container">
               <div 
@@ -1076,7 +1125,7 @@ function App() {
             {/* Overall Score */}
             <div className="overall-score">
               <div className="score-display">
-                <div className="score-number">{results.overall_score}/10</div>
+                <div className="score-number">{Math.round(results.overall_score * 10) / 10}/10</div>
                 <div className="score-label">Teaching Excellence Score</div>
               </div>
             </div>
