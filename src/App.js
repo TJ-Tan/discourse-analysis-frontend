@@ -59,16 +59,16 @@ function App() {
     if (analysisStatus && analysisStatus.progress !== undefined) {
       const targetProgress = analysisStatus.progress;
       const startProgress = animatedProgress;
-      const duration = 300; // 300ms animation
+      const duration = 150; // 150ms animation for more immediate feel
       const startTime = Date.now();
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Easing function for smooth animation
-        const easeOutCubic = 1 - Math.pow(1 - progress, 3);
-        const currentProgress = startProgress + (targetProgress - startProgress) * easeOutCubic;
+        // Faster easing for more immediate updates
+        const easeOutQuad = 1 - (1 - progress) * (1 - progress);
+        const currentProgress = startProgress + (targetProgress - startProgress) * easeOutQuad;
         
         setAnimatedProgress(currentProgress);
         
@@ -339,17 +339,21 @@ function App() {
             return;
           }
           
-          setAnalysisStatus(prev => {
-            // Safely handle null/undefined prev state
-            const safePrev = prev || {};
-            return {
-              status: message.data.status || 'processing',
-              progress: message.data.progress || 0,
-              message: message.data.message || '',
-              timestamp: Date.now(),
-              previousProgress: safePrev.progress || 0
-            };
-          });
+          // Force immediate state update
+          const newStatus = {
+            status: message.data.status || 'processing',
+            progress: message.data.progress || 0,
+            message: message.data.message || '',
+            timestamp: Date.now(),
+            updateId: Date.now() // Force React to see this as a new update
+          };
+          
+          setAnalysisStatus(newStatus);
+          
+          // Also force a re-render by updating animated progress immediately
+          if (message.data.progress !== undefined) {
+            setAnimatedProgress(message.data.progress);
+          }
         } else if (message.type === 'complete') {
           // Analysis complete
           console.log('🏁 Analysis completed');
