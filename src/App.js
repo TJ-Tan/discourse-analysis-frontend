@@ -143,7 +143,12 @@ function App() {
     if (uploadedFile && uploadedFile.type.startsWith('video/')) {
       setFile(uploadedFile);
       setAnalysisId(null);
-      setAnalysisStatus(null);
+      setAnalysisStatus({
+        status: 'idle',
+        progress: 0,
+        message: 'Ready to start analysis',
+        timestamp: Date.now()
+      });
       setResults(null);
       setLogMessages([]);
     } else {
@@ -689,7 +694,7 @@ function App() {
         )}
 
         {/* Upload Section */}
-        {!analysisId && !analysisStatus && !results && (
+        {!analysisId && analysisStatus?.status === 'idle' && !results && (
           <div className="upload-container">
             <div
               {...getRootProps()}
@@ -1648,7 +1653,12 @@ function App() {
                 onClick={() => {
                   setFile(null);
                   setAnalysisId(null);
-                  setAnalysisStatus(null);
+                  setAnalysisStatus({
+                    status: 'idle',
+                    progress: 0,
+                    message: 'Ready to start analysis',
+                    timestamp: Date.now()
+                  });
                   setResults(null);
                   setLogMessages([]);
                   setShowParameters(false);
