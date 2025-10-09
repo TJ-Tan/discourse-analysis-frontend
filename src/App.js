@@ -38,14 +38,85 @@ function App() {
   const [logMessages, setLogMessages] = useState([]);
   const logContainerRef = useRef(null);
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [isStopping, setIsStopping] = useState(false);
 
-  // Debug: Log whenever logMessages changes
+  // Format timestamp to Singapore time
+  const formatSingaporeTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-SG', {
+      timeZone: 'Asia/Singapore',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  // Enhanced bokeh effects with variation and motion
   useEffect(() => {
-    console.log('🔄 logMessages state updated, length:', logMessages.length);
-    if (logMessages.length > 0) {
-      console.log('📝 Current log messages in state:', logMessages);
-    }
-  }, [logMessages]);
+    const createBokeh = () => {
+      const bokehContainer = document.getElementById('bokeh-container');
+      if (!bokehContainer) return;
+
+      // Clear existing bokeh
+      bokehContainer.innerHTML = '';
+
+      // Create multiple bokeh elements with variation
+      const bokehCount = 15;
+      for (let i = 0; i < bokehCount; i++) {
+        const bokeh = document.createElement('div');
+        bokeh.className = 'bokeh';
+        
+        // Random size variation (20px to 80px)
+        const size = Math.random() * 60 + 20;
+        bokeh.style.width = `${size}px`;
+        bokeh.style.height = `${size}px`;
+        
+        // Random position
+        bokeh.style.left = `${Math.random() * 100}%`;
+        bokeh.style.top = `${Math.random() * 100}%`;
+        
+        // Random blur variation (2px to 8px)
+        const blur = Math.random() * 6 + 2;
+        bokeh.style.filter = `blur(${blur}px)`;
+        
+        // Random opacity variation (0.1 to 0.4)
+        const opacity = Math.random() * 0.3 + 0.1;
+        bokeh.style.opacity = opacity;
+        
+        // Random color variation
+        const colors = [
+          'rgba(59, 130, 246, 0.3)',   // Blue
+          'rgba(147, 51, 234, 0.3)',   // Purple
+          'rgba(236, 72, 153, 0.3)',   // Pink
+          'rgba(34, 197, 94, 0.3)',    // Green
+          'rgba(245, 158, 11, 0.3)',   // Yellow
+          'rgba(239, 68, 68, 0.3)'     // Red
+        ];
+        bokeh.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        // Random animation duration (8s to 20s)
+        const duration = Math.random() * 12 + 8;
+        bokeh.style.animationDuration = `${duration}s`;
+        
+        // Random animation delay
+        const delay = Math.random() * 5;
+        bokeh.style.animationDelay = `${delay}s`;
+        
+        // Add subtle movement animation
+        bokeh.style.animation = `bokehFloat ${duration}s ease-in-out infinite`;
+        
+        bokehContainer.appendChild(bokeh);
+      }
+    };
+
+    createBokeh();
+    
+    // Recreate bokeh every 30 seconds for variety
+    const interval = setInterval(createBokeh, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-scroll to bottom when new log messages arrive
   useEffect(() => {
@@ -303,6 +374,44 @@ function App() {
   };
 
   // Real-time updates using Server-Sent Events (more reliable than WebSocket)
+  // Stop analysis function
+  const stopAnalysis = async () => {
+    if (!analysisId) return;
+    
+    setIsStopping(true);
+    try {
+      console.log('🛑 Stopping analysis:', analysisId);
+      const response = await axios.post(`${API_BASE_URL}/stop-analysis/${analysisId}`);
+      
+      if (response.data.success) {
+        setAnalysisStatus({
+          status: 'stopped',
+          progress: analysisStatus?.progress || 0,
+          message: 'Analysis stopped by user',
+          timestamp: Date.now()
+        });
+        
+        // Close SSE connection
+        if (window.currentEventSource) {
+          window.currentEventSource.close();
+        }
+        
+        console.log('✅ Analysis stopped successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error stopping analysis:', error);
+      // Still update UI even if backend call fails
+      setAnalysisStatus({
+        status: 'stopped',
+        progress: analysisStatus?.progress || 0,
+        message: 'Analysis stopped (connection may be lost)',
+        timestamp: Date.now()
+      });
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
   const connectToUpdates = (id) => {
     console.log('🔌 Connecting to real-time updates for:', id);
     
@@ -612,6 +721,18 @@ function App() {
 
   return (
     <div className="app-background">
+      {/* Enhanced Bokeh Background Effects */}
+      <div id="bokeh-container" style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: -1,
+        overflow: 'hidden'
+      }}></div>
+      
       <div className="container">
         {/* Header */}
         <div className="header">
@@ -789,7 +910,48 @@ function App() {
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
               <h3 className="progress-title">Enhanced Analysis in Progress</h3>
+              <button
+                onClick={stopAnalysis}
+                disabled={isStopping || analysisStatus?.status === 'stopped'}
+                className="stop-button"
+                style={{
+                  marginLeft: 'auto',
+                  padding: '8px 16px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: isStopping ? 'not-allowed' : 'pointer',
+                  opacity: isStopping ? 0.6 : 1,
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                {isStopping ? 'Stopping...' : 'Stop Analysis'}
+              </button>
             </div>
+            
+            {/* Queue Status */}
+            {analysisStatus?.status === 'queued' && (
+              <div style={{
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #0ea5e9',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                <h4 style={{ color: '#0c4a6e', margin: '0 0 8px 0' }}>
+                  📋 Your video is queued for processing
+                </h4>
+                <p style={{ color: '#0c4a6e', margin: '0' }}>
+                  Estimated wait time: {analysisStatus?.estimated_wait_minutes || 0} minutes
+                </p>
+                <p style={{ color: '#0c4a6e', margin: '8px 0 0 0', fontSize: '14px' }}>
+                  Queue position: {analysisStatus?.queue_position || 1}
+                </p>
+              </div>
+            )}
             
             {/* Overall Progress */}
             <div className="progress-bar-container">
@@ -858,7 +1020,7 @@ function App() {
                       }}
                     >
                       <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                        [{new Date(log.timestamp).toLocaleTimeString()}]
+                        [{formatSingaporeTime(log.timestamp)}]
                       </span>
                       <span style={{ 
                         color: log.progress >= 100 ? '#10b981' : '#3b82f6',
@@ -1601,7 +1763,7 @@ function App() {
                       }}
                     >
                       <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                        [{new Date(log.timestamp).toLocaleTimeString()}]
+                        [{formatSingaporeTime(log.timestamp)}]
                       </span>
                       <span style={{ 
                         color: log.progress >= 100 ? '#10b981' : '#3b82f6',
