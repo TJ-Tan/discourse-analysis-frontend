@@ -32,6 +32,7 @@ function App() {
   const [configChanged, setConfigChanged] = useState(false);
   const [logMessages, setLogMessages] = useState([]);
   const logContainerRef = useRef(null);
+  const [animatedProgress, setAnimatedProgress] = useState(0);
 
   // Debug: Log whenever logMessages changes
   useEffect(() => {
@@ -47,6 +48,33 @@ function App() {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logMessages]);
+
+  // Smooth progress animation
+  useEffect(() => {
+    if (analysisStatus && analysisStatus.progress !== undefined) {
+      const targetProgress = analysisStatus.progress;
+      const startProgress = animatedProgress;
+      const duration = 300; // 300ms animation
+      const startTime = Date.now();
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function for smooth animation
+        const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+        const currentProgress = startProgress + (targetProgress - startProgress) * easeOutCubic;
+        
+        setAnimatedProgress(currentProgress);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }
+  }, [analysisStatus?.progress]);
 
   // Enhanced configuration state
   const [configuration, setConfiguration] = useState({
@@ -292,13 +320,15 @@ function App() {
           // New log message
           setLogMessages(prev => [...prev, message.data]);
         } else if (message.type === 'status') {
-          // Status update
-          setAnalysisStatus({
+          // Status update with smooth progress animation
+          console.log(`📊 Progress update: ${message.data.progress}% - ${message.data.message}`);
+          setAnalysisStatus(prev => ({
             status: message.data.status,
             progress: message.data.progress,
             message: message.data.message,
-            timestamp: Date.now()
-          });
+            timestamp: Date.now(),
+            previousProgress: prev.progress || 0
+          }));
         } else if (message.type === 'complete') {
           // Analysis complete
           console.log('🏁 Analysis completed');
@@ -738,10 +768,10 @@ function App() {
             <div className="progress-bar-container">
               <div 
                 className="progress-bar"
-                style={{ width: `${analysisStatus?.progress || 0}%` }}
+                style={{ width: `${Math.round(animatedProgress)}%` }}
               ></div>
             </div>
-            <div className="progress-percent">{analysisStatus?.progress || 0}% Complete</div>
+            <div className="progress-percent">{Math.round(animatedProgress)}% Complete</div>
 
             {/* Real-time Server Logs */}
             <div style={{
