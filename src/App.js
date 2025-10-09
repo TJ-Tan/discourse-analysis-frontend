@@ -329,8 +329,48 @@ function App() {
   };
 
   // Upload and start analysis
+  const [queueWarning, setQueueWarning] = useState(null);
+
+  // Check queue status on component mount
+  useEffect(() => {
+    const checkInitialQueueStatus = async () => {
+      const status = await checkQueueStatus();
+      if (status && status.warning_level !== "none") {
+        setQueueWarning(status);
+      }
+    };
+    
+    checkInitialQueueStatus();
+    
+    // Check every 30 seconds
+    const interval = setInterval(checkInitialQueueStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Check queue status before upload
+  const checkQueueStatus = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/queue-status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking queue status:', error);
+      return null;
+    }
+  };
+
   const startAnalysis = async () => {
     if (!file) return;
+
+    // Check queue status first
+    const queueStatus = await checkQueueStatus();
+    if (queueStatus && queueStatus.warning_level !== "none") {
+      const shouldProceed = window.confirm(
+        `${queueStatus.warning_message}\n\nDo you want to proceed anyway?`
+      );
+      if (!shouldProceed) {
+        return;
+      }
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -845,6 +885,42 @@ function App() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Queue Warning */}
+        {queueWarning && (
+          <div style={{
+            backgroundColor: queueWarning.warning_level === 'high' ? '#fef2f2' : 
+                           queueWarning.warning_level === 'medium' ? '#fffbeb' : '#f0f9ff',
+            border: queueWarning.warning_level === 'high' ? '1px solid #ef4444' : 
+                    queueWarning.warning_level === 'medium' ? '1px solid #f59e0b' : '1px solid #0ea5e9',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '16px',
+            textAlign: 'center'
+          }}>
+            <h4 style={{ 
+              color: queueWarning.warning_level === 'high' ? '#dc2626' : 
+                     queueWarning.warning_level === 'medium' ? '#d97706' : '#0c4a6e', 
+              margin: '0 0 8px 0' 
+            }}>
+              {queueWarning.warning_level === 'high' ? '🚨' : 
+               queueWarning.warning_level === 'medium' ? '⚠️' : 'ℹ️'} 
+              System Notice
+            </h4>
+            <p style={{ 
+              color: queueWarning.warning_level === 'high' ? '#dc2626' : 
+                     queueWarning.warning_level === 'medium' ? '#d97706' : '#0c4a6e', 
+              margin: '0' 
+            }}>
+              {queueWarning.warning_message}
+            </p>
+            {queueWarning.warning_level === 'high' && (
+              <p style={{ color: '#dc2626', margin: '8px 0 0 0', fontSize: '14px', fontWeight: 'bold' }}>
+                💡 Recommendation: Please wait and try again later for faster processing.
+              </p>
+            )}
           </div>
         )}
 
