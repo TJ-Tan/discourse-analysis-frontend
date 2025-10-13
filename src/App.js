@@ -891,36 +891,135 @@ function App() {
         {/* Queue Warning */}
         {queueWarning && (
           <div style={{
-            backgroundColor: queueWarning.warning_level === 'high' ? '#fef2f2' : 
-                           queueWarning.warning_level === 'medium' ? '#fffbeb' : '#f0f9ff',
-            border: queueWarning.warning_level === 'high' ? '1px solid #ef4444' : 
-                    queueWarning.warning_level === 'medium' ? '1px solid #f59e0b' : '1px solid #0ea5e9',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px',
-            textAlign: 'center'
+            background: queueWarning.warning_level === 'high' ? 
+              'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' : 
+              queueWarning.warning_level === 'medium' ? 
+              'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : 
+              'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+            border: queueWarning.warning_level === 'high' ? 
+              '2px solid #ef4444' : 
+              queueWarning.warning_level === 'medium' ? 
+              '2px solid #f59e0b' : 
+              '2px solid #0ea5e9',
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '24px',
+            textAlign: 'center',
+            boxShadow: queueWarning.warning_level === 'high' ? 
+              '0 10px 25px rgba(239, 68, 68, 0.15), 0 4px 6px rgba(239, 68, 68, 0.1)' :
+              queueWarning.warning_level === 'medium' ?
+              '0 10px 25px rgba(245, 158, 11, 0.15), 0 4px 6px rgba(245, 158, 11, 0.1)' :
+              '0 10px 25px rgba(14, 165, 233, 0.15), 0 4px 6px rgba(14, 165, 233, 0.1)',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <h4 style={{ 
-              color: queueWarning.warning_level === 'high' ? '#dc2626' : 
-                     queueWarning.warning_level === 'medium' ? '#d97706' : '#0c4a6e', 
-              margin: '0 0 8px 0' 
-            }}>
-              {queueWarning.warning_level === 'high' ? '🚨' : 
-               queueWarning.warning_level === 'medium' ? '⚠️' : 'ℹ️'} 
-              System Notice
-            </h4>
-            <p style={{ 
-              color: queueWarning.warning_level === 'high' ? '#dc2626' : 
-                     queueWarning.warning_level === 'medium' ? '#d97706' : '#0c4a6e', 
-              margin: '0' 
-            }}>
-              {queueWarning.warning_message}
-            </p>
-            {queueWarning.warning_level === 'high' && (
-              <p style={{ color: '#dc2626', margin: '8px 0 0 0', fontSize: '14px', fontWeight: 'bold' }}>
-                💡 Recommendation: Please wait and try again later for faster processing.
+            {/* Background Pattern */}
+            <div style={{
+              position: 'absolute',
+              top: '-50%',
+              right: '-50%',
+              width: '200%',
+              height: '200%',
+              background: queueWarning.warning_level === 'high' ?
+                'radial-gradient(circle, rgba(239, 68, 68, 0.05) 0%, transparent 70%)' :
+                queueWarning.warning_level === 'medium' ?
+                'radial-gradient(circle, rgba(245, 158, 11, 0.05) 0%, transparent 70%)' :
+                'radial-gradient(circle, rgba(14, 165, 233, 0.05) 0%, transparent 70%)',
+              pointerEvents: 'none'
+            }}></div>
+            
+            {/* Content */}
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  fontSize: '32px',
+                  marginRight: '12px',
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                }}>
+                  {queueWarning.warning_level === 'high' ? '🚨' : 
+                   queueWarning.warning_level === 'medium' ? '⚠️' : 'ℹ️'}
+                </div>
+                <h4 style={{ 
+                  color: queueWarning.warning_level === 'high' ? '#dc2626' : 
+                         queueWarning.warning_level === 'medium' ? '#d97706' : '#0c4a6e', 
+                  margin: '0',
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  letterSpacing: '-0.025em'
+                }}>
+                  System Notice
+                </h4>
+              </div>
+              
+              <p style={{ 
+                color: queueWarning.warning_level === 'high' ? '#dc2626' : 
+                       queueWarning.warning_level === 'medium' ? '#d97706' : '#0c4a6e', 
+                margin: '0 0 16px 0',
+                fontSize: '16px',
+                lineHeight: '1.5',
+                fontWeight: '500'
+              }}>
+                {queueWarning.warning_message}
               </p>
-            )}
+              
+              {queueWarning.warning_level === 'high' && (
+                <div style={{
+                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                  border: '1px solid rgba(220, 38, 38, 0.2)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginTop: '16px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '20px', marginRight: '8px' }}>💡</span>
+                    <p style={{ 
+                      color: '#dc2626', 
+                      margin: '0', 
+                      fontSize: '14px', 
+                      fontWeight: '600'
+                    }}>
+                      Recommendation: Please wait and try again later for faster processing.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Status Indicator */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: '16px',
+                gap: '16px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: queueWarning.warning_level === 'high' ? '#ef4444' :
+                                   queueWarning.warning_level === 'medium' ? '#f59e0b' : '#0ea5e9',
+                    animation: 'pulse 2s infinite'
+                  }}></div>
+                  <span style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    fontWeight: '500'
+                  }}>
+                    Active monitoring
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
