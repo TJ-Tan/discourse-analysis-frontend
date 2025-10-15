@@ -643,12 +643,18 @@ function App() {
     setIsGeneratingPDF(true);
     try {
       const generateEnhancedPDFContent = () => {
+        // Get full transcript
+        const fullTranscript = results.speech_analysis?.transcript || 'No transcript available';
+        
+        // Get evidence quotes if available
+        const evidenceQuotes = results.comprehensive_evaluation?.evidence || [];
+        
         const doc = `
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="UTF-8">
-            <title>Enhanced Discourse Analysis Report</title>
+            <title>MARS - Discourse Analysis Report</title>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
               
@@ -694,33 +700,98 @@ function App() {
                 margin: 0;
               }
               
-              .scores-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
+              .section {
                 margin: 40px 0;
-              }
-              
-              .score-card {
-                padding: 25px;
+                padding: 30px;
                 background: #f9fafb;
                 border-radius: 12px;
-                text-align: center;
-                border: 1px solid #e5e7eb;
+                border-left: 4px solid #003D7C;
               }
               
-              .score-card .score {
-                font-size: 2.5rem;
+              .section h2 {
+                color: #003D7C;
+                font-size: 1.8rem;
+                margin: 0 0 20px 0;
+                font-weight: 700;
+              }
+              
+              .category-score {
+                display: inline-block;
+                background: #003D7C;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-weight: 600;
+                margin-bottom: 20px;
+              }
+              
+              .transcript {
+                background: white;
+                padding: 25px;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+                line-height: 1.8;
+                white-space: pre-wrap;
+                max-height: 400px;
+                overflow-y: auto;
+              }
+              
+              .evidence {
+                background: #fef3c7;
+                padding: 20px;
+                border-radius: 8px;
+                border-left: 4px solid #f59e0b;
+                margin: 20px 0;
+              }
+              
+              .evidence h4 {
+                color: #92400e;
+                margin: 0 0 10px 0;
+              }
+              
+              .feedback {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+                margin: 15px 0;
+              }
+              
+              .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin: 20px 0;
+              }
+              
+              .metric {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+                text-align: center;
+              }
+              
+              .metric-value {
+                font-size: 1.5rem;
                 font-weight: 700;
                 color: #003D7C;
-                margin: 0 0 8px 0;
+              }
+              
+              .metric-label {
+                font-size: 0.9rem;
+                color: #6b7280;
+                margin-top: 5px;
               }
             </style>
           </head>
           <body>
             <div class="header">
               <h1>MARS Analysis Report</h1>
-              <p>Multimodal AI Reflection System - Pedagogical Assessment with Advanced Metrics</p>
+              <p>Multimodal AI Reflection System - Discourse Analysis with Agentic AI</p>
+              <p>Generated on ${new Date().toLocaleDateString()}</p>
             </div>
             
             <div class="overall-score">
@@ -728,24 +799,196 @@ function App() {
               <div style="font-size: 1.2rem; opacity: 0.9;">Overall Teaching Excellence Score</div>
             </div>
             
-            <div class="scores-grid">
-              <div class="score-card">
-                <div class="score">${results.speech_analysis.score}/10</div>
-                <div>Speech Analysis</div>
-              </div>
-              <div class="score-card">
-                <div class="score">${results.body_language.score}/10</div>
-                <div>Body Language</div>
-              </div>
-              <div class="score-card">
-                <div class="score">${results.teaching_effectiveness.score}/10</div>
-                <div>Teaching Effectiveness</div>
-              </div>
-              <div class="score-card">
-                <div class="score">${results.presentation_skills.score}/10</div>
-                <div>Presentation Skills</div>
-              </div>
+            <!-- Full Lecture Transcript -->
+            <div class="section">
+              <h2>📝 Full Lecture Transcript</h2>
+              <div class="transcript">${fullTranscript}</div>
             </div>
+            
+            <!-- Evidence Supporting Assessment -->
+            ${evidenceQuotes.length > 0 ? `
+            <div class="section">
+              <h2>🔍 Evidence Supporting Assessment</h2>
+              ${evidenceQuotes.map(quote => `
+                <div class="evidence">
+                  <h4>Key Evidence:</h4>
+                  <p>"${quote}"</p>
+                </div>
+              `).join('')}
+            </div>
+            ` : ''}
+            
+            <!-- 1. Speech Analysis -->
+            <div class="section">
+              <h2>🎤 1. Speech Analysis</h2>
+              <div class="category-score">Score: ${Math.round(results.speech_analysis.score * 10) / 10}/10</div>
+              
+              <div class="feedback">
+                <h4>Analysis Summary:</h4>
+                <p>${results.speech_analysis.summary || 'Speech analysis completed successfully.'}</p>
+              </div>
+              
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-value">${results.speech_analysis.raw_metrics?.speaking_rate || 0}</div>
+                  <div class="metric-label">Speaking Rate (WPM)</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${results.speech_analysis.raw_metrics?.filler_words_count || 0}</div>
+                  <div class="metric-label">Filler Words</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${results.speech_analysis.raw_metrics?.total_words || 0}</div>
+                  <div class="metric-label">Total Words</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${Math.round((results.speech_analysis.raw_metrics?.confidence || 0) * 100)}%</div>
+                  <div class="metric-label">Confidence Level</div>
+                </div>
+              </div>
+              
+              ${results.speech_analysis.feedback ? `
+                <div class="feedback">
+                  <h4>Detailed Feedback:</h4>
+                  <p>${results.speech_analysis.feedback}</p>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- 2. Body Language -->
+            <div class="section">
+              <h2>👁️ 2. Body Language</h2>
+              <div class="category-score">Score: ${Math.round(results.body_language.score * 10) / 10}/10</div>
+              
+              <div class="feedback">
+                <h4>Analysis Summary:</h4>
+                <p>${results.body_language.summary || 'Visual analysis completed successfully.'}</p>
+              </div>
+              
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-value">${results.body_language.raw_metrics?.total_frames_extracted || 0}</div>
+                  <div class="metric-label">Frames Analyzed</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${Math.round((results.body_language.raw_metrics?.eye_contact_score || 0) * 100)}%</div>
+                  <div class="metric-label">Eye Contact</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${Math.round((results.body_language.raw_metrics?.gesture_score || 0) * 100)}%</div>
+                  <div class="metric-label">Gesture Quality</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${Math.round((results.body_language.raw_metrics?.posture_score || 0) * 100)}%</div>
+                  <div class="metric-label">Posture Score</div>
+                </div>
+              </div>
+              
+              ${results.body_language.feedback ? `
+                <div class="feedback">
+                  <h4>Detailed Feedback:</h4>
+                  <p>${results.body_language.feedback}</p>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- 3. Teaching Effectiveness -->
+            <div class="section">
+              <h2>📚 3. Teaching Effectiveness</h2>
+              <div class="category-score">Score: ${Math.round(results.teaching_effectiveness.score * 10) / 10}/10</div>
+              
+              <div class="feedback">
+                <h4>Analysis Summary:</h4>
+                <p>${results.teaching_effectiveness.summary || 'Pedagogical analysis completed successfully.'}</p>
+              </div>
+              
+              ${results.teaching_effectiveness.feedback ? `
+                <div class="feedback">
+                  <h4>Detailed Feedback:</h4>
+                  <p>${results.teaching_effectiveness.feedback}</p>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- 4. Interaction & Engagement -->
+            <div class="section">
+              <h2>🤝 4. Interaction & Engagement</h2>
+              <div class="category-score">Score: ${Math.round(results.interaction_engagement.score * 10) / 10}/10</div>
+              
+              <div class="feedback">
+                <h4>Analysis Summary:</h4>
+                <p>${results.interaction_engagement.summary || 'Interaction analysis completed successfully.'}</p>
+              </div>
+              
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-value">${results.interaction_engagement.raw_metrics?.total_questions || 0}</div>
+                  <div class="metric-label">Questions Asked</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">${results.interaction_engagement.raw_metrics?.engagement_score || 0}</div>
+                  <div class="metric-label">Engagement Score</div>
+                </div>
+              </div>
+              
+              ${results.interaction_engagement.feedback ? `
+                <div class="feedback">
+                  <h4>Detailed Feedback:</h4>
+                  <p>${results.interaction_engagement.feedback}</p>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- 5. Presentation Skills -->
+            <div class="section">
+              <h2>🎯 5. Presentation Skills</h2>
+              <div class="category-score">Score: ${Math.round(results.presentation_skills.score * 10) / 10}/10</div>
+              
+              <div class="feedback">
+                <h4>Analysis Summary:</h4>
+                <p>${results.presentation_skills.summary || 'Presentation analysis completed successfully.'}</p>
+              </div>
+              
+              ${results.presentation_skills.feedback ? `
+                <div class="feedback">
+                  <h4>Detailed Feedback:</h4>
+                  <p>${results.presentation_skills.feedback}</p>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- Comprehensive Evaluation -->
+            ${results.comprehensive_evaluation ? `
+            <div class="section">
+              <h2>📊 Comprehensive Teaching Evaluation</h2>
+              <div class="feedback">
+                <h4>Overall Assessment:</h4>
+                <p>${results.comprehensive_evaluation.overall_summary || 'Comprehensive evaluation completed.'}</p>
+              </div>
+              
+              ${results.comprehensive_evaluation.strengths ? `
+                <div class="feedback">
+                  <h4>Key Strengths:</h4>
+                  <p>${results.comprehensive_evaluation.strengths}</p>
+                </div>
+              ` : ''}
+              
+              ${results.comprehensive_evaluation.areas_for_improvement ? `
+                <div class="feedback">
+                  <h4>Areas for Improvement:</h4>
+                  <p>${results.comprehensive_evaluation.areas_for_improvement}</p>
+                </div>
+              ` : ''}
+              
+              ${results.comprehensive_evaluation.recommendations ? `
+                <div class="feedback">
+                  <h4>Recommendations:</h4>
+                  <p>${results.comprehensive_evaluation.recommendations}</p>
+                </div>
+              ` : ''}
+            </div>
+            ` : ''}
+            
           </body>
           </html>
         `;
@@ -822,99 +1065,31 @@ function App() {
         </p>
         </div>
 
-        {/* Configuration Panel */}
-        {showAdvancedConfig && (
-          <div className="results-container" style={{ marginBottom: '2rem' }}>
-            <div className="results-header">
-              <Sliders size={32} style={{ color: 'var(--nus-orange)' }} />
-              <h2 className="results-title">Advanced Configuration</h2>
-              <div className="results-actions">
-                <button 
-                  onClick={saveConfiguration} 
-                  className="export-button"
-                  disabled={!configChanged}
-                  style={{ opacity: configChanged ? 1 : 0.6 }}
-                >
-                  <Save size={16} />
-                  Save Config
-                </button>
-                <button onClick={resetConfiguration} className="parameter-button">
-                  <RotateCcw size={16} />
-                  Reset
-                </button>
-              </div>
-            </div>
-
-            {configChanged && (
-              <div style={{ 
-                padding: '1rem', 
-                background: 'var(--accent-50)', 
-                border: `1px solid var(--nus-orange)`,
-                borderRadius: '8px',
-                marginBottom: '1.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--nus-orange-dark)' }}>
-                  <Info size={16} />
-                  <strong>Configuration Changed</strong>
-                </div>
-                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--nus-orange-dark)', fontSize: '0.9rem' }}>
-                  Save your changes to apply them to the next analysis.
-                </p>
-              </div>
-            )}
-
-            {/* Category Weights */}
-            <div className="parameter-section">
-              <h3 className="parameter-title">Category Weights (%)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                {Object.entries(configuration.categoryWeights).map(([key, value]) => (
-                  <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
-                    <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem' }}>
-                      {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </label>
-                    <input 
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={value}
-                      onChange={(e) => updateConfiguration('categoryWeights', null, key, e.target.value)}
-                      style={{ 
-                        width: '100%', 
-                        marginTop: '0.5rem',
-                        padding: '0.5rem',
-                        border: '1px solid var(--gray-300)',
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Queue Warning */}
         {queueWarning && (
           <div style={{
             background: queueWarning.warning_level === 'high' ? 
-              'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' : 
+              'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1))' : 
               queueWarning.warning_level === 'medium' ? 
-              'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : 
-              'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.1))' : 
+              'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))',
             border: queueWarning.warning_level === 'high' ? 
-              '2px solid #ef4444' : 
+              '2px solid rgba(239, 68, 68, 0.6)' : 
               queueWarning.warning_level === 'medium' ? 
-              '2px solid #f59e0b' : 
-              '2px solid #0ea5e9',
+              '2px solid rgba(245, 158, 11, 0.6)' : 
+              '2px solid rgba(59, 130, 246, 0.6)',
             borderRadius: '16px',
             padding: '24px',
             marginBottom: '24px',
             textAlign: 'center',
+            backdropFilter: 'blur(10px)',
+            maxWidth: '600px',
+            margin: '0 auto 24px auto',
             boxShadow: queueWarning.warning_level === 'high' ? 
               '0 10px 25px rgba(239, 68, 68, 0.15), 0 4px 6px rgba(239, 68, 68, 0.1)' :
               queueWarning.warning_level === 'medium' ?
               '0 10px 25px rgba(245, 158, 11, 0.15), 0 4px 6px rgba(245, 158, 11, 0.1)' :
-              '0 10px 25px rgba(14, 165, 233, 0.15), 0 4px 6px rgba(14, 165, 233, 0.1)',
+              '0 10px 25px rgba(59, 130, 246, 0.15), 0 4px 6px rgba(59, 130, 246, 0.1)',
             position: 'relative',
             overflow: 'hidden'
           }}>
@@ -1291,13 +1466,6 @@ function App() {
                       Export PDF
                     </>
                   )}
-                </button>
-                <button 
-                  onClick={() => setShowParameters(!showParameters)} 
-                  className="parameter-button"
-                >
-                  <Settings size={16} />
-                  {showParameters ? 'Hide' : 'Show'} Details
                 </button>
               </div>
             </div>
@@ -2067,6 +2235,77 @@ function App() {
           </div>
         )}
       </div>
+      
+      {/* Configuration Panel - Moved to Bottom */}
+      {showAdvancedConfig && (
+        <div className="results-container" style={{ marginBottom: '2rem' }}>
+          <div className="results-header">
+            <Sliders size={32} style={{ color: 'var(--nus-orange)' }} />
+            <h2 className="results-title">Advanced Configuration</h2>
+            <div className="results-actions">
+              <button 
+                onClick={saveConfiguration} 
+                className="export-button"
+                disabled={!configChanged}
+                style={{ opacity: configChanged ? 1 : 0.6 }}
+              >
+                <Save size={16} />
+                Save Config
+              </button>
+              <button onClick={resetConfiguration} className="parameter-button">
+                <RotateCcw size={16} />
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {configChanged && (
+            <div style={{ 
+              padding: '1rem', 
+              background: 'var(--accent-50)', 
+              border: `1px solid var(--nus-orange)`,
+              borderRadius: '8px',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--nus-orange-dark)' }}>
+                <Info size={16} />
+                <strong>Configuration Changed</strong>
+              </div>
+              <p style={{ margin: '0.5rem 0 0 0', color: 'var(--nus-orange-dark)', fontSize: '0.9rem' }}>
+                Save your changes to apply them to the next analysis.
+              </p>
+            </div>
+          )}
+
+          {/* Category Weights */}
+          <div className="parameter-section">
+            <h3 className="parameter-title">Category Weights (%)</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              {Object.entries(configuration.categoryWeights).map(([key, value]) => (
+                <div key={key} style={{ padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+                  <label style={{ fontWeight: '600', color: 'var(--gray-700)', fontSize: '0.9rem' }}>
+                    {key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </label>
+                  <input 
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={value}
+                    onChange={(e) => updateConfiguration('categoryWeights', null, key, e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      marginTop: '0.5rem',
+                      padding: '0.5rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: '4px'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Author Credits */}
       <div style={{
