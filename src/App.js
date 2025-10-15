@@ -2318,6 +2318,11 @@ function App() {
           In collaboration with <strong>Mark Gan</strong>.
         </div>
       </div>
+      
+      {/* Planet Mars - Bottom Right */}
+      <div className="mars-planet">
+        <div className="mars-planet-inner"></div>
+      </div>
     </div>
   );
 }
