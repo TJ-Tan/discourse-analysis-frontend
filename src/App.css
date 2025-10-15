@@ -152,7 +152,7 @@ body {
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 800;
   color: white;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   letter-spacing: -0.025em;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
@@ -164,11 +164,11 @@ body {
   max-width: 700px;
   margin: 0 auto;
   margin-bottom: 2rem;
-  line-height: 1.6;
+  line-height: 1.4;
 }
 
 .subheader {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(211, 211, 211, 0.9);
   font-size: 1.1rem;
   font-weight: 400;
   max-width: 800px;

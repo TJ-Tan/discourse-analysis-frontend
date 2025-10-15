@@ -810,16 +810,16 @@ function App() {
         <div className="header">
           <div className="announcement-banner">
             <Sparkles size={16} />
-            <span>AI Media Tools Developed by CTLT</span>
+            <span>An AI Media Tools by CTLT</span>
             <ArrowRight size={16} />
           </div>
           <h1 className="title">MARS</h1>
           <p className="subtitle">
             Multimodal AI Reflection System
           </p>
-          <p className="subheader">
-            Discourse analysis with AI-enhanced pedagogical insights and personalised feedback.
-          </p>
+        <p className="subheader">
+          Discourse Analysis with Agentic AI for enhanced pedagogical insights and personalised feedback.
+        </p>
         </div>
 
         {/* Configuration Panel */}
@@ -2077,13 +2077,13 @@ function App() {
         lineHeight: '1.6'
       }}>
         <div style={{ marginBottom: '0.5rem' }}>
-          <strong>Developed by</strong> Teong Jin, Prakash, Maria.
+          Developed by <strong>Tan Teong Jin, Prakash S/O Perumal Haridas, Maria Goh</strong>.
         </div>
         <div style={{ marginBottom: '0.5rem' }}>
-          <strong>Guided by</strong> Sie Wee.
+          Guided by <strong>Tan Sie Wee</strong>.
         </div>
         <div>
-          <strong>In collaboration with</strong> Mark Gan.
+          In collaboration with <strong>Mark Gan</strong>.
         </div>
       </div>
     </div>
