@@ -67,8 +67,8 @@ function App() {
         const bokeh = document.createElement('div');
         bokeh.className = 'bokeh';
         
-        // MUCH BIGGER size variation (10px to 150px)
-        const size = Math.random() * 140 + 10;
+        // MUCH BIGGER size variation (5px to 250px) - Extreme variations
+        const size = Math.random() * 245 + 5;
         bokeh.style.width = `${size}px`;
         bokeh.style.height = `${size}px`;
         
@@ -76,12 +76,12 @@ function App() {
         bokeh.style.left = `${Math.random() * 100}%`;
         bokeh.style.top = `${Math.random() * 100}%`;
         
-        // BIGGER blur variation (1px to 15px)
-        const blur = Math.random() * 14 + 1;
+        // BIGGER blur variation (1px to 25px) - More dramatic blur
+        const blur = Math.random() * 24 + 1;
         bokeh.style.filter = `blur(${blur}px)`;
         
-        // BIGGER opacity variation (0.05 to 0.6)
-        const opacity = Math.random() * 0.55 + 0.05;
+        // BIGGER opacity variation (0.02 to 0.8) - More dramatic opacity range
+        const opacity = Math.random() * 0.78 + 0.02;
         bokeh.style.opacity = opacity;
         
         // EXPANDED color variation with lighter tones
@@ -2066,6 +2066,25 @@ function App() {
             </div>
           </div>
         )}
+      </div>
+      
+      {/* Author Credits */}
+      <div style={{
+        textAlign: 'center',
+        padding: '2rem 1rem',
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontSize: '0.9rem',
+        lineHeight: '1.6'
+      }}>
+        <div style={{ marginBottom: '0.5rem' }}>
+          <strong>Developed by</strong> Teong Jin, Prakash, Maria.
+        </div>
+        <div style={{ marginBottom: '0.5rem' }}>
+          <strong>Guided by</strong> Sie Wee.
+        </div>
+        <div>
+          <strong>In collaboration with</strong> Mark Gan.
+        </div>
       </div>
     </div>
   );
