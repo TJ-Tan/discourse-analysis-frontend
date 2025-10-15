@@ -76,31 +76,42 @@ function App() {
         star.style.left = `${Math.random() * 100}%`;
         star.style.top = `${Math.random() * 100}%`;
         
-        // Realistic star colors (white to pale blue/white)
+        // Enhanced star colors with more brightness variation
         const starColors = [
           'rgba(255, 255, 255, 1)',      // Pure white (brightest stars)
-          'rgba(255, 255, 255, 0.9)',    // Very bright white
-          'rgba(255, 255, 255, 0.8)',    // Bright white
-          'rgba(255, 255, 255, 0.7)',    // Medium white
-          'rgba(255, 255, 255, 0.6)',    // Dimmer white
-          'rgba(240, 248, 255, 0.8)',    // Pale blue-white
-          'rgba(230, 240, 255, 0.7)',    // Light blue-white
-          'rgba(220, 230, 255, 0.6)'     // Very light blue-white
+          'rgba(255, 255, 255, 0.95)',   // Very bright white
+          'rgba(255, 255, 255, 0.9)',    // Bright white
+          'rgba(255, 255, 255, 0.8)',    // Medium white
+          'rgba(255, 255, 255, 0.7)',    // Dimmer white
+          'rgba(255, 255, 255, 0.6)',    // Dim white
+          'rgba(240, 248, 255, 0.9)',    // Pale blue-white (bright)
+          'rgba(230, 240, 255, 0.8)',    // Light blue-white
+          'rgba(220, 230, 255, 0.7)',    // Very light blue-white
+          'rgba(200, 220, 255, 0.6)',    // Subtle blue-white
+          'rgba(255, 248, 240, 0.8)',    // Warm white
+          'rgba(255, 240, 220, 0.7)'     // Soft warm white
         ];
         star.style.backgroundColor = starColors[Math.floor(Math.random() * starColors.length)];
         
-        // Add twinkling effect for some stars
-        if (Math.random() < 0.3) { // 30% of stars twinkle
-          const twinkleDuration = Math.random() * 4 + 2; // 2-6 seconds
-          const twinkleDelay = Math.random() * 2; // 0-2 second delay
+        // Enhanced twinkling effect for more stars with stronger animation
+        if (Math.random() < 0.5) { // 50% of stars twinkle (increased from 30%)
+          const twinkleDuration = Math.random() * 3 + 1.5; // 1.5-4.5 seconds (faster)
+          const twinkleDelay = Math.random() * 1.5; // 0-1.5 second delay
           star.style.animation = `starTwinkle ${twinkleDuration}s ease-in-out infinite ${twinkleDelay}s`;
         }
         
-        // Add occasional fade effect for some stars
-        if (Math.random() < 0.2) { // 20% of stars fade occasionally
-          const fadeDuration = Math.random() * 6 + 4; // 4-10 seconds
-          const fadeDelay = Math.random() * 3; // 0-3 second delay
+        // Enhanced fade effect for more stars
+        if (Math.random() < 0.3) { // 30% of stars fade (increased from 20%)
+          const fadeDuration = Math.random() * 4 + 3; // 3-7 seconds
+          const fadeDelay = Math.random() * 2; // 0-2 second delay
           star.style.animation = `starFade ${fadeDuration}s ease-in-out infinite ${fadeDelay}s`;
+        }
+        
+        // New brightness variation effect for some stars
+        if (Math.random() < 0.25) { // 25% of stars have brightness variation
+          const brightnessDuration = Math.random() * 5 + 4; // 4-9 seconds
+          const brightnessDelay = Math.random() * 2.5; // 0-2.5 second delay
+          star.style.animation = `starBrightness ${brightnessDuration}s ease-in-out infinite ${brightnessDelay}s`;
         }
         
         bokehContainer.appendChild(star);
@@ -2317,11 +2328,6 @@ function App() {
         <div>
           In collaboration with <strong>Mark Gan</strong>.
         </div>
-      </div>
-      
-      {/* Planet Mars - Bottom Right */}
-      <div className="mars-planet">
-        <div className="mars-planet-inner"></div>
       </div>
     </div>
   );
