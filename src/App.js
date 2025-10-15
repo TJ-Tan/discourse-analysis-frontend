@@ -61,56 +61,49 @@ function App() {
       // Clear existing bokeh
       bokehContainer.innerHTML = '';
 
-      // Create multiple bokeh elements with BIGGER variation
-      const bokehCount = 20;
-      for (let i = 0; i < bokehCount; i++) {
-        const bokeh = document.createElement('div');
-        bokeh.className = 'bokeh';
+      // Create realistic starry night background
+      const starCount = 150; // More stars for realistic effect
+      for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
         
-        // MUCH BIGGER size variation (5px to 250px) - Extreme variations
-        const size = Math.random() * 245 + 5;
-        bokeh.style.width = `${size}px`;
-        bokeh.style.height = `${size}px`;
+        // Realistic star sizes (tiny to medium)
+        const size = Math.random() * 3 + 1; // 1px to 4px
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
         
-        // Random position
-        bokeh.style.left = `${Math.random() * 100}%`;
-        bokeh.style.top = `${Math.random() * 100}%`;
+        // Random position across entire viewport
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
         
-        // BIGGER blur variation (1px to 25px) - More dramatic blur
-        const blur = Math.random() * 24 + 1;
-        bokeh.style.filter = `blur(${blur}px)`;
-        
-        // BIGGER opacity variation (0.02 to 0.8) - More dramatic opacity range
-        const opacity = Math.random() * 0.78 + 0.02;
-        bokeh.style.opacity = opacity;
-        
-        // EXPANDED color variation with lighter tones
-        const colors = [
-          'rgba(255, 255, 255, 0.4)',     // White
-          'rgba(173, 216, 230, 0.4)',      // Light Blue
-          'rgba(211, 211, 211, 0.4)',      // Light Grey
-          'rgba(255, 218, 185, 0.4)',      // Light Orange
-          'rgba(255, 255, 224, 0.4)',     // Light Yellow
-          'rgba(221, 160, 221, 0.4)',     // Light Purple
-          'rgba(255, 182, 193, 0.4)',     // Light Pink
-          'rgba(144, 238, 144, 0.4)',     // Light Green
-          'rgba(255, 228, 196, 0.4)',     // Light Peach
-          'rgba(230, 230, 250, 0.4)'     // Lavender
+        // Realistic star colors (white to pale blue/white)
+        const starColors = [
+          'rgba(255, 255, 255, 1)',      // Pure white (brightest stars)
+          'rgba(255, 255, 255, 0.9)',    // Very bright white
+          'rgba(255, 255, 255, 0.8)',    // Bright white
+          'rgba(255, 255, 255, 0.7)',    // Medium white
+          'rgba(255, 255, 255, 0.6)',    // Dimmer white
+          'rgba(240, 248, 255, 0.8)',    // Pale blue-white
+          'rgba(230, 240, 255, 0.7)',    // Light blue-white
+          'rgba(220, 230, 255, 0.6)'     // Very light blue-white
         ];
-        bokeh.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        star.style.backgroundColor = starColors[Math.floor(Math.random() * starColors.length)];
         
-        // MUCH BIGGER animation duration variation (5s to 30s)
-        const duration = Math.random() * 25 + 5;
-        bokeh.style.animationDuration = `${duration}s`;
+        // Add twinkling effect for some stars
+        if (Math.random() < 0.3) { // 30% of stars twinkle
+          const twinkleDuration = Math.random() * 4 + 2; // 2-6 seconds
+          const twinkleDelay = Math.random() * 2; // 0-2 second delay
+          star.style.animation = `starTwinkle ${twinkleDuration}s ease-in-out infinite ${twinkleDelay}s`;
+        }
         
-        // Random animation delay
-        const delay = Math.random() * 10;
-        bokeh.style.animationDelay = `${delay}s`;
+        // Add occasional fade effect for some stars
+        if (Math.random() < 0.2) { // 20% of stars fade occasionally
+          const fadeDuration = Math.random() * 6 + 4; // 4-10 seconds
+          const fadeDelay = Math.random() * 3; // 0-3 second delay
+          star.style.animation = `starFade ${fadeDuration}s ease-in-out infinite ${fadeDelay}s`;
+        }
         
-        // Add movement animation with different speeds
-        bokeh.style.animation = `bokehFloat ${duration}s ease-in-out infinite`;
-        
-        bokehContainer.appendChild(bokeh);
+        bokehContainer.appendChild(star);
       }
     };
 
@@ -868,7 +861,7 @@ function App() {
               <div class="metrics">
                 <div class="metric">
                   <div class="metric-value">${results.body_language.raw_metrics?.total_frames_extracted || 0}</div>
-                  <div class="metric-label">Frames Analyzed</div>
+                  <div class="metric-label">Frames Analysed</div>
                 </div>
                 <div class="metric">
                   <div class="metric-value">${Math.round((results.body_language.raw_metrics?.eye_contact_score || 0) * 100)}%</div>
@@ -1217,7 +1210,7 @@ function App() {
               {isDragActive ? (
                 <div>
                   <p className="upload-text">Drop your lecture video here</p>
-                  <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 1 hour, 500MB • Analyzes 100 frames
+                  <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 1 hour, 500MB • Analyses 100 frames
                   </p>
                 </div>
               ) : (
@@ -1552,7 +1545,7 @@ function App() {
               }}>
                 <div><strong>Duration:</strong> {results.full_transcript?.duration_formatted || '00:00'}</div>
                 <div><strong>Words:</strong> {results.full_transcript?.word_count || 0}</div>
-                <div><strong>Frames Analyzed:</strong> {results.configuration_used?.frames_analyzed || 0}</div>
+                <div><strong>Frames Analysed:</strong> {results.configuration_used?.frames_analyzed || 0}</div>
               </div>
 
               <div style={{ 
@@ -2037,7 +2030,7 @@ function App() {
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <strong>Frames Analyzed:</strong> {results.body_language.raw_metrics?.total_frames_extracted || 0}
+                    <strong>Frames Analysed:</strong> {results.body_language.raw_metrics?.total_frames_extracted || 0}
                   </div>
                   <div>
                     <strong>Frame Interval:</strong> {results.body_language.raw_metrics?.frame_interval_seconds || 0}s

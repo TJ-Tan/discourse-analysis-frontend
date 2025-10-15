@@ -148,13 +148,28 @@ body {
   padding: 2rem 0;
 }
 
+/* MARS Title Flash Effect */
+@keyframes marsFlash {
+  0%, 100% {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    text-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(255, 255, 255, 0.8),
+      0 0 40px rgba(255, 255, 255, 0.6),
+      0 0 60px rgba(255, 255, 255, 0.4);
+  }
+}
+
 .title {
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: clamp(3.5rem, 7vw, 6rem);
   font-weight: 800;
   color: white;
   margin-bottom: 0.25rem;
   letter-spacing: -0.025em;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  animation: marsFlash 8s ease-in-out infinite;
 }
 
 .subtitle {
@@ -1795,6 +1810,39 @@ body {
   .server-logs-content {
     font-size: 0.75rem;
   }
+}
+
+/* Starry Night Background Animations */
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes starFade {
+  0%, 100% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.4;
+  }
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 /* Enhanced Bokeh Animation with BIGGER movement */
