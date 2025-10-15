@@ -159,10 +159,11 @@ function App() {
   // Enhanced configuration state
   const [configuration, setConfiguration] = useState({
     categoryWeights: {
-      speech_analysis: 30,
-      body_language: 25,
-      teaching_effectiveness: 35,
-      presentation_skills: 10
+      speech_analysis: 20,
+      body_language: 20,
+      teaching_effectiveness: 20,
+      interaction_engagement: 20,
+      presentation_skills: 20
     },
     speechComponents: {
       speaking_rate: 25,
@@ -266,10 +267,11 @@ function App() {
   const resetConfiguration = () => {
     setConfiguration({
       categoryWeights: {
-        speech_analysis: 30,
-        body_language: 25,
-        teaching_effectiveness: 35,
-        presentation_skills: 10
+        speech_analysis: 20,
+        body_language: 20,
+        teaching_effectiveness: 20,
+        interaction_engagement: 20,
+        presentation_skills: 20
       },
       speechComponents: {
         speaking_rate: 25,
@@ -717,8 +719,8 @@ function App() {
           </head>
           <body>
             <div class="header">
-              <h1>Enhanced Discourse Analysis Report</h1>
-              <p>AI-Powered Pedagogical Assessment with Advanced Metrics</p>
+              <h1>MARS Analysis Report</h1>
+              <p>Multimodal AI Reflection System - Pedagogical Assessment with Advanced Metrics</p>
             </div>
             
             <div class="overall-score">
@@ -756,7 +758,7 @@ function App() {
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `enhanced-discourse-analysis-${new Date().toISOString().split('T')[0]}.html`;
+      link.download = `MARS-analysis-report-${new Date().toISOString().split('T')[0]}.html`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -811,9 +813,12 @@ function App() {
             <span>AI Media Tools Developed by CTLT</span>
             <ArrowRight size={16} />
           </div>
-          <h1 className="title">Discourse Analysis with genAI</h1>
+          <h1 className="title">MARS</h1>
           <p className="subtitle">
-            Elevate your T&L delivery with AI-enhanced pedagogical insights and personalised feedback
+            Multimodal AI Reflection System
+          </p>
+          <p className="subheader">
+            Discourse analysis with AI-enhanced pedagogical insights and personalised feedback.
           </p>
         </div>
 
