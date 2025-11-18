@@ -576,7 +576,7 @@ function App() {
               </div>
               {isDragActive ? (
                 <div>
-                  <p className="upload-text">Drop your lecture video here</p>
+                  <p className="upload-text">Drop your lecture video sandbox here</p>
                   <p className="upload-subtext">Release to upload and analyse</p>
                 </div>
               ) : (
