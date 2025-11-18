@@ -148,13 +148,28 @@ body {
   padding: 2rem 0;
 }
 
+/* MARS Title Flash Effect */
+@keyframes marsFlash {
+  0%, 100% {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    text-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(255, 255, 255, 0.8),
+      0 0 40px rgba(255, 255, 255, 0.6),
+      0 0 60px rgba(255, 255, 255, 0.4);
+  }
+}
+
 .title {
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: clamp(3.5rem, 7vw, 6rem);
   font-weight: 800;
   color: white;
-  margin-bottom: 1rem;
+  margin-bottom: 0.25rem;
   letter-spacing: -0.025em;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  animation: marsFlash 8s ease-in-out infinite;
 }
 
 .subtitle {
@@ -163,7 +178,19 @@ body {
   font-weight: 400;
   max-width: 700px;
   margin: 0 auto;
-  line-height: 1.6;
+  margin-bottom: 2rem;
+  line-height: 1.4;
+}
+
+.subheader {
+  color: rgba(211, 211, 211, 0.9);
+  font-size: 1.1rem;
+  font-weight: 400;
+  max-width: 800px;
+  margin: 0 auto;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
 }
 
 .announcement-banner {
@@ -1535,6 +1562,12 @@ body {
   
   .subtitle {
     font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .subheader {
+    font-size: 1rem;
+    margin-top: 0.5rem;
   }
   
   .upload-area {
@@ -1777,4 +1810,100 @@ body {
   .server-logs-content {
     font-size: 0.75rem;
   }
+}
+
+/* Enhanced Starry Night Background Animations */
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+  75% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes starFade {
+  0%, 100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.1;
+  }
+  40% {
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.2;
+  }
+  80% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes starBrightness {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  30% {
+    opacity: 0.3;
+    filter: brightness(0.3);
+  }
+  60% {
+    opacity: 1.2;
+    filter: brightness(1.5);
+  }
+  90% {
+    opacity: 0.5;
+    filter: brightness(0.7);
+  }
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+@keyframes bokehFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate(50px, -80px) scale(1.3) rotate(90deg);
+  }
+  50% {
+    transform: translate(-40px, -60px) scale(0.7) rotate(180deg);
+  }
+  75% {
+    transform: translate(60px, 30px) scale(1.1) rotate(270deg);
+  }
+}
+
+/* Pulse animation for status indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.bokeh {
+  position: absolute;
+  border-radius: 50%;
+  animation: bokehFloat 12s ease-in-out infinite;
 }
