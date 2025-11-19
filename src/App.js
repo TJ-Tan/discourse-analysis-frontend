@@ -2380,8 +2380,26 @@ function App() {
         <div style={{ marginBottom: '0.5rem' }}>
           Guided by <strong>Tan Sie Wee</strong>.
         </div>
-        <div>
+        <div style={{ marginBottom: '1rem' }}>
           In collaboration with <strong>Mark Gan</strong>.
+        </div>
+        <div style={{
+          marginTop: '1.5rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+          fontSize: '0.85rem',
+          color: 'rgba(255, 255, 255, 0.5)'
+        }}>
+          Last updated: {new Date().toLocaleString('en-SG', {
+            timeZone: 'Asia/Singapore',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })}
         </div>
       </div>
     </div>
