@@ -1566,30 +1566,77 @@ function App() {
                 background: 'var(--gray-50)',
                 borderRadius: '12px',
                 fontFamily: "'Inter', sans-serif",
-                lineHeight: '2',
+                lineHeight: '1.8',
                 fontSize: '0.95rem'
               }}>
                 {results.full_transcript?.timecoded_words && results.full_transcript.timecoded_words.length > 0 ? (
-                  results.full_transcript.timecoded_words.map((wordData, idx) => (
-                    <span key={idx} style={{ marginRight: '0.3rem' }}>
-                      {idx % 15 === 0 && (
+                  (() => {
+                    // Helper function to format timestamp from seconds
+                    const formatTimestamp = (seconds) => {
+                      const mins = Math.floor(seconds / 60);
+                      const secs = Math.floor(seconds % 60);
+                      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    };
+                    
+                    // Group words by timestamp to create paragraphs
+                    const paragraphs = [];
+                    let currentParagraph = { timestamp: null, words: [] };
+                    
+                    results.full_transcript.timecoded_words.forEach((wordData, idx) => {
+                      // Get timestamp - prefer formatted timestamp, fallback to start time
+                      const timestamp = wordData.timestamp || (wordData.start ? formatTimestamp(wordData.start) : null);
+                      
+                      // If this word has a timestamp and it's different from current paragraph, start new paragraph
+                      if (timestamp && timestamp !== currentParagraph.timestamp) {
+                        // Save previous paragraph if it has words
+                        if (currentParagraph.words.length > 0) {
+                          paragraphs.push(currentParagraph);
+                        }
+                        // Start new paragraph
+                        currentParagraph = { timestamp: timestamp, words: [wordData] };
+                      } else {
+                        // Add word to current paragraph (same timestamp or no timestamp)
+                        currentParagraph.words.push(wordData);
+                      }
+                    });
+                    
+                    // Add the last paragraph
+                    if (currentParagraph.words.length > 0) {
+                      paragraphs.push(currentParagraph);
+                    }
+                    
+                    // Render paragraphs - each timestamp starts a new paragraph
+                    return paragraphs.map((paragraph, pIdx) => (
+                      <div key={pIdx} style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'flex-start' }}>
                         <span style={{ 
                           display: 'inline-block',
-                          marginRight: '0.5rem',
-                          padding: '0.1rem 0.4rem',
+                          marginRight: '0.75rem',
+                          padding: '0.2rem 0.6rem',
                           background: 'var(--nus-blue)',
                           color: 'white',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
                           fontWeight: '600',
-                          verticalAlign: 'middle'
+                          flexShrink: 0,
+                          marginTop: '0.1rem'
                         }}>
-                          {wordData.timestamp}
+                          {paragraph.timestamp}
                         </span>
-                      )}
-                      {wordData.word}
-                    </span>
-                  ))
+                        <p style={{ 
+                          margin: 0, 
+                          display: 'inline-block', 
+                          lineHeight: '1.8',
+                          flex: 1
+                        }}>
+                          {paragraph.words.map((wordData, wIdx) => (
+                            <span key={wIdx} style={{ marginRight: '0.3rem' }}>
+                              {wordData.word}
+                            </span>
+                          ))}
+                        </p>
+                      </div>
+                    ));
+                  })()
                 ) : (
                   <div style={{ color: 'var(--gray-500)', fontStyle: 'italic' }}>
                     {results.full_transcript?.text || 'Transcript not available'}
