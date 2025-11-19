@@ -357,10 +357,17 @@ function App() {
   // Check queue status before upload
   const checkQueueStatus = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/queue-status`);
+      const response = await axios.get(`${API_BASE_URL}/queue-status`, {
+        timeout: 5000, // 5 second timeout
+        validateStatus: (status) => status < 500 // Don't throw on 4xx errors
+      });
       return response.data;
     } catch (error) {
-      console.error('Error checking queue status:', error);
+      // Only log in development, suppress in production
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error checking queue status:', error.message);
+      }
+      // Silently fail - queue status check is not critical
       return null;
     }
   };
