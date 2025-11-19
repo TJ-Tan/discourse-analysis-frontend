@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = 'discourse-analysis-duplicated-production.up.railway.app';
+// Use environment variable for API URL, fallback to production
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://discourse-analysis-duplicated-production.up.railway.app';
 
 function App() {
   const [file, setFile] = useState(null);
