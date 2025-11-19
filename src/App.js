@@ -18,7 +18,7 @@ import {
 import './App.css';
 
 // Use environment variable for API URL, fallback to production
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://discourse-analysis-production.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://discourse-analysis-backend.up.railway.app';
 
 function App() {
   const [file, setFile] = useState(null);
