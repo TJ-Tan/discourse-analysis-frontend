@@ -1957,6 +1957,28 @@ function App() {
                     <strong>Cognitive Level:</strong> {results.interaction_engagement.cognitive_level}
                   </div>
                 </div>
+                
+                {/* Metric Explanations */}
+                {results.interaction_engagement.explanations && (
+                  <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0, 61, 124, 0.05)', borderRadius: '8px' }}>
+                    <h5 style={{ color: 'var(--nus-blue)', marginBottom: '1rem', fontSize: '1rem' }}>Metric Explanations</h5>
+                    {Object.entries(results.interaction_engagement.explanations).map(([metric, explanation]) => (
+                      <div key={metric} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0, 61, 124, 0.1)' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                          {metric.replace(/_/g, ' ')}: <span style={{ color: 'var(--nus-blue)' }}>{explanation.rating}</span> ({explanation.score_range})
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#333', marginBottom: '0.25rem' }}>
+                          {explanation.justification}
+                        </div>
+                        {explanation.remarks && (
+                          <div style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                            Note: {explanation.remarks}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* High-Level Questions with Timecodes */}
                 {results.interaction_engagement.high_level_questions && results.interaction_engagement.high_level_questions.length > 0 && (
@@ -2332,6 +2354,28 @@ function App() {
                   </div>
                 </div>
                 
+                {/* Metric Explanations */}
+                {results.speech_analysis.explanations && (
+                  <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0, 61, 124, 0.05)', borderRadius: '8px' }}>
+                    <h5 style={{ color: 'var(--nus-blue)', marginBottom: '1rem', fontSize: '1rem' }}>Metric Explanations</h5>
+                    {Object.entries(results.speech_analysis.explanations).map(([metric, explanation]) => (
+                      <div key={metric} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0, 61, 124, 0.1)' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                          {metric.replace(/_/g, ' ')}: <span style={{ color: 'var(--nus-blue)' }}>{explanation.rating}</span> ({explanation.score_range})
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#333', marginBottom: '0.25rem' }}>
+                          {explanation.justification}
+                        </div>
+                        {explanation.remarks && (
+                          <div style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                            Note: {explanation.remarks}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 {/* Filler Words Detail */}
                 {results.detailed_insights?.filler_word_analysis && results.detailed_insights.filler_word_analysis.length > 0 && (
                   <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
@@ -2387,7 +2431,89 @@ function App() {
                     <strong>Professionalism:</strong> {results.body_language.raw_metrics?.professionalism_raw || 0}/10
                   </div>
                 </div>
+                
+                {/* Metric Explanations */}
+                {results.body_language.explanations && (
+                  <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0, 61, 124, 0.05)', borderRadius: '8px' }}>
+                    <h5 style={{ color: 'var(--nus-blue)', marginBottom: '1rem', fontSize: '1rem' }}>Metric Explanations</h5>
+                    {Object.entries(results.body_language.explanations).map(([metric, explanation]) => (
+                      <div key={metric} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0, 61, 124, 0.1)' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                          {metric.replace(/_/g, ' ')}: <span style={{ color: 'var(--nus-blue)' }}>{explanation.rating}</span> ({explanation.score_range})
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#333', marginBottom: '0.25rem' }}>
+                          {explanation.justification}
+                        </div>
+                        {explanation.remarks && (
+                          <div style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                            Note: {explanation.remarks}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Teaching Effectiveness Explanations */}
+              {results.teaching_effectiveness?.explanations && (
+                <div style={{ 
+                  background: 'white', 
+                  padding: '1.5rem', 
+                  borderRadius: '12px', 
+                  marginBottom: '1.5rem',
+                  border: '1px solid var(--gray-200)'
+                }}>
+                  <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                    📚 Teaching Effectiveness Explanations
+                  </h4>
+                  {Object.entries(results.teaching_effectiveness.explanations).map(([metric, explanation]) => (
+                    <div key={metric} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0, 61, 124, 0.1)' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                        {metric.replace(/_/g, ' ')}: <span style={{ color: 'var(--nus-blue)' }}>{explanation.rating}</span> ({explanation.score_range})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#333', marginBottom: '0.25rem' }}>
+                        {explanation.justification}
+                      </div>
+                      {explanation.remarks && (
+                        <div style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                          Note: {explanation.remarks}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Presentation Skills Explanations */}
+              {results.presentation_skills?.explanations && (
+                <div style={{ 
+                  background: 'white', 
+                  padding: '1.5rem', 
+                  borderRadius: '12px', 
+                  marginBottom: '1.5rem',
+                  border: '1px solid var(--gray-200)'
+                }}>
+                  <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                    🎯 Presentation Skills Explanations
+                  </h4>
+                  {Object.entries(results.presentation_skills.explanations).map(([metric, explanation]) => (
+                    <div key={metric} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0, 61, 124, 0.1)' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                        {metric.replace(/_/g, ' ')}: <span style={{ color: 'var(--nus-blue)' }}>{explanation.rating}</span> ({explanation.score_range})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#333', marginBottom: '0.25rem' }}>
+                        {explanation.justification}
+                      </div>
+                      {explanation.remarks && (
+                        <div style={{ fontSize: '0.85rem', color: '#666', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                          Note: {explanation.remarks}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Score Calculation Breakdown */}
               <div style={{ 
