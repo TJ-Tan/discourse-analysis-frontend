@@ -149,9 +149,26 @@ function App() {
 
   // Shooting stars effect
   useEffect(() => {
+    // Create a dedicated container for shooting stars with higher z-index
+    let shootingStarContainer = document.getElementById('shooting-stars-container');
+    if (!shootingStarContainer) {
+      shootingStarContainer = document.createElement('div');
+      shootingStarContainer.id = 'shooting-stars-container';
+      shootingStarContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      `;
+      document.body.appendChild(shootingStarContainer);
+    }
+
     const createShootingStar = () => {
-      const bokehContainer = document.getElementById('bokeh-container');
-      if (!bokehContainer) return;
+      if (!shootingStarContainer) return;
 
       // Create 1-3 shooting stars
       const starCount = Math.floor(Math.random() * 3) + 1; // 1-3 stars
@@ -188,7 +205,7 @@ function App() {
         const duration = Math.random() * 0.7 + 0.8;
         shootingStar.style.animation = `shootingStar ${duration}s linear forwards`;
         
-        bokehContainer.appendChild(shootingStar);
+        shootingStarContainer.appendChild(shootingStar);
         
         // Remove after animation completes
         setTimeout(() => {
@@ -211,7 +228,12 @@ function App() {
     // Start the cycle
     scheduleNextShootingStar();
 
-    // No cleanup needed as stars remove themselves
+    // Cleanup on unmount
+    return () => {
+      if (shootingStarContainer && shootingStarContainer.parentNode) {
+        shootingStarContainer.parentNode.removeChild(shootingStarContainer);
+      }
+    };
   }, []);
 
   // Auto-scroll to bottom when new log messages arrive
@@ -1831,25 +1853,36 @@ function App() {
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                         >
-                          <img 
-                            src={frame.image} 
-                            alt={`Frame at ${formatTimestamp(frame.timestamp)}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'contain',
-                              display: 'block'
-                            }}
-                          />
-                          <div style={{
-                            padding: '0.75rem',
-                            background: 'rgba(0, 0, 0, 0.6)',
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            fontSize: '0.85rem',
-                            textAlign: 'center',
-                            fontWeight: '500'
-                          }}>
-                            {formatTimestamp(frame.timestamp)}
+                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                            <img 
+                              src={frame.image} 
+                              alt={`Frame at ${formatTimestamp(frame.timestamp)}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                display: 'block'
+                              }}
+                            />
+                            {/* Timecode overlay on image */}
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '8px',
+                              left: '8px',
+                              padding: '0.5rem 0.75rem',
+                              background: 'rgba(0, 0, 0, 0.85)',
+                              color: '#FFFFFF',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+                              fontFamily: 'monospace',
+                              letterSpacing: '0.5px',
+                              backdropFilter: 'blur(4px)'
+                            }}>
+                              {formatTimestamp(frame.timestamp)}
+                            </div>
                           </div>
                         </div>
                       );
