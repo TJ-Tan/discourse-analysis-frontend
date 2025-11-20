@@ -1883,25 +1883,26 @@ body {
 
 .shooting-star {
   position: fixed;
-  width: 2px;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 0) 100%);
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 1);
   border-radius: 50%;
   pointer-events: none;
-  z-index: 0;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8), 0 0 12px rgba(255, 255, 255, 0.6);
+  z-index: 1;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 1), 0 0 16px rgba(255, 255, 255, 0.8), 0 0 24px rgba(255, 255, 255, 0.6);
 }
 
 .shooting-star::before {
   content: '';
   position: absolute;
-  width: 100px;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
+  width: 150px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 30%, rgba(255, 255, 255, 0.9) 70%, rgba(255, 255, 255, 0) 100%);
   top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+  left: -75px;
+  transform: translateY(-50%) rotate(var(--trail-angle, 0deg));
+  transform-origin: center;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8), 0 0 12px rgba(255, 255, 255, 0.6);
 }
 
 .star {
