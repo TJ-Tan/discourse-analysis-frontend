@@ -1813,7 +1813,8 @@ function App() {
                         <div key={idx} style={{
                           position: 'relative',
                           flexShrink: 0,
-                          width: '200px',
+                          width: '300px',
+                          aspectRatio: '16/9',
                           borderRadius: '12px',
                           overflow: 'hidden',
                           background: 'rgba(0, 0, 0, 0.3)',
@@ -1835,8 +1836,8 @@ function App() {
                             alt={`Frame at ${formatTimestamp(frame.timestamp)}`}
                             style={{
                               width: '100%',
-                              height: '150px',
-                              objectFit: 'cover',
+                              height: '100%',
+                              objectFit: 'contain',
                               display: 'block'
                             }}
                           />
