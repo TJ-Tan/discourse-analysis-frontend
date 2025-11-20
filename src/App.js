@@ -1673,6 +1673,136 @@ function App() {
               </div>
             </div>
 
+            {/* Sample Frames Gallery */}
+            {results.sample_frames && results.sample_frames.length > 0 && (
+              <div style={{ 
+                marginTop: '2rem', 
+                padding: '2rem', 
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 1.5rem 0', 
+                  color: 'rgba(255, 255, 255, 0.95)', 
+                  fontSize: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  📸 Extracted Video Frames
+                </h3>
+                
+                <div 
+                style={{
+                  position: 'relative',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  paddingBottom: '1rem',
+                  cursor: results.sample_frames.length > 3 ? 'grab' : 'default',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent'
+                }}
+                onMouseDown={(e) => {
+                  if (results.sample_frames.length <= 3) return;
+                  const container = e.currentTarget;
+                  const startX = e.pageX - container.offsetLeft;
+                  const scrollLeft = container.scrollLeft;
+                  let isDown = true;
+
+                  const handleMouseMove = (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - container.offsetLeft;
+                    const walk = (x - startX) * 2;
+                    container.scrollLeft = scrollLeft - walk;
+                  };
+
+                  const handleMouseUp = () => {
+                    isDown = false;
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                  };
+
+                  document.addEventListener('mousemove', handleMouseMove);
+                  document.addEventListener('mouseup', handleMouseUp);
+                }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    minWidth: 'max-content',
+                    paddingRight: '1rem'
+                  }}>
+                    {results.sample_frames.map((frame, idx) => {
+                      const formatTimestamp = (seconds) => {
+                        const mins = Math.floor(seconds / 60);
+                        const secs = Math.floor(seconds % 60);
+                        return `${mins}:${secs.toString().padStart(2, '0')}`;
+                      };
+                      
+                      return (
+                        <div key={idx} style={{
+                          position: 'relative',
+                          flexShrink: 0,
+                          width: '200px',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: '2px solid rgba(255, 255, 255, 0.1)',
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                        >
+                          <img 
+                            src={frame.image} 
+                            alt={`Frame at ${formatTimestamp(frame.timestamp)}`}
+                            style={{
+                              width: '100%',
+                              height: '150px',
+                              objectFit: 'cover',
+                              display: 'block'
+                            }}
+                          />
+                          <div style={{
+                            padding: '0.75rem',
+                            background: 'rgba(0, 0, 0, 0.6)',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            fontSize: '0.85rem',
+                            textAlign: 'center',
+                            fontWeight: '500'
+                          }}>
+                            {formatTimestamp(frame.timestamp)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {results.sample_frames.length > 3 && (
+                  <p style={{
+                    marginTop: '1rem',
+                    fontSize: '0.85rem',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    textAlign: 'center',
+                    fontStyle: 'italic'
+                  }}>
+                    Hover and drag to view more frames
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Interaction & Engagement Analysis */}
             {results.interaction_engagement && (
               <div style={{ 
@@ -2289,8 +2419,28 @@ function App() {
               </div>
             </div>
 
+            {/* Disclaimer */}
+            <div style={{
+              marginTop: '3rem',
+              padding: '1.5rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              textAlign: 'center'
+            }}>
+              <p style={{
+                margin: 0,
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.9rem',
+                lineHeight: '1.6',
+                fontStyle: 'italic'
+              }}>se results are generated by AI using curated algorithms and may not fully reflect the pedagogical impact. For a more comprehensive consultation, please contact CTLT.
+                <strong style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Disclaimer:</strong> The
+              </p>
+            </div>
+
             {/* Reset Button */}
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
               <button
                 onClick={() => {
                   setFile(null);
