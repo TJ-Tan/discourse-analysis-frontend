@@ -177,32 +177,33 @@ function App() {
         const shootingStar = document.createElement('div');
         shootingStar.className = 'shooting-star';
         
-        // Random starting position (top or left edge)
-        const startFromTop = Math.random() < 0.5;
-        const startX = startFromTop ? Math.random() * window.innerWidth : (Math.random() < 0.5 ? 0 : window.innerWidth);
-        const startY = startFromTop ? 0 : Math.random() * window.innerHeight;
+        // Always start from top right area
+        // Random position in top right quadrant (right 30% of width, top 20% of height)
+        const startX = window.innerWidth * (0.7 + Math.random() * 0.3); // 70-100% of width
+        const startY = window.innerHeight * (Math.random() * 0.2); // 0-20% of height
         
         shootingStar.style.left = `${startX}px`;
         shootingStar.style.top = `${startY}px`;
         
-        // Random direction (diagonal)
-        const angle = Math.random() * 60 + 15; // 15-75 degrees
-        const distance = Math.random() * 400 + 300; // 300-700px
+        // Fixed direction: 30 degrees from horizontal, going down-left
+        // 30 degrees means: going left (negative X) and down (positive Y)
+        const angle = 30; // Fixed 30 degrees
+        const distance = Math.random() * 600 + 500; // 500-1100px (longer distance for slower effect)
         const radians = (angle * Math.PI) / 180;
         
-        const direction = Math.random() < 0.5 ? 1 : -1; // Left or right
-        const shootX = Math.cos(radians) * distance * direction;
-        const shootY = Math.sin(radians) * distance;
+        // Calculate direction: going left (negative X) and down (positive Y) at 30 degrees
+        const shootX = -Math.cos(radians) * distance; // Negative for left
+        const shootY = Math.sin(radians) * distance; // Positive for down
         
-        // Calculate trail angle for rotation
-        const trailAngle = Math.atan2(shootY, shootX) * (180 / Math.PI);
+        // Calculate trail angle for rotation (210 degrees = 180 + 30, going down-left)
+        const trailAngle = 210; // Fixed at 210 degrees (30 degrees from horizontal going down-left)
         
         shootingStar.style.setProperty('--shoot-distance-x', `${shootX}px`);
         shootingStar.style.setProperty('--shoot-distance-y', `${shootY}px`);
         shootingStar.style.setProperty('--trail-angle', `${trailAngle}deg`);
         
-        // Random duration (0.8-1.5 seconds)
-        const duration = Math.random() * 0.7 + 0.8;
+        // Slower duration (2.5-4 seconds for slower movement)
+        const duration = Math.random() * 1.5 + 2.5;
         shootingStar.style.animation = `shootingStar ${duration}s linear forwards`;
         
         shootingStarContainer.appendChild(shootingStar);
