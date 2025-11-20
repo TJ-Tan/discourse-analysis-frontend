@@ -1887,32 +1887,24 @@ body {
 
 .shooting-star {
   position: fixed;
-  width: 5px;
-  height: 5px;
-  background: rgba(255, 255, 255, 1);
-  border-radius: 50%;
+  width: 0;
+  height: 0;
   pointer-events: none;
   z-index: 1;
-  box-shadow: 
-    0 0 4px rgba(255, 255, 255, 1),
-    0 0 8px rgba(255, 255, 255, 0.9),
-    0 0 12px rgba(255, 255, 255, 0.7),
-    0 0 16px rgba(255, 255, 255, 0.5);
-  /* Position head at the front (center of the element) */
+  /* No circle - just a container for the trail */
   transform-origin: center center;
 }
 
 .shooting-star::before {
   content: '';
   position: absolute;
-  width: 200px;
-  height: 1.5px;
-  /* Trail fades from bright head (right edge) to very transparent tail (left edge) */
-  /* More transparency towards the tail */
+  width: 300px;
+  height: 2px;
+  /* Long gradient line: bright at the front (right edge) fading to transparent at the tail (left edge) */
   background: linear-gradient(to left, 
     rgba(255, 255, 255, 0) 0%, 
-    rgba(255, 255, 255, 0.05) 5%,
-    rgba(255, 255, 255, 0.1) 12%,
+    rgba(255, 255, 255, 0.05) 8%,
+    rgba(255, 255, 255, 0.1) 15%,
     rgba(255, 255, 255, 0.2) 25%,
     rgba(255, 255, 255, 0.35) 40%,
     rgba(255, 255, 255, 0.5) 55%,
@@ -1921,15 +1913,15 @@ body {
     rgba(255, 255, 255, 0.95) 90%,
     rgba(255, 255, 255, 1) 100%);
   top: 50%;
-  /* Trail extends backwards from the head */
-  /* Bright end (right) is at center, trail extends to left */
-  right: 50%;
+  /* Trail extends backwards from the starting point */
+  /* Bright end (right) is at the starting position, trail extends to left */
+  right: 0;
   transform: translateY(-50%) rotate(var(--trail-angle, 0deg));
   transform-origin: right center;
   box-shadow: 
-    0 0 2px rgba(255, 255, 255, 0.4),
-    0 0 4px rgba(255, 255, 255, 0.3),
-    0 0 6px rgba(255, 255, 255, 0.2);
+    0 0 3px rgba(255, 255, 255, 0.5),
+    0 0 6px rgba(255, 255, 255, 0.4),
+    0 0 9px rgba(255, 255, 255, 0.3);
 }
 
 .star {

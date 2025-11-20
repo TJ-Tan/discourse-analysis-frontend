@@ -174,19 +174,21 @@ function App() {
       const shootingStar = document.createElement('div');
       shootingStar.className = 'shooting-star';
       
-      // Spread out starting locations:
-      // - Some from top right (near MARS title): right 30% of width, top 10-25% of height
-      // - Some from upload box height: right 30% of width, middle 40-60% of height
+      // Start from off-screen (outside the right edge of the viewport)
+      // Spread out starting locations vertically:
+      // - Some from top right area: off-screen right, top 10-25% of height
+      // - Some from middle area: off-screen right, middle 40-60% of height
       const startFromTop = Math.random() < 0.5; // 50% chance for each location
       let startX, startY;
       
+      // Start from outside the right edge of the screen (off-screen)
+      startX = window.innerWidth + 50; // Start 50px beyond the right edge
+      
       if (startFromTop) {
         // Top right area (near MARS title)
-        startX = window.innerWidth * (0.7 + Math.random() * 0.3); // 70-100% of width
         startY = window.innerHeight * (0.1 + Math.random() * 0.15); // 10-25% of height
       } else {
         // Upload box height area (middle of screen)
-        startX = window.innerWidth * (0.7 + Math.random() * 0.3); // 70-100% of width
         startY = window.innerHeight * (0.4 + Math.random() * 0.2); // 40-60% of height
       }
       
@@ -199,8 +201,8 @@ function App() {
       const radians = (angle * Math.PI) / 180;
       
       // Calculate distance needed to travel to extreme left of screen (and slightly beyond)
-      // Start at startX, need to reach x = -100px (well off screen to the left)
-      const requiredXDistance = startX + 100; // Distance to travel horizontally
+      // Start at startX (off-screen right), need to reach x = -200px (well off screen to the left)
+      const requiredXDistance = startX + 200; // Distance to travel horizontally
       // At 30 degrees, total distance = horizontal distance / cos(30°)
       const totalDistance = requiredXDistance / Math.cos(radians);
       
