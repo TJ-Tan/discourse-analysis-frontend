@@ -1872,8 +1872,12 @@ body {
 /* Shooting Star Animation */
 @keyframes shootingStar {
   0% {
-    opacity: 0.8;
+    opacity: 1;
     transform: translateX(0) translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(calc(var(--shoot-distance-x) * 0.85)) translateY(calc(var(--shoot-distance-y) * 0.85));
   }
   100% {
     opacity: 0;

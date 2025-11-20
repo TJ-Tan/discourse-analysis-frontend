@@ -196,12 +196,17 @@ function App() {
       // Fixed direction: 30 degrees from horizontal, going down-left
       // 30 degrees means: going left (negative X) and down (positive Y)
       const angle = 30; // Fixed 30 degrees
-      const distance = Math.random() * 600 + 500; // 500-1100px (longer distance for slower effect)
       const radians = (angle * Math.PI) / 180;
       
+      // Calculate distance needed to travel to extreme left of screen (and slightly beyond)
+      // Start at startX, need to reach x = -100px (well off screen to the left)
+      const requiredXDistance = startX + 100; // Distance to travel horizontally
+      // At 30 degrees, total distance = horizontal distance / cos(30°)
+      const totalDistance = requiredXDistance / Math.cos(radians);
+      
       // Calculate direction: going left (negative X) and down (positive Y) at 30 degrees
-      const shootX = -Math.cos(radians) * distance; // Negative for left
-      const shootY = Math.sin(radians) * distance; // Positive for down
+      const shootX = -Math.cos(radians) * totalDistance; // Negative for left
+      const shootY = Math.sin(radians) * totalDistance; // Positive for down
       
       // Calculate trail angle from actual movement direction
       // atan2 gives angle in radians, convert to degrees
@@ -213,8 +218,11 @@ function App() {
       shootingStar.style.setProperty('--shoot-distance-y', `${shootY}px`);
       shootingStar.style.setProperty('--trail-angle', `${trailAngle}deg`);
       
-      // Slower duration (2.5-4 seconds for slower movement)
-      const duration = Math.random() * 1.5 + 2.5;
+      // Calculate duration based on distance for consistent speed
+      // Speed: approximately 200-250px per second for smooth movement
+      const speed = 200 + Math.random() * 50; // 200-250px per second
+      const duration = totalDistance / speed; // Duration based on distance
+      
       shootingStar.style.animation = `shootingStar ${duration}s linear forwards`;
       
       shootingStarContainer.appendChild(shootingStar);
