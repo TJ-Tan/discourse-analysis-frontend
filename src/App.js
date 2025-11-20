@@ -41,6 +41,9 @@ function App() {
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
   const [deploymentTime, setDeploymentTime] = useState(null);
+  const [queueList, setQueueList] = useState([]);
+  const [isQueued, setIsQueued] = useState(false);
+  const [userAnalysisId, setUserAnalysisId] = useState(null);
 
   // Fetch deployment time on mount
   useEffect(() => {
@@ -546,16 +549,24 @@ function App() {
         return;
       }
       
-      // Start polling IMMEDIATELY before state updates
       const newAnalysisId = response.data.analysis_id;
+      setUserAnalysisId(newAnalysisId);
       
-      // Connect WebSocket for real-time updates
-      connectToUpdates(newAnalysisId);
-      
-      // Then update state
-      setAnalysisId(newAnalysisId);
-      setUploadProgress(100);
-      setIsUploading(false);
+      // Check if video was queued
+      if (response.data.status === 'queued') {
+        setIsQueued(true);
+        setAnalysisId(newAnalysisId);
+        setUploadProgress(100);
+        setIsUploading(false);
+        // Start polling queue list
+        startQueuePolling(newAnalysisId);
+      } else {
+        // Start processing immediately
+        connectToUpdates(newAnalysisId);
+        setAnalysisId(newAnalysisId);
+        setUploadProgress(100);
+        setIsUploading(false);
+      }
 
     } catch (error) {
       if (error.code === 'ECONNABORTED') {
@@ -567,6 +578,47 @@ function App() {
       }
       setIsUploading(false);
     }
+  };
+
+  // Queue polling function
+  const startQueuePolling = (analysisId) => {
+    const pollQueue = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/queue-list`, {
+          timeout: 5000,
+          validateStatus: (status) => status < 500
+        });
+        
+        if (response.data && response.data.queue) {
+          setQueueList(response.data.queue);
+          
+          // Check if it's the user's turn (their analysis_id is now processing)
+          const userJob = response.data.queue.find(job => job.analysis_id === analysisId);
+          if (userJob && userJob.status === 'processing') {
+            // It's the user's turn! Start the analysis
+            setIsQueued(false);
+            setQueueList([]);
+            connectToUpdates(analysisId);
+            // Update analysis status
+            setAnalysisStatus({
+              status: 'processing',
+              progress: userJob.progress || 0,
+              message: 'Starting analysis...',
+              timestamp: Date.now()
+            });
+          } else {
+            // Continue polling
+            setTimeout(pollQueue, 2000); // Poll every 2 seconds
+          }
+        }
+      } catch (error) {
+        // Silently fail and retry
+        setTimeout(pollQueue, 2000);
+      }
+    };
+    
+    // Start polling immediately
+    pollQueue();
   };
 
   // Real-time updates using Server-Sent Events (more reliable than WebSocket)
@@ -1439,8 +1491,107 @@ function App() {
           </div>
         )}
 
+        {/* Queue List Display */}
+        {isQueued && queueList.length > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05))',
+            border: '2px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '24px',
+            maxWidth: '800px',
+            margin: '0 auto 24px auto'
+          }}>
+            <h3 style={{
+              color: 'var(--nus-blue)',
+              marginBottom: '20px',
+              fontSize: '20px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              📋 Queue Status
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {queueList.map((job, index) => {
+                const isUserJob = job.analysis_id === userAnalysisId;
+                const isProcessing = job.status === 'processing';
+                
+                return (
+                  <div
+                    key={job.analysis_id}
+                    style={{
+                      background: isUserJob ? 'rgba(59, 130, 246, 0.15)' : 'white',
+                      border: isUserJob ? '2px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(0, 0, 0, 0.1)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>
+                          {isProcessing ? '⚙️' : '⏳'}
+                        </span>
+                        <strong style={{ color: isUserJob ? 'var(--nus-blue)' : '#333' }}>
+                          {job.filename || 'Unknown Video'}
+                        </strong>
+                        {isUserJob && (
+                          <span style={{
+                            background: 'var(--nus-blue)',
+                            color: 'white',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            Your Video
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#666', marginLeft: '28px' }}>
+                        <div>IP: {job.client_ip || 'Unknown'}</div>
+                        <div>Status: {isProcessing ? `Processing (${job.progress}%)` : `Queued (Position ${job.queue_position || index + 1})`}</div>
+                        {job.file_size && (
+                          <div>Size: {(job.file_size / (1024 * 1024)).toFixed(2)} MB</div>
+                        )}
+                      </div>
+                    </div>
+                    {isProcessing && (
+                      <div style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        border: '4px solid rgba(59, 130, 246, 0.2)',
+                        borderTopColor: 'var(--nus-blue)',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              background: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: 'var(--nus-blue)',
+              textAlign: 'center'
+            }}>
+              ⏱️ Your video will start processing automatically when it's your turn.
+            </div>
+          </div>
+        )}
+
         {/* Analysis Progress with Real-time Logs */}
-        {analysisId && !results && (
+        {analysisId && !results && !isQueued && (
           <div className="progress-container" >
             <div className="progress-header">
               <div className="spinner" style={{ color: 'var(--nus-blue)' }}></div>
