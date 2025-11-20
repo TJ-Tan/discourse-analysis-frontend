@@ -40,6 +40,26 @@ function App() {
   const logContainerRef = useRef(null);
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
+  const [deploymentTime, setDeploymentTime] = useState(null);
+
+  // Fetch deployment time on mount
+  useEffect(() => {
+    const fetchDeploymentTime = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/deployment-info`, {
+          timeout: 5000,
+          validateStatus: (status) => status < 500
+        });
+        if (response.data && response.data.deployment_time_formatted) {
+          setDeploymentTime(response.data.deployment_time_formatted);
+        }
+      } catch (error) {
+        // Silently fail - fallback to current time
+        console.log('Could not fetch deployment time');
+      }
+    };
+    fetchDeploymentTime();
+  }, []);
 
   // Format timestamp to Singapore time
   const formatSingaporeTime = (timestamp) => {
@@ -2390,7 +2410,7 @@ function App() {
           fontSize: '0.85rem',
           color: 'rgba(255, 255, 255, 0.5)'
         }}>
-          Last updated: {new Date().toLocaleString('en-SG', {
+          Last updated: {deploymentTime || new Date().toLocaleString('en-SG', {
             timeZone: 'Asia/Singapore',
             year: 'numeric',
             month: 'long',
