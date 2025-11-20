@@ -44,6 +44,7 @@ function App() {
   const [queueList, setQueueList] = useState([]);
   const [isQueued, setIsQueued] = useState(false);
   const [userAnalysisId, setUserAnalysisId] = useState(null);
+  const uploadCancelToken = useRef(null);
 
   // Fetch deployment time on mount
   useEffect(() => {
@@ -513,6 +514,32 @@ function App() {
     }
   };
 
+  const cancelUpload = async () => {
+    if (uploadCancelToken.current) {
+      uploadCancelToken.current.cancel('Upload cancelled by user');
+      uploadCancelToken.current = null;
+    }
+    
+    setIsUploading(false);
+    setUploadProgress(0);
+    
+    // If we have an analysis_id, try to cancel it on the backend
+    if (userAnalysisId) {
+      try {
+        await axios.post(`${API_BASE_URL}/cancel-upload/${userAnalysisId}`);
+      } catch (error) {
+        // Silently fail - backend cleanup is best effort
+        console.log('Backend cleanup may have failed, but upload is cancelled');
+      }
+      setUserAnalysisId(null);
+    }
+    
+    // Reset state
+    setAnalysisId(null);
+    setIsQueued(false);
+    setQueueList([]);
+  };
+
   const startAnalysis = async () => {
     if (!file) return;
 
@@ -533,10 +560,16 @@ function App() {
     const formData = new FormData();
     formData.append('file', file);
 
+    // Create cancel token for this upload
+    const CancelToken = axios.CancelToken;
+    const source = CancelToken.source();
+    uploadCancelToken.current = source;
+
     try {
       const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 600000,
+        cancelToken: source.token,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
@@ -567,8 +600,26 @@ function App() {
         setUploadProgress(100);
         setIsUploading(false);
       }
+      
+      // Clear cancel token on success
+      uploadCancelToken.current = null;
 
     } catch (error) {
+      // Clear cancel token
+      uploadCancelToken.current = null;
+      
+      // Handle cancellation
+      if (axios.isCancel(error)) {
+        console.log('Upload cancelled by user');
+        setIsUploading(false);
+        setUploadProgress(0);
+        setAnalysisId(null);
+        setIsQueued(false);
+        setQueueList([]);
+        setUserAnalysisId(null);
+        return;
+      }
+      
       if (error.code === 'ECONNABORTED') {
         alert('Upload timeout. Please try with a smaller file or check your connection.');
       } else if (error.response) {
@@ -577,6 +628,10 @@ function App() {
         alert(`Upload failed: ${error.message}`);
       }
       setIsUploading(false);
+      setAnalysisId(null);
+      setIsQueued(false);
+      setQueueList([]);
+      setUserAnalysisId(null);
     }
   };
 
@@ -1462,11 +1517,34 @@ function App() {
 
                 {isUploading && (
                   <div className="upload-progress">
-                    <div className="progress-bar-container">
-                      <div 
-                        className="progress-bar"
-                        style={{ width: `${uploadProgress}%` }}
-                      ></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                      <div className="progress-bar-container" style={{ flex: 1 }}>
+                        <div 
+                          className="progress-bar"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <button
+                        onClick={cancelUpload}
+                        className="stop-button"
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <span>✕</span>
+                        Stop Upload
+                      </button>
                     </div>
                     <p className="progress-text">Uploading: {uploadProgress}%</p>
                   </div>
