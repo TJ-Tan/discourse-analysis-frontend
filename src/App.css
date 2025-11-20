@@ -1893,13 +1893,15 @@ body {
   z-index: 1;
   /* No circle - just a container for the trail */
   transform-origin: center center;
+  /* Apply brightness variance via opacity */
+  opacity: var(--star-brightness, 1);
 }
 
 .shooting-star::before {
   content: '';
   position: absolute;
-  width: 300px;
-  height: 2px;
+  width: var(--star-length, 300px);
+  height: var(--star-thickness, 2px);
   /* Long gradient line: bright at the front (right edge) fading to transparent at the tail (left edge) */
   background: linear-gradient(to left, 
     rgba(255, 255, 255, 0) 0%, 
