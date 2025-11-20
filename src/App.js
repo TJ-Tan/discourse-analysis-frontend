@@ -195,8 +195,11 @@ function App() {
         const shootX = -Math.cos(radians) * distance; // Negative for left
         const shootY = Math.sin(radians) * distance; // Positive for down
         
-        // Calculate trail angle for rotation (210 degrees = 180 + 30, going down-left)
-        const trailAngle = 210; // Fixed at 210 degrees (30 degrees from horizontal going down-left)
+        // Calculate trail angle from actual movement direction
+        // atan2 gives angle in radians, convert to degrees
+        // This ensures trail is aligned with direction of travel
+        const trailAngleRad = Math.atan2(shootY, shootX);
+        const trailAngle = (trailAngleRad * 180) / Math.PI;
         
         shootingStar.style.setProperty('--shoot-distance-x', `${shootX}px`);
         shootingStar.style.setProperty('--shoot-distance-y', `${shootY}px`);
