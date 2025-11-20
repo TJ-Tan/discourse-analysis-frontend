@@ -1883,17 +1883,17 @@ body {
 
 .shooting-star {
   position: fixed;
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   background: rgba(255, 255, 255, 1);
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
   box-shadow: 
-    0 0 6px rgba(255, 255, 255, 1),
-    0 0 12px rgba(255, 255, 255, 0.8),
-    0 0 18px rgba(255, 255, 255, 0.6),
-    0 0 24px rgba(255, 255, 255, 0.4);
+    0 0 4px rgba(255, 255, 255, 1),
+    0 0 8px rgba(255, 255, 255, 0.9),
+    0 0 12px rgba(255, 255, 255, 0.7),
+    0 0 16px rgba(255, 255, 255, 0.5);
   /* Position head at the front (center of the element) */
   transform-origin: center center;
 }
@@ -1901,18 +1901,20 @@ body {
 .shooting-star::before {
   content: '';
   position: absolute;
-  width: 250px;
-  height: 2px;
-  /* Trail fades from bright at head (right edge) to transparent at end (left edge) */
+  width: 200px;
+  height: 1.5px;
+  /* Trail fades from bright head (right edge) to very transparent tail (left edge) */
+  /* More transparency towards the tail */
   background: linear-gradient(to left, 
     rgba(255, 255, 255, 0) 0%, 
-    rgba(255, 255, 255, 0.1) 8%,
-    rgba(255, 255, 255, 0.25) 20%,
-    rgba(255, 255, 255, 0.45) 40%,
-    rgba(255, 255, 255, 0.65) 60%,
-    rgba(255, 255, 255, 0.8) 75%,
-    rgba(255, 255, 255, 0.9) 85%,
-    rgba(255, 255, 255, 0.95) 92%,
+    rgba(255, 255, 255, 0.05) 5%,
+    rgba(255, 255, 255, 0.1) 12%,
+    rgba(255, 255, 255, 0.2) 25%,
+    rgba(255, 255, 255, 0.35) 40%,
+    rgba(255, 255, 255, 0.5) 55%,
+    rgba(255, 255, 255, 0.7) 70%,
+    rgba(255, 255, 255, 0.85) 82%,
+    rgba(255, 255, 255, 0.95) 90%,
     rgba(255, 255, 255, 1) 100%);
   top: 50%;
   /* Trail extends backwards from the head */
@@ -1921,9 +1923,9 @@ body {
   transform: translateY(-50%) rotate(var(--trail-angle, 0deg));
   transform-origin: right center;
   box-shadow: 
-    0 0 3px rgba(255, 255, 255, 0.5),
-    0 0 6px rgba(255, 255, 255, 0.4),
-    0 0 9px rgba(255, 255, 255, 0.3);
+    0 0 2px rgba(255, 255, 255, 0.4),
+    0 0 4px rgba(255, 255, 255, 0.3),
+    0 0 6px rgba(255, 255, 255, 0.2);
 }
 
 .star {

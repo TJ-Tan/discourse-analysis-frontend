@@ -170,59 +170,66 @@ function App() {
     const createShootingStar = () => {
       if (!shootingStarContainer) return;
 
-      // Create 1-3 shooting stars
-      const starCount = Math.floor(Math.random() * 3) + 1; // 1-3 stars
+      // Create 1 shooting star (lower frequency)
+      const shootingStar = document.createElement('div');
+      shootingStar.className = 'shooting-star';
       
-      for (let i = 0; i < starCount; i++) {
-        const shootingStar = document.createElement('div');
-        shootingStar.className = 'shooting-star';
-        
-        // Always start from top right area
-        // Random position in top right quadrant (right 30% of width, top 20% of height)
-        const startX = window.innerWidth * (0.7 + Math.random() * 0.3); // 70-100% of width
-        const startY = window.innerHeight * (Math.random() * 0.2); // 0-20% of height
-        
-        shootingStar.style.left = `${startX}px`;
-        shootingStar.style.top = `${startY}px`;
-        
-        // Fixed direction: 30 degrees from horizontal, going down-left
-        // 30 degrees means: going left (negative X) and down (positive Y)
-        const angle = 30; // Fixed 30 degrees
-        const distance = Math.random() * 600 + 500; // 500-1100px (longer distance for slower effect)
-        const radians = (angle * Math.PI) / 180;
-        
-        // Calculate direction: going left (negative X) and down (positive Y) at 30 degrees
-        const shootX = -Math.cos(radians) * distance; // Negative for left
-        const shootY = Math.sin(radians) * distance; // Positive for down
-        
-        // Calculate trail angle from actual movement direction
-        // atan2 gives angle in radians, convert to degrees
-        // This ensures trail is aligned with direction of travel
-        const trailAngleRad = Math.atan2(shootY, shootX);
-        const trailAngle = (trailAngleRad * 180) / Math.PI;
-        
-        shootingStar.style.setProperty('--shoot-distance-x', `${shootX}px`);
-        shootingStar.style.setProperty('--shoot-distance-y', `${shootY}px`);
-        shootingStar.style.setProperty('--trail-angle', `${trailAngle}deg`);
-        
-        // Slower duration (2.5-4 seconds for slower movement)
-        const duration = Math.random() * 1.5 + 2.5;
-        shootingStar.style.animation = `shootingStar ${duration}s linear forwards`;
-        
-        shootingStarContainer.appendChild(shootingStar);
-        
-        // Remove after animation completes
-        setTimeout(() => {
-          if (shootingStar.parentNode) {
-            shootingStar.parentNode.removeChild(shootingStar);
-          }
-        }, duration * 1000);
+      // Spread out starting locations:
+      // - Some from top right (near MARS title): right 30% of width, top 10-25% of height
+      // - Some from upload box height: right 30% of width, middle 40-60% of height
+      const startFromTop = Math.random() < 0.5; // 50% chance for each location
+      let startX, startY;
+      
+      if (startFromTop) {
+        // Top right area (near MARS title)
+        startX = window.innerWidth * (0.7 + Math.random() * 0.3); // 70-100% of width
+        startY = window.innerHeight * (0.1 + Math.random() * 0.15); // 10-25% of height
+      } else {
+        // Upload box height area (middle of screen)
+        startX = window.innerWidth * (0.7 + Math.random() * 0.3); // 70-100% of width
+        startY = window.innerHeight * (0.4 + Math.random() * 0.2); // 40-60% of height
       }
+      
+      shootingStar.style.left = `${startX}px`;
+      shootingStar.style.top = `${startY}px`;
+      
+      // Fixed direction: 30 degrees from horizontal, going down-left
+      // 30 degrees means: going left (negative X) and down (positive Y)
+      const angle = 30; // Fixed 30 degrees
+      const distance = Math.random() * 600 + 500; // 500-1100px (longer distance for slower effect)
+      const radians = (angle * Math.PI) / 180;
+      
+      // Calculate direction: going left (negative X) and down (positive Y) at 30 degrees
+      const shootX = -Math.cos(radians) * distance; // Negative for left
+      const shootY = Math.sin(radians) * distance; // Positive for down
+      
+      // Calculate trail angle from actual movement direction
+      // atan2 gives angle in radians, convert to degrees
+      // This ensures trail is aligned with direction of travel
+      const trailAngleRad = Math.atan2(shootY, shootX);
+      const trailAngle = (trailAngleRad * 180) / Math.PI;
+      
+      shootingStar.style.setProperty('--shoot-distance-x', `${shootX}px`);
+      shootingStar.style.setProperty('--shoot-distance-y', `${shootY}px`);
+      shootingStar.style.setProperty('--trail-angle', `${trailAngle}deg`);
+      
+      // Slower duration (2.5-4 seconds for slower movement)
+      const duration = Math.random() * 1.5 + 2.5;
+      shootingStar.style.animation = `shootingStar ${duration}s linear forwards`;
+      
+      shootingStarContainer.appendChild(shootingStar);
+      
+      // Remove after animation completes
+      setTimeout(() => {
+        if (shootingStar.parentNode) {
+          shootingStar.parentNode.removeChild(shootingStar);
+        }
+      }, duration * 1000);
     };
 
-    // Create shooting stars every 3-8 seconds
+    // Create shooting stars with lower frequency (every 8-15 seconds)
     const scheduleNextShootingStar = () => {
-      const delay = Math.random() * 5000 + 3000; // 3-8 seconds
+      const delay = Math.random() * 7000 + 8000; // 8-15 seconds
       setTimeout(() => {
         createShootingStar();
         scheduleNextShootingStar();
