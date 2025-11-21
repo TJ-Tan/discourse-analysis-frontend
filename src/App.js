@@ -1391,7 +1391,7 @@ function App() {
       document.body.appendChild(pdfWrapper);
       
       // Force a reflow to ensure rendering
-      pdfWrapper.offsetHeight;
+      void pdfWrapper.offsetHeight;
       
       // Wait for fonts and rendering
       await new Promise(resolve => setTimeout(resolve, 1000));
