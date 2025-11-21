@@ -901,12 +901,34 @@ function App() {
 
     setIsGeneratingPDF(true);
     try {
-      // Create a wrapper div for the PDF
+      // Store original display states to restore later
+      const originalDisplayStates = new Map();
+      
+      // Hide elements that shouldn't be in PDF from the original element
+      const element = resultsContainerRef.current;
+      const elementsToHide = element.querySelectorAll('.results-actions, .export-button, button, .stop-button, .parameter-button, .reset-button, .announcement-banner');
+      elementsToHide.forEach(el => {
+        if (el) {
+          originalDisplayStates.set(el, el.style.display);
+          el.style.display = 'none';
+        }
+      });
+      
+      // Create a wrapper div for the PDF with header
       const pdfWrapper = document.createElement('div');
-      pdfWrapper.style.width = '210mm'; // A4 width
-      pdfWrapper.style.background = 'white';
-      pdfWrapper.style.padding = '20mm';
-      pdfWrapper.style.fontFamily = "'Inter', sans-serif";
+      pdfWrapper.id = 'pdf-export-wrapper';
+      pdfWrapper.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 210mm;
+        min-height: 100vh;
+        background: white;
+        padding: 20mm;
+        font-family: 'Inter', sans-serif;
+        z-index: 999999;
+        overflow: auto;
+      `;
       
       // Add PDF header
       const header = document.createElement('div');
@@ -933,22 +955,22 @@ function App() {
       pdfWrapper.appendChild(header);
       
       // Clone the results container
-      const element = resultsContainerRef.current;
       const clone = element.cloneNode(true);
       
-      // Hide elements that shouldn't be in PDF
-      const elementsToHide = clone.querySelectorAll('.results-actions, .export-button, button, .stop-button, .parameter-button, .reset-button, .announcement-banner');
-      elementsToHide.forEach(el => {
+      // Remove any interactive elements from clone
+      const interactiveElements = clone.querySelectorAll('input, select, textarea, a[href]');
+      interactiveElements.forEach(el => {
         if (el) el.style.display = 'none';
       });
       
-      // Add PDF-specific styling with CSS variable replacements
+      // Add PDF-specific styling
       const pdfStyles = document.createElement('style');
       pdfStyles.textContent = `
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
           color-adjust: exact !important;
+          box-sizing: border-box;
         }
         :root {
           --nus-orange: #EF7C00;
@@ -981,38 +1003,10 @@ function App() {
           box-shadow: none !important;
           border: none !important;
         }
-        .results-header {
-          margin-bottom: 30px !important;
-        }
-        .results-title {
-          color: #1f2937 !important;
-        }
-        .score-display {
-          page-break-inside: avoid;
-          margin: 20px 0 !important;
-        }
-        .scores-grid {
-          page-break-inside: avoid;
-          margin: 20px 0 !important;
-        }
-        .section, div[style*="marginTop"] {
-          page-break-inside: avoid;
-          margin-bottom: 25px !important;
-        }
         img {
           max-width: 100% !important;
           height: auto !important;
-          page-break-inside: avoid;
-        }
-        .transcript-section, .frame-gallery, .disclaimer {
-          page-break-inside: avoid;
-        }
-        h2, h3, h4 {
-          page-break-after: avoid;
-        }
-        p {
-          orphans: 3;
-          widows: 3;
+          display: block !important;
         }
       `;
       clone.appendChild(pdfStyles);
@@ -1020,42 +1014,23 @@ function App() {
       // Append clone to wrapper
       pdfWrapper.appendChild(clone);
       
-      // Temporarily append wrapper to body (off-screen) for rendering
-      pdfWrapper.style.position = 'absolute';
-      pdfWrapper.style.left = '-9999px';
-      pdfWrapper.style.top = '0';
+      // Append wrapper to body (will overlay but that's okay for PDF generation)
       document.body.appendChild(pdfWrapper);
       
-      // Wait for images and fonts to load, then get computed styles
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Replace inline style CSS variables with computed values
-      const replaceInlineCSSVariables = () => {
-        const allElements = pdfWrapper.querySelectorAll('*');
-        allElements.forEach(el => {
-          if (el.style) {
-            const computedStyle = window.getComputedStyle(el);
-            // Replace color
-            if (el.style.color && el.style.color.includes('var(--')) {
-              el.style.color = computedStyle.color;
-            }
-            // Replace background
-            if (el.style.background && el.style.background.includes('var(--')) {
-              el.style.background = computedStyle.background;
-            }
-            // Replace backgroundColor
-            if (el.style.backgroundColor && el.style.backgroundColor.includes('var(--')) {
-              el.style.backgroundColor = computedStyle.backgroundColor;
-            }
-            // Replace borderColor
-            if (el.style.borderColor && el.style.borderColor.includes('var(--')) {
-              el.style.borderColor = computedStyle.borderColor;
-            }
-          }
+      // Wait for images to load
+      const images = pdfWrapper.querySelectorAll('img');
+      const imagePromises = Array.from(images).map(img => {
+        if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          setTimeout(resolve, 3000);
         });
-      };
+      });
+      await Promise.all(imagePromises);
       
-      replaceInlineCSSVariables();
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Configure html2pdf options
       const opt = {
@@ -1067,7 +1042,7 @@ function App() {
           useCORS: true,
           logging: false,
           letterRendering: true,
-          allowTaint: false,
+          allowTaint: true,
           backgroundColor: '#ffffff'
         },
         jsPDF: { 
@@ -1078,21 +1053,24 @@ function App() {
         },
         pagebreak: { 
           mode: ['avoid-all', 'css', 'legacy'],
-          before: '.page-break-before',
-          after: '.page-break-after',
-          avoid: ['.score-display', '.scores-grid', '.section', 'h2', 'h3', 'h4']
+          avoid: ['.score-display', '.scores-grid', 'h2', 'h3', 'h4']
         }
       };
       
       // Generate PDF
       await html2pdf().set(opt).from(pdfWrapper).save();
       
+      // Restore original display states
+      originalDisplayStates.forEach((display, el) => {
+        el.style.display = display;
+      });
+      
       // Clean up
       document.body.removeChild(pdfWrapper);
       
     } catch (error) {
       console.error('PDF generation failed:', error);
-      alert('PDF export failed. Please try again.');
+      alert(`PDF export failed: ${error.message}. Please try again.`);
     } finally {
       setIsGeneratingPDF(false);
     }
