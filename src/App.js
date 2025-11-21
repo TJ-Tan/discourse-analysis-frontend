@@ -1474,14 +1474,14 @@ function App() {
               {isDragActive ? (
                 <div>
                   <p className="upload-text">Drop your lecture video here</p>
-                  <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 1 hour, 500MB • Analyses 100 frames
+                  <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB • Analyses 100 frames
                   </p>
                 </div>
               ) : (
                 <div>
                   <p className="upload-text">Upload your lecture video</p>
                   <p className="upload-subtext">
-                    Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 500MB
+                    Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB
                   </p>
                 </div>
               )}
