@@ -895,146 +895,500 @@ function App() {
     }, 500); // Poll every 500ms (twice per second)
   };
 
-  // Enhanced PDF export
+  // Enhanced PDF export - Clean format with only metrics and analysis
   const exportToPDF = async () => {
-    if (!results || !analysisId || !resultsContainerRef.current) return;
+    if (!results || !analysisId) return;
 
     setIsGeneratingPDF(true);
     try {
-      // Store original display states to restore later
-      const originalDisplayStates = new Map();
-      
-      // Hide elements that shouldn't be in PDF from the original element
-      const element = resultsContainerRef.current;
-      const elementsToHide = element.querySelectorAll('.results-actions, .export-button, button, .stop-button, .parameter-button, .reset-button, .announcement-banner');
-      elementsToHide.forEach(el => {
-        if (el) {
-          originalDisplayStates.set(el, el.style.display);
-          el.style.display = 'none';
-        }
-      });
-      
-      // Create a wrapper div for the PDF with header
-      const pdfWrapper = document.createElement('div');
-      pdfWrapper.id = 'pdf-export-wrapper';
-      pdfWrapper.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 210mm;
-        min-height: 100vh;
-        background: white;
-        padding: 20mm;
-        font-family: 'Inter', sans-serif;
-        z-index: 999999;
-        overflow: auto;
-      `;
-      
-      // Add PDF header
-      const header = document.createElement('div');
-      header.style.cssText = `
-        text-align: center;
-        margin-bottom: 30px;
-        padding: 30px 20px;
-        background: linear-gradient(135deg, #003D7C, #EF7C00);
-        color: white;
-        border-radius: 12px;
-      `;
-      header.innerHTML = `
-        <h1 style="font-size: 2.5rem; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.025em;">MARS</h1>
-        <p style="font-size: 1.2rem; margin: 0 0 5px 0; opacity: 0.95;">Multimodal AI Reflection System</p>
-        <p style="font-size: 0.9rem; margin: 0; opacity: 0.85;">Discourse Analysis with Agentic AI</p>
-        <p style="font-size: 0.85rem; margin: 15px 0 0 0; opacity: 0.8;">Generated on ${new Date().toLocaleDateString('en-SG', { 
+      // Helper function to format metric names
+      const formatMetricName = (name) => {
+        return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      };
+
+      // Helper function to render metric explanations
+      const renderExplanations = (explanations) => {
+        if (!explanations || Object.keys(explanations).length === 0) return '';
+        
+        let html = '<div class="metric-explanations">';
+        Object.entries(explanations).forEach(([metric, explanation]) => {
+          html += `
+            <div class="metric-item">
+              <div class="metric-header">
+                <strong>${formatMetricName(metric)}</strong>
+                <span class="rating-badge">${explanation.rating}</span>
+                <span class="score-range">${explanation.score_range}</span>
+              </div>
+              <div class="metric-justification">${explanation.justification}</div>
+              ${explanation.remarks ? `<div class="metric-remarks">Note: ${explanation.remarks}</div>` : ''}
+            </div>
+          `;
+        });
+        html += '</div>';
+        return html;
+      };
+
+      // Generate clean HTML content
+      const generatePDFContent = () => {
+        const overallScore = Math.round(results.overall_score * 10) / 10;
+        const genDate = new Date().toLocaleDateString('en-SG', { 
           year: 'numeric', 
           month: 'long', 
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit'
-        })}</p>
+        });
+
+        return `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>MARS Analysis Report</title>
+            <style>
+              @page {
+                size: A4;
+                margin: 15mm;
+              }
+              
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 10pt;
+                line-height: 1.6;
+                color: #1f2937;
+                background: white;
+              }
+              
+              .header {
+                text-align: center;
+                margin-bottom: 25px;
+                padding: 20px;
+                background: linear-gradient(135deg, #003D7C, #EF7C00);
+                color: white;
+                border-radius: 8px;
+              }
+              
+              .header h1 {
+                font-size: 32pt;
+                font-weight: 800;
+                margin-bottom: 8px;
+                letter-spacing: -0.5px;
+              }
+              
+              .header .subtitle {
+                font-size: 14pt;
+                margin-bottom: 4px;
+                opacity: 0.95;
+              }
+              
+              .header .tagline {
+                font-size: 11pt;
+                margin-bottom: 12px;
+                opacity: 0.85;
+              }
+              
+              .header .date {
+                font-size: 9pt;
+                opacity: 0.8;
+              }
+              
+              .overall-score {
+                text-align: center;
+                margin: 25px 0;
+                padding: 20px;
+                background: #f9fafb;
+                border-radius: 8px;
+                border: 2px solid #003D7C;
+              }
+              
+              .overall-score .score {
+                font-size: 48pt;
+                font-weight: 900;
+                color: #003D7C;
+                margin-bottom: 8px;
+              }
+              
+              .overall-score .label {
+                font-size: 14pt;
+                color: #6b7280;
+                font-weight: 600;
+              }
+              
+              .category-scores {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 12px;
+                margin: 25px 0;
+              }
+              
+              .category-score {
+                text-align: center;
+                padding: 15px;
+                background: #f9fafb;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+              }
+              
+              .category-score .score {
+                font-size: 24pt;
+                font-weight: 700;
+                color: #003D7C;
+                margin-bottom: 4px;
+              }
+              
+              .category-score .label {
+                font-size: 9pt;
+                color: #6b7280;
+                font-weight: 500;
+              }
+              
+              .section {
+                margin: 25px 0;
+                page-break-inside: avoid;
+              }
+              
+              .section-header {
+                background: #003D7C;
+                color: white;
+                padding: 12px 16px;
+                border-radius: 6px 6px 0 0;
+                font-size: 14pt;
+                font-weight: 700;
+                margin-bottom: 0;
+              }
+              
+              .section-content {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-top: none;
+                border-radius: 0 0 6px 6px;
+                padding: 20px;
+              }
+              
+              .section-score {
+                display: inline-block;
+                background: #003D7C;
+                color: white;
+                padding: 6px 14px;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 11pt;
+                margin-bottom: 15px;
+              }
+              
+              .metric-explanations {
+                margin-top: 15px;
+              }
+              
+              .metric-item {
+                margin-bottom: 15px;
+                padding-bottom: 15px;
+                border-bottom: 1px solid #e5e7eb;
+              }
+              
+              .metric-item:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+              }
+              
+              .metric-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 8px;
+                flex-wrap: wrap;
+              }
+              
+              .metric-header strong {
+                font-size: 11pt;
+                color: #1f2937;
+              }
+              
+              .rating-badge {
+                background: #EF7C00;
+                color: white;
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 9pt;
+                font-weight: 600;
+              }
+              
+              .score-range {
+                color: #6b7280;
+                font-size: 9pt;
+              }
+              
+              .metric-justification {
+                font-size: 10pt;
+                color: #374151;
+                line-height: 1.6;
+                margin-bottom: 4px;
+              }
+              
+              .metric-remarks {
+                font-size: 9pt;
+                color: #6b7280;
+                font-style: italic;
+                margin-top: 4px;
+              }
+              
+              .raw-metrics {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-top: 15px;
+              }
+              
+              .raw-metric {
+                padding: 10px;
+                background: #f9fafb;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+              }
+              
+              .raw-metric strong {
+                display: block;
+                font-size: 9pt;
+                color: #6b7280;
+                margin-bottom: 4px;
+              }
+              
+              .raw-metric .value {
+                font-size: 12pt;
+                font-weight: 700;
+                color: #003D7C;
+              }
+              
+              .footer {
+                margin-top: 30px;
+                padding-top: 15px;
+                border-top: 2px solid #e5e7eb;
+                text-align: center;
+                font-size: 8pt;
+                color: #6b7280;
+              }
+              
+              @media print {
+                .section {
+                  page-break-inside: avoid;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <!-- Header -->
+            <div class="header">
+              <h1>MARS</h1>
+              <div class="subtitle">Multimodal AI Reflection System</div>
+              <div class="tagline">Discourse Analysis with Agentic AI</div>
+              <div class="date">Generated on ${genDate}</div>
+            </div>
+            
+            <!-- Overall Score -->
+            <div class="overall-score">
+              <div class="score">${overallScore}/10</div>
+              <div class="label">Overall Teaching Excellence Score</div>
+            </div>
+            
+            <!-- Category Scores -->
+            <div class="category-scores">
+              <div class="category-score">
+                <div class="score">${Math.round(results.speech_analysis?.score * 10) / 10}</div>
+                <div class="label">Speech Analysis</div>
+              </div>
+              <div class="category-score">
+                <div class="score">${Math.round(results.body_language?.score * 10) / 10}</div>
+                <div class="label">Body Language</div>
+              </div>
+              <div class="category-score">
+                <div class="score">${Math.round(results.teaching_effectiveness?.score * 10) / 10}</div>
+                <div class="label">Teaching Effectiveness</div>
+              </div>
+              <div class="category-score">
+                <div class="score">${Math.round((results.interaction_engagement?.score || 0) * 10) / 10}</div>
+                <div class="label">Interaction & Engagement</div>
+              </div>
+              <div class="category-score">
+                <div class="score">${Math.round(results.presentation_skills?.score * 10) / 10}</div>
+                <div class="label">Presentation Skills</div>
+              </div>
+            </div>
+            
+            <!-- 1. Speech Analysis -->
+            <div class="section">
+              <div class="section-header">1. Speech Analysis</div>
+              <div class="section-content">
+                <div class="section-score">Score: ${Math.round(results.speech_analysis?.score * 10) / 10}/10</div>
+                ${results.speech_analysis?.explanations ? renderExplanations(results.speech_analysis.explanations) : ''}
+                ${results.speech_analysis?.raw_metrics ? `
+                  <div class="raw-metrics">
+                    ${results.speech_analysis.raw_metrics.total_words ? `
+                      <div class="raw-metric">
+                        <strong>Total Words</strong>
+                        <div class="value">${results.speech_analysis.raw_metrics.total_words}</div>
+                      </div>
+                    ` : ''}
+                    ${results.speech_analysis.raw_metrics.words_per_minute ? `
+                      <div class="raw-metric">
+                        <strong>Speaking Rate (WPM)</strong>
+                        <div class="value">${results.speech_analysis.raw_metrics.words_per_minute}</div>
+                      </div>
+                    ` : ''}
+                    ${results.speech_analysis.raw_metrics.filler_word_count !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Filler Words</strong>
+                        <div class="value">${results.speech_analysis.raw_metrics.filler_word_count} (${results.speech_analysis.raw_metrics.filler_ratio_percentage || 0}%)</div>
+                      </div>
+                    ` : ''}
+                    ${results.speech_analysis.raw_metrics.transcription_confidence !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Transcription Accuracy</strong>
+                        <div class="value">${results.speech_analysis.raw_metrics.transcription_confidence}%</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- 2. Body Language -->
+            <div class="section">
+              <div class="section-header">2. Body Language</div>
+              <div class="section-content">
+                <div class="section-score">Score: ${Math.round(results.body_language?.score * 10) / 10}/10</div>
+                ${results.body_language?.explanations ? renderExplanations(results.body_language.explanations) : ''}
+                ${results.body_language?.raw_metrics ? `
+                  <div class="raw-metrics">
+                    ${results.body_language.raw_metrics.total_frames_extracted ? `
+                      <div class="raw-metric">
+                        <strong>Frames Analysed</strong>
+                        <div class="value">${results.body_language.raw_metrics.total_frames_extracted}</div>
+                      </div>
+                    ` : ''}
+                    ${results.body_language.raw_metrics.eye_contact_raw !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Eye Contact Score</strong>
+                        <div class="value">${results.body_language.raw_metrics.eye_contact_raw}/10</div>
+                      </div>
+                    ` : ''}
+                    ${results.body_language.raw_metrics.gestures_raw !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Gestures Score</strong>
+                        <div class="value">${results.body_language.raw_metrics.gestures_raw}/10</div>
+                      </div>
+                    ` : ''}
+                    ${results.body_language.raw_metrics.posture_raw !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Posture Score</strong>
+                        <div class="value">${results.body_language.raw_metrics.posture_raw}/10</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- 3. Teaching Effectiveness -->
+            <div class="section">
+              <div class="section-header">3. Teaching Effectiveness</div>
+              <div class="section-content">
+                <div class="section-score">Score: ${Math.round(results.teaching_effectiveness?.score * 10) / 10}/10</div>
+                ${results.teaching_effectiveness?.explanations ? renderExplanations(results.teaching_effectiveness.explanations) : ''}
+              </div>
+            </div>
+            
+            <!-- 4. Interaction & Engagement -->
+            <div class="section">
+              <div class="section-header">4. Interaction & Engagement</div>
+              <div class="section-content">
+                <div class="section-score">Score: ${Math.round((results.interaction_engagement?.score || 0) * 10) / 10}/10</div>
+                ${results.interaction_engagement?.explanations ? renderExplanations(results.interaction_engagement.explanations) : ''}
+                ${results.interaction_engagement?.raw_metrics ? `
+                  <div class="raw-metrics">
+                    ${results.interaction_engagement.raw_metrics.total_questions !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Total Questions</strong>
+                        <div class="value">${results.interaction_engagement.raw_metrics.total_questions}</div>
+                      </div>
+                    ` : ''}
+                    ${results.interaction_engagement.raw_metrics.engagement_score !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Engagement Score</strong>
+                        <div class="value">${results.interaction_engagement.raw_metrics.engagement_score}/10</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- 5. Presentation Skills -->
+            <div class="section">
+              <div class="section-header">5. Presentation Skills</div>
+              <div class="section-content">
+                <div class="section-score">Score: ${Math.round(results.presentation_skills?.score * 10) / 10}/10</div>
+                ${results.presentation_skills?.explanations ? renderExplanations(results.presentation_skills.explanations) : ''}
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+              <p>This report is generated by MARS (Multimodal AI Reflection System) with curated algorithms.</p>
+              <p>An AI Media Tool by CTLT</p>
+            </div>
+          </body>
+          </html>
+        `;
+      };
+
+      // Create a temporary container for PDF content
+      const pdfWrapper = document.createElement('div');
+      pdfWrapper.id = 'pdf-export-wrapper';
+      pdfWrapper.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        width: 210mm;
+        background: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       `;
-      pdfWrapper.appendChild(header);
       
-      // Clone the results container
-      const clone = element.cloneNode(true);
+      // Generate HTML content and extract body
+      const fullHTML = generatePDFContent();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fullHTML, 'text/html');
       
-      // Remove any interactive elements from clone
-      const interactiveElements = clone.querySelectorAll('input, select, textarea, a[href]');
-      interactiveElements.forEach(el => {
-        if (el) el.style.display = 'none';
+      // Get the body content and styles
+      const bodyContent = doc.body;
+      const styles = doc.head.querySelectorAll('style');
+      
+      // Create a wrapper div and append styles and body content
+      const styleElement = document.createElement('style');
+      styles.forEach(style => {
+        styleElement.textContent += style.textContent;
+      });
+      pdfWrapper.appendChild(styleElement);
+      
+      // Clone and append body children
+      Array.from(bodyContent.children).forEach(child => {
+        pdfWrapper.appendChild(child.cloneNode(true));
       });
       
-      // Add PDF-specific styling
-      const pdfStyles = document.createElement('style');
-      pdfStyles.textContent = `
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          color-adjust: exact !important;
-          box-sizing: border-box;
-        }
-        :root {
-          --nus-orange: #EF7C00;
-          --nus-orange-light: #FF9A33;
-          --nus-orange-dark: #CC6600;
-          --nus-blue: #003D7C;
-          --nus-blue-light: #1A5490;
-          --nus-blue-dark: #002952;
-          --primary-50: #E6F0FF;
-          --primary-100: #CCE1FF;
-          --primary-200: #99C3FF;
-          --accent-50: #FFF4E6;
-          --accent-100: #FFE9CC;
-          --success-50: #ecfdf5;
-          --success-100: #d1fae5;
-          --success-500: #10b981;
-          --success-700: #047857;
-          --gray-50: #f9fafb;
-          --gray-100: #f3f4f6;
-          --gray-200: #e5e7eb;
-          --gray-600: #4b5563;
-          --gray-700: #374151;
-          --gray-800: #1f2937;
-        }
-        .results-container {
-          background: white !important;
-          padding: 0 !important;
-          max-width: 100% !important;
-          margin: 0 !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-          display: block !important;
-        }
-      `;
-      clone.appendChild(pdfStyles);
-      
-      // Append clone to wrapper
-      pdfWrapper.appendChild(clone);
-      
-      // Append wrapper to body (will overlay but that's okay for PDF generation)
+      // Append to document (off-screen)
       document.body.appendChild(pdfWrapper);
       
-      // Wait for images to load
-      const images = pdfWrapper.querySelectorAll('img');
-      const imagePromises = Array.from(images).map(img => {
-        if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          setTimeout(resolve, 3000);
-        });
-      });
-      await Promise.all(imagePromises);
-      
       // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Configure html2pdf options
       const opt = {
-        margin: [5, 5, 5, 5],
+        margin: [15, 15, 15, 15],
         filename: `MARS-analysis-report-${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { 
@@ -1053,17 +1407,12 @@ function App() {
         },
         pagebreak: { 
           mode: ['avoid-all', 'css', 'legacy'],
-          avoid: ['.score-display', '.scores-grid', 'h2', 'h3', 'h4']
+          avoid: ['.section', '.overall-score', '.category-scores']
         }
       };
       
-      // Generate PDF
+      // Generate PDF from the content
       await html2pdf().set(opt).from(pdfWrapper).save();
-      
-      // Restore original display states
-      originalDisplayStates.forEach((display, el) => {
-        el.style.display = display;
-      });
       
       // Clean up
       document.body.removeChild(pdfWrapper);
