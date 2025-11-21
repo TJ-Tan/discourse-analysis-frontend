@@ -1348,27 +1348,34 @@ function App() {
         `;
       };
 
-      // Create a temporary container for PDF content
-      const pdfWrapper = document.createElement('div');
-      pdfWrapper.id = 'pdf-export-wrapper';
-      pdfWrapper.style.cssText = `
-        position: absolute;
-        left: -9999px;
-        width: 210mm;
-        background: white;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      `;
-      
-      // Generate HTML content and extract body
+      // Generate HTML content
       const fullHTML = generatePDFContent();
       const parser = new DOMParser();
       const doc = parser.parseFromString(fullHTML, 'text/html');
+      
+      // Create a temporary container for PDF content - make it visible but off-screen
+      const pdfWrapper = document.createElement('div');
+      pdfWrapper.id = 'pdf-export-wrapper';
+      pdfWrapper.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 210mm;
+        min-height: 100vh;
+        background: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 20mm;
+        z-index: 999999;
+        opacity: 0;
+        pointer-events: none;
+        overflow: visible;
+      `;
       
       // Get the body content and styles
       const bodyContent = doc.body;
       const styles = doc.head.querySelectorAll('style');
       
-      // Create a wrapper div and append styles and body content
+      // Create a style element and append all styles
       const styleElement = document.createElement('style');
       styles.forEach(style => {
         styleElement.textContent += style.textContent;
@@ -1380,11 +1387,14 @@ function App() {
         pdfWrapper.appendChild(child.cloneNode(true));
       });
       
-      // Append to document (off-screen)
+      // Append to document
       document.body.appendChild(pdfWrapper);
       
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Force a reflow to ensure rendering
+      pdfWrapper.offsetHeight;
+      
+      // Wait for fonts and rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Configure html2pdf options
       const opt = {
@@ -1397,7 +1407,9 @@ function App() {
           logging: false,
           letterRendering: true,
           allowTaint: true,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          windowWidth: pdfWrapper.scrollWidth,
+          windowHeight: pdfWrapper.scrollHeight
         },
         jsPDF: { 
           unit: 'mm', 
@@ -1450,7 +1462,7 @@ function App() {
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: -1,
+        zIndex: 0,
         overflow: 'hidden'
       }}></div>
       
