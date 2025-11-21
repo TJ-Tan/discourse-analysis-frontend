@@ -85,9 +85,26 @@ function App() {
       const bokehContainer = document.getElementById('bokeh-container');
       if (!bokehContainer) return;
 
-      // Clear existing bokeh
-      bokehContainer.innerHTML = '';
+      // Fade out existing stars before removing them
+      const existingStars = bokehContainer.querySelectorAll('.star');
+      if (existingStars.length > 0) {
+        existingStars.forEach(star => {
+          star.style.transition = 'opacity 1.5s ease-out';
+          star.style.opacity = '0';
+        });
+        
+        // Wait for fade out, then clear and create new stars
+        setTimeout(() => {
+          bokehContainer.innerHTML = '';
+          createNewStars(bokehContainer);
+        }, 1500);
+      } else {
+        // No existing stars, create immediately
+        createNewStars(bokehContainer);
+      }
+    };
 
+    const createNewStars = (bokehContainer) => {
       // Create realistic starry night background
       const starCount = 150; // More stars for realistic effect
       for (let i = 0; i < starCount; i++) {
@@ -120,6 +137,10 @@ function App() {
         ];
         star.style.backgroundColor = starColors[Math.floor(Math.random() * starColors.length)];
         
+        // Start with opacity 0 for fade-in effect
+        star.style.opacity = '0';
+        star.style.transition = 'opacity 1.5s ease-in';
+        
         // Enhanced twinkling effect for more stars with stronger animation
         if (Math.random() < 0.5) { // 50% of stars twinkle (increased from 30%)
           const twinkleDuration = Math.random() * 3 + 1.5; // 1.5-4.5 seconds (faster)
@@ -142,6 +163,11 @@ function App() {
         }
         
         bokehContainer.appendChild(star);
+        
+        // Trigger fade-in after a tiny delay to ensure DOM is ready
+        setTimeout(() => {
+          star.style.opacity = '1';
+        }, 10);
       }
     };
 
