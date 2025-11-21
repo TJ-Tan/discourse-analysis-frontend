@@ -9,6 +9,7 @@
   --nus-blue: #003D7C;
   --nus-blue-light: #1A5490;
   --nus-blue-dark: #002952;
+  --cosmic-blue: #000d1a;
   
   --primary-600: var(--nus-blue);
   --primary-700: var(--nus-blue-dark);
@@ -64,7 +65,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, var(--nus-blue) 0%, var(--nus-blue-light) 50%, var(--nus-orange) 100%);
+  background: linear-gradient(135deg, var(--cosmic-blue) 0%, var(--cosmic-blue) 30%, var(--nus-blue-dark) 50%, var(--nus-blue) 75%, var(--nus-orange) 100%);
   min-height: 100vh;
   color: var(--gray-800);
   line-height: 1.6;
@@ -76,7 +77,7 @@ body {
 .app-background {
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--nus-blue) 0%, var(--nus-blue-light) 30%, var(--nus-orange-dark) 70%, var(--nus-orange) 100%);
+  background: linear-gradient(135deg, var(--cosmic-blue) 0%, var(--cosmic-blue) 30%, var(--nus-blue-dark) 50%, var(--nus-blue) 75%, var(--nus-orange) 100%);
   overflow: hidden;
 }
 
