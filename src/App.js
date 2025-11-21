@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
+import html2pdf from 'html2pdf.js';
 import { 
   Upload, 
   Play, 
@@ -38,6 +39,7 @@ function App() {
   const [configChanged, setConfigChanged] = useState(false);
   const [logMessages, setLogMessages] = useState([]);
   const logContainerRef = useRef(null);
+  const resultsContainerRef = useRef(null);
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
   const [deploymentTime, setDeploymentTime] = useState(null);
@@ -895,379 +897,199 @@ function App() {
 
   // Enhanced PDF export
   const exportToPDF = async () => {
-    if (!results || !analysisId) return;
+    if (!results || !analysisId || !resultsContainerRef.current) return;
 
     setIsGeneratingPDF(true);
     try {
-      const generateEnhancedPDFContent = () => {
-        // Get full transcript
-        const fullTranscript = results.speech_analysis?.transcript || 'No transcript available';
-        
-        // Get evidence quotes if available
-        const evidenceQuotes = results.comprehensive_evaluation?.evidence || [];
-        
-        const doc = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>MARS - Discourse Analysis Report</title>
-            <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-              
-              body {
-                font-family: 'Inter', sans-serif;
-                line-height: 1.6;
-                color: #1f2937;
-                margin: 0;
-                padding: 40px;
-                background: white;
-              }
-              
-              .header {
-                text-align: center;
-                margin-bottom: 40px;
-                padding: 30px 0;
-                background: linear-gradient(135deg, #003D7C, #EF7C00);
-                color: white;
-                border-radius: 12px;
-                margin: -40px -40px 40px -40px;
-                padding: 60px 40px;
-              }
-              
-              .header h1 {
-                font-size: 2.5rem;
-                font-weight: 700;
-                margin: 0 0 10px 0;
-                letter-spacing: -0.025em;
-              }
-              
-              .overall-score {
-                text-align: center;
-                margin: 40px 0;
-                padding: 30px;
-                background: linear-gradient(135deg, #003D7C, #EF7C00);
-                color: white;
-                border-radius: 16px;
-              }
-              
-              .overall-score .score {
-                font-size: 4rem;
-                font-weight: 900;
-                margin: 0;
-              }
-              
-              .section {
-                margin: 40px 0;
-                padding: 30px;
-                background: #f9fafb;
-                border-radius: 12px;
-                border-left: 4px solid #003D7C;
-              }
-              
-              .section h2 {
-                color: #003D7C;
-                font-size: 1.8rem;
-                margin: 0 0 20px 0;
-                font-weight: 700;
-              }
-              
-              .category-score {
-                display: inline-block;
-                background: #003D7C;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-weight: 600;
-                margin-bottom: 20px;
-              }
-              
-              .transcript {
-                background: white;
-                padding: 25px;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
-                font-family: 'Courier New', monospace;
-                font-size: 0.9rem;
-                line-height: 1.8;
-                white-space: pre-wrap;
-                max-height: 400px;
-                overflow-y: auto;
-              }
-              
-              .evidence {
-                background: #fef3c7;
-                padding: 20px;
-                border-radius: 8px;
-                border-left: 4px solid #f59e0b;
-                margin: 20px 0;
-              }
-              
-              .evidence h4 {
-                color: #92400e;
-                margin: 0 0 10px 0;
-              }
-              
-              .feedback {
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
-                margin: 15px 0;
-              }
-              
-              .metrics {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin: 20px 0;
-              }
-              
-              .metric {
-                background: white;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
-                text-align: center;
-              }
-              
-              .metric-value {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: #003D7C;
-              }
-              
-              .metric-label {
-                font-size: 0.9rem;
-                color: #6b7280;
-                margin-top: 5px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>MARS Analysis Report</h1>
-              <p>Multimodal AI Reflection System - Discourse Analysis with Agentic AI</p>
-              <p>Generated on ${new Date().toLocaleDateString()}</p>
-            </div>
-            
-            <div class="overall-score">
-              <div class="score">${Math.round(results.overall_score * 10) / 10}/10</div>
-              <div style="font-size: 1.2rem; opacity: 0.9;">Overall Teaching Excellence Score</div>
-            </div>
-            
-            <!-- Full Lecture Transcript -->
-            <div class="section">
-              <h2>📝 Full Lecture Transcript</h2>
-              <div class="transcript">${fullTranscript}</div>
-            </div>
-            
-            <!-- Evidence Supporting Assessment -->
-            ${evidenceQuotes.length > 0 ? `
-            <div class="section">
-              <h2>🔍 Evidence Supporting Assessment</h2>
-              ${evidenceQuotes.map(quote => `
-                <div class="evidence">
-                  <h4>Key Evidence:</h4>
-                  <p>"${quote}"</p>
-                </div>
-              `).join('')}
-            </div>
-            ` : ''}
-            
-            <!-- 1. Speech Analysis -->
-            <div class="section">
-              <h2>🎤 1. Speech Analysis</h2>
-              <div class="category-score">Score: ${Math.round(results.speech_analysis.score * 10) / 10}/10</div>
-              
-              <div class="feedback">
-                <h4>Analysis Summary:</h4>
-                <p>${results.speech_analysis.summary || 'Speech analysis completed successfully.'}</p>
-              </div>
-              
-              <div class="metrics">
-                <div class="metric">
-                  <div class="metric-value">${results.speech_analysis.raw_metrics?.speaking_rate || 0}</div>
-                  <div class="metric-label">Speaking Rate (WPM)</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${results.speech_analysis.raw_metrics?.filler_words_count || 0}</div>
-                  <div class="metric-label">Filler Words</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${results.speech_analysis.raw_metrics?.total_words || 0}</div>
-                  <div class="metric-label">Total Words</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${Math.round((results.speech_analysis.raw_metrics?.confidence || 0) * 100)}%</div>
-                  <div class="metric-label">Confidence Level</div>
-                </div>
-              </div>
-              
-              ${results.speech_analysis.feedback ? `
-                <div class="feedback">
-                  <h4>Detailed Feedback:</h4>
-                  <p>${results.speech_analysis.feedback}</p>
-                </div>
-              ` : ''}
-            </div>
-            
-            <!-- 2. Body Language -->
-            <div class="section">
-              <h2>👁️ 2. Body Language</h2>
-              <div class="category-score">Score: ${Math.round(results.body_language.score * 10) / 10}/10</div>
-              
-              <div class="feedback">
-                <h4>Analysis Summary:</h4>
-                <p>${results.body_language.summary || 'Visual analysis completed successfully.'}</p>
-              </div>
-              
-              <div class="metrics">
-                <div class="metric">
-                  <div class="metric-value">${results.body_language.raw_metrics?.total_frames_extracted || 0}</div>
-                  <div class="metric-label">Frames Analysed</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${Math.round((results.body_language.raw_metrics?.eye_contact_score || 0) * 100)}%</div>
-                  <div class="metric-label">Eye Contact</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${Math.round((results.body_language.raw_metrics?.gesture_score || 0) * 100)}%</div>
-                  <div class="metric-label">Gesture Quality</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${Math.round((results.body_language.raw_metrics?.posture_score || 0) * 100)}%</div>
-                  <div class="metric-label">Posture Score</div>
-                </div>
-              </div>
-              
-              ${results.body_language.feedback ? `
-                <div class="feedback">
-                  <h4>Detailed Feedback:</h4>
-                  <p>${results.body_language.feedback}</p>
-                </div>
-              ` : ''}
-            </div>
-            
-            <!-- 3. Teaching Effectiveness -->
-            <div class="section">
-              <h2>📚 3. Teaching Effectiveness</h2>
-              <div class="category-score">Score: ${Math.round(results.teaching_effectiveness.score * 10) / 10}/10</div>
-              
-              <div class="feedback">
-                <h4>Analysis Summary:</h4>
-                <p>${results.teaching_effectiveness.summary || 'Pedagogical analysis completed successfully.'}</p>
-              </div>
-              
-              ${results.teaching_effectiveness.feedback ? `
-                <div class="feedback">
-                  <h4>Detailed Feedback:</h4>
-                  <p>${results.teaching_effectiveness.feedback}</p>
-                </div>
-              ` : ''}
-            </div>
-            
-            <!-- 4. Interaction & Engagement -->
-            <div class="section">
-              <h2>🤝 4. Interaction & Engagement</h2>
-              <div class="category-score">Score: ${Math.round(results.interaction_engagement.score * 10) / 10}/10</div>
-              
-              <div class="feedback">
-                <h4>Analysis Summary:</h4>
-                <p>${results.interaction_engagement.summary || 'Interaction analysis completed successfully.'}</p>
-              </div>
-              
-              <div class="metrics">
-                <div class="metric">
-                  <div class="metric-value">${results.interaction_engagement.raw_metrics?.total_questions || 0}</div>
-                  <div class="metric-label">Questions Asked</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">${results.interaction_engagement.raw_metrics?.engagement_score || 0}</div>
-                  <div class="metric-label">Engagement Score</div>
-                </div>
-              </div>
-              
-              ${results.interaction_engagement.feedback ? `
-                <div class="feedback">
-                  <h4>Detailed Feedback:</h4>
-                  <p>${results.interaction_engagement.feedback}</p>
-                </div>
-              ` : ''}
-            </div>
-            
-            <!-- 5. Presentation Skills -->
-            <div class="section">
-              <h2>🎯 5. Presentation Skills</h2>
-              <div class="category-score">Score: ${Math.round(results.presentation_skills.score * 10) / 10}/10</div>
-              
-              <div class="feedback">
-                <h4>Analysis Summary:</h4>
-                <p>${results.presentation_skills.summary || 'Presentation analysis completed successfully.'}</p>
-              </div>
-              
-              ${results.presentation_skills.feedback ? `
-                <div class="feedback">
-                  <h4>Detailed Feedback:</h4>
-                  <p>${results.presentation_skills.feedback}</p>
-                </div>
-              ` : ''}
-            </div>
-            
-            <!-- Comprehensive Evaluation -->
-            ${results.comprehensive_evaluation ? `
-            <div class="section">
-              <h2>📊 Comprehensive Teaching Evaluation</h2>
-              <div class="feedback">
-                <h4>Overall Assessment:</h4>
-                <p>${results.comprehensive_evaluation.overall_summary || 'Comprehensive evaluation completed.'}</p>
-              </div>
-              
-              ${results.comprehensive_evaluation.strengths ? `
-                <div class="feedback">
-                  <h4>Key Strengths:</h4>
-                  <p>${results.comprehensive_evaluation.strengths}</p>
-                </div>
-              ` : ''}
-              
-              ${results.comprehensive_evaluation.areas_for_improvement ? `
-                <div class="feedback">
-                  <h4>Areas for Improvement:</h4>
-                  <p>${results.comprehensive_evaluation.areas_for_improvement}</p>
-                </div>
-              ` : ''}
-              
-              ${results.comprehensive_evaluation.recommendations ? `
-                <div class="feedback">
-                  <h4>Recommendations:</h4>
-                  <p>${results.comprehensive_evaluation.recommendations}</p>
-                </div>
-              ` : ''}
-            </div>
-            ` : ''}
-            
-          </body>
-          </html>
-        `;
-        return doc;
-      };
-
-      const htmlContent = generateEnhancedPDFContent();
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
+      // Create a wrapper div for the PDF
+      const pdfWrapper = document.createElement('div');
+      pdfWrapper.style.width = '210mm'; // A4 width
+      pdfWrapper.style.background = 'white';
+      pdfWrapper.style.padding = '20mm';
+      pdfWrapper.style.fontFamily = "'Inter', sans-serif";
       
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `MARS-analysis-report-${new Date().toISOString().split('T')[0]}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      setTimeout(() => {
-        alert('Enhanced report downloaded!');
-      }, 500);
-
+      // Add PDF header
+      const header = document.createElement('div');
+      header.style.cssText = `
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 30px 20px;
+        background: linear-gradient(135deg, #003D7C, #EF7C00);
+        color: white;
+        border-radius: 12px;
+      `;
+      header.innerHTML = `
+        <h1 style="font-size: 2.5rem; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.025em;">MARS</h1>
+        <p style="font-size: 1.2rem; margin: 0 0 5px 0; opacity: 0.95;">Multimodal AI Reflection System</p>
+        <p style="font-size: 0.9rem; margin: 0; opacity: 0.85;">Discourse Analysis with Agentic AI</p>
+        <p style="font-size: 0.85rem; margin: 15px 0 0 0; opacity: 0.8;">Generated on ${new Date().toLocaleDateString('en-SG', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</p>
+      `;
+      pdfWrapper.appendChild(header);
+      
+      // Clone the results container
+      const element = resultsContainerRef.current;
+      const clone = element.cloneNode(true);
+      
+      // Hide elements that shouldn't be in PDF
+      const elementsToHide = clone.querySelectorAll('.results-actions, .export-button, button, .stop-button, .parameter-button, .reset-button, .announcement-banner');
+      elementsToHide.forEach(el => {
+        if (el) el.style.display = 'none';
+      });
+      
+      // Add PDF-specific styling with CSS variable replacements
+      const pdfStyles = document.createElement('style');
+      pdfStyles.textContent = `
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        :root {
+          --nus-orange: #EF7C00;
+          --nus-orange-light: #FF9A33;
+          --nus-orange-dark: #CC6600;
+          --nus-blue: #003D7C;
+          --nus-blue-light: #1A5490;
+          --nus-blue-dark: #002952;
+          --primary-50: #E6F0FF;
+          --primary-100: #CCE1FF;
+          --primary-200: #99C3FF;
+          --accent-50: #FFF4E6;
+          --accent-100: #FFE9CC;
+          --success-50: #ecfdf5;
+          --success-100: #d1fae5;
+          --success-500: #10b981;
+          --success-700: #047857;
+          --gray-50: #f9fafb;
+          --gray-100: #f3f4f6;
+          --gray-200: #e5e7eb;
+          --gray-600: #4b5563;
+          --gray-700: #374151;
+          --gray-800: #1f2937;
+        }
+        .results-container {
+          background: white !important;
+          padding: 0 !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        .results-header {
+          margin-bottom: 30px !important;
+        }
+        .results-title {
+          color: #1f2937 !important;
+        }
+        .score-display {
+          page-break-inside: avoid;
+          margin: 20px 0 !important;
+        }
+        .scores-grid {
+          page-break-inside: avoid;
+          margin: 20px 0 !important;
+        }
+        .section, div[style*="marginTop"] {
+          page-break-inside: avoid;
+          margin-bottom: 25px !important;
+        }
+        img {
+          max-width: 100% !important;
+          height: auto !important;
+          page-break-inside: avoid;
+        }
+        .transcript-section, .frame-gallery, .disclaimer {
+          page-break-inside: avoid;
+        }
+        h2, h3, h4 {
+          page-break-after: avoid;
+        }
+        p {
+          orphans: 3;
+          widows: 3;
+        }
+      `;
+      clone.appendChild(pdfStyles);
+      
+      // Append clone to wrapper
+      pdfWrapper.appendChild(clone);
+      
+      // Temporarily append wrapper to body (off-screen) for rendering
+      pdfWrapper.style.position = 'absolute';
+      pdfWrapper.style.left = '-9999px';
+      pdfWrapper.style.top = '0';
+      document.body.appendChild(pdfWrapper);
+      
+      // Wait for images and fonts to load, then get computed styles
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Replace inline style CSS variables with computed values
+      const replaceInlineCSSVariables = () => {
+        const allElements = pdfWrapper.querySelectorAll('*');
+        allElements.forEach(el => {
+          if (el.style) {
+            const computedStyle = window.getComputedStyle(el);
+            // Replace color
+            if (el.style.color && el.style.color.includes('var(--')) {
+              el.style.color = computedStyle.color;
+            }
+            // Replace background
+            if (el.style.background && el.style.background.includes('var(--')) {
+              el.style.background = computedStyle.background;
+            }
+            // Replace backgroundColor
+            if (el.style.backgroundColor && el.style.backgroundColor.includes('var(--')) {
+              el.style.backgroundColor = computedStyle.backgroundColor;
+            }
+            // Replace borderColor
+            if (el.style.borderColor && el.style.borderColor.includes('var(--')) {
+              el.style.borderColor = computedStyle.borderColor;
+            }
+          }
+        });
+      };
+      
+      replaceInlineCSSVariables();
+      
+      // Configure html2pdf options
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `MARS-analysis-report-${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          letterRendering: true,
+          allowTaint: false,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait',
+          compress: true
+        },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          before: '.page-break-before',
+          after: '.page-break-after',
+          avoid: ['.score-display', '.scores-grid', '.section', 'h2', 'h3', 'h4']
+        }
+      };
+      
+      // Generate PDF
+      await html2pdf().set(opt).from(pdfWrapper).save();
+      
+      // Clean up
+      document.body.removeChild(pdfWrapper);
+      
     } catch (error) {
       console.error('PDF generation failed:', error);
       alert('PDF export failed. Please try again.');
@@ -1824,7 +1646,7 @@ function App() {
 
         {/* Results Dashboard with Detailed Breakdown */}
         {results && (
-          <div className="results-container">
+          <div className="results-container" ref={resultsContainerRef}>
             <div className="results-header">
               <CheckCircle size={32} style={{ color: 'var(--success-500)' }} />
               <h2 className="results-title">Enhanced Analysis Complete</h2>
