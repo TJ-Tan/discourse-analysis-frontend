@@ -584,6 +584,9 @@ function App() {
     setUploadProgress(0);
     setLogMessages([]);
     
+    // Declare progressInterval outside try block so it's accessible in catch
+    let progressInterval = null;
+    
     try {
       // Check queue status first (with timeout to prevent hanging)
       let queueStatus = null;
@@ -620,7 +623,6 @@ function App() {
       uploadCancelToken.current = source;
 
       // Fallback progress indicator - show minimal progress to indicate activity
-      let progressInterval = null;
       let simulatedProgress = 0;
       
       // Start a fallback progress indicator in case progress events don't fire
