@@ -1376,10 +1376,23 @@ function App() {
 
       // Generate HTML content
       const fullHTML = generatePDFContent();
+      
+      // Debug: Log HTML length to verify it's generated
+      console.log('Generated HTML length:', fullHTML.length);
+      
       const parser = new DOMParser();
       const doc = parser.parseFromString(fullHTML, 'text/html');
       
-      // Create a temporary container for PDF content - make it visible but off-screen
+      // Verify parsing was successful
+      if (doc.querySelector('parsererror')) {
+        throw new Error('Failed to parse HTML content');
+      }
+      
+      // Get the body content and styles
+      const bodyContent = doc.body;
+      const styles = doc.head.querySelectorAll('style');
+      
+      // Create a temporary container for PDF content
       const pdfWrapper = document.createElement('div');
       pdfWrapper.id = 'pdf-export-wrapper';
       pdfWrapper.style.cssText = `
@@ -1392,14 +1405,8 @@ function App() {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         padding: 20mm;
         z-index: 999999;
-        opacity: 0;
-        pointer-events: none;
-        overflow: visible;
+        overflow: auto;
       `;
-      
-      // Get the body content and styles
-      const bodyContent = doc.body;
-      const styles = doc.head.querySelectorAll('style');
       
       // Create a style element and append all styles
       const styleElement = document.createElement('style');
@@ -1413,14 +1420,22 @@ function App() {
         pdfWrapper.appendChild(child.cloneNode(true));
       });
       
-      // Append to document
+      // Append to document (will briefly overlay, but that's okay)
       document.body.appendChild(pdfWrapper);
       
       // Force a reflow to ensure rendering
       void pdfWrapper.offsetHeight;
       
       // Wait for fonts and rendering
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Verify content exists
+      const contentElements = pdfWrapper.querySelectorAll('.header, .overall-score, .section');
+      if (contentElements.length === 0) {
+        console.error('PDF content verification failed. Elements found:', pdfWrapper.children.length);
+        document.body.removeChild(pdfWrapper);
+        throw new Error('PDF content is empty or not properly rendered');
+      }
       
       // Configure html2pdf options
       const opt = {
@@ -1433,9 +1448,7 @@ function App() {
           logging: false,
           letterRendering: true,
           allowTaint: true,
-          backgroundColor: '#ffffff',
-          windowWidth: pdfWrapper.scrollWidth,
-          windowHeight: pdfWrapper.scrollHeight
+          backgroundColor: '#ffffff'
         },
         jsPDF: { 
           unit: 'mm', 
