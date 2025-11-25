@@ -1457,19 +1457,29 @@ function App() {
       const fullHTML = generatePDFContent();
       
       // Debug: Log HTML length to verify it's generated
-      console.log('Generated HTML length:', fullHTML.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Generated HTML length:', fullHTML.length);
+        console.log('Generated HTML preview:', fullHTML.substring(0, 500));
+      }
       
       const parser = new DOMParser();
       const doc = parser.parseFromString(fullHTML, 'text/html');
       
       // Verify parsing was successful
-      if (doc.querySelector('parsererror')) {
-        throw new Error('Failed to parse HTML content');
+      const parserError = doc.querySelector('parsererror');
+      if (parserError) {
+        console.error('HTML parsing error:', parserError.textContent);
+        throw new Error('Failed to parse HTML content: ' + parserError.textContent);
       }
       
       // Get the body content and styles
       const bodyContent = doc.body;
       const styles = doc.head.querySelectorAll('style');
+      
+      if (!bodyContent || bodyContent.children.length === 0) {
+        console.error('Body content is empty or has no children');
+        throw new Error('PDF HTML body is empty');
+      }
       
       // Create a temporary container for PDF content
       const pdfWrapper = document.createElement('div');
@@ -1495,8 +1505,17 @@ function App() {
       pdfWrapper.appendChild(styleElement);
       
       // Clone and append body children
-      Array.from(bodyContent.children).forEach(child => {
-        pdfWrapper.appendChild(child.cloneNode(true));
+      const bodyChildren = Array.from(bodyContent.children);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Body children count:', bodyChildren.length);
+      }
+      
+      bodyChildren.forEach((child, idx) => {
+        const cloned = child.cloneNode(true);
+        pdfWrapper.appendChild(cloned);
+        if (process.env.NODE_ENV === 'development' && idx < 3) {
+          console.log(`Appended child ${idx}:`, cloned.tagName, cloned.className || cloned.id);
+        }
       });
       
       // Append to document (will briefly overlay, but that's okay)
@@ -1510,10 +1529,22 @@ function App() {
       
       // Verify content exists
       const contentElements = pdfWrapper.querySelectorAll('.header, .overall-score, .section');
-      if (contentElements.length === 0) {
+      const allChildren = pdfWrapper.querySelectorAll('*');
+      console.log('PDF wrapper children count:', pdfWrapper.children.length);
+      console.log('PDF wrapper total elements:', allChildren.length);
+      console.log('PDF wrapper content elements:', contentElements.length);
+      
+      if (contentElements.length === 0 && pdfWrapper.children.length === 0) {
         console.error('PDF content verification failed. Elements found:', pdfWrapper.children.length);
         document.body.removeChild(pdfWrapper);
         throw new Error('PDF content is empty or not properly rendered');
+      }
+      
+      // Make sure wrapper has content and is visible
+      if (pdfWrapper.scrollHeight === 0) {
+        console.error('PDF wrapper has zero height');
+        document.body.removeChild(pdfWrapper);
+        throw new Error('PDF content has zero height');
       }
       
       // Configure html2pdf options
@@ -1524,10 +1555,12 @@ function App() {
         html2canvas: { 
           scale: 2,
           useCORS: true,
-          logging: false,
+          logging: true, // Enable logging to debug
           letterRendering: true,
           allowTaint: true,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          width: pdfWrapper.scrollWidth,
+          height: pdfWrapper.scrollHeight
         },
         jsPDF: { 
           unit: 'mm', 
@@ -1542,7 +1575,9 @@ function App() {
       };
       
       // Generate PDF from the content
+      console.log('Starting PDF generation...');
       await html2pdf().set(opt).from(pdfWrapper).save();
+      console.log('PDF generation completed');
       
       // Clean up
       document.body.removeChild(pdfWrapper);
@@ -2232,25 +2267,34 @@ function App() {
                       return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                     };
                     
-                    // Group words by timestamp to create paragraphs
+                    // Group words by sentence start (capital letter) to create paragraphs
                     const paragraphs = [];
                     let currentParagraph = { timestamp: null, words: [] };
                     
                     results.full_transcript.timecoded_words.forEach((wordData, idx) => {
+                      // Get the word text
+                      const wordText = wordData.word || '';
+                      // Check if word starts with a capital letter (sentence start)
+                      const isSentenceStart = wordText.length > 0 && /^[A-Z]/.test(wordText);
+                      
                       // Get timestamp - prefer formatted timestamp, fallback to start time
                       const timestamp = wordData.timestamp || (wordData.start ? formatTimestamp(wordData.start) : null);
                       
-                      // If this word has a timestamp and it's different from current paragraph, start new paragraph
-                      if (timestamp && timestamp !== currentParagraph.timestamp) {
+                      // If this word starts a sentence (capital letter), start new paragraph with timecode
+                      if (isSentenceStart && timestamp) {
                         // Save previous paragraph if it has words
                         if (currentParagraph.words.length > 0) {
                           paragraphs.push(currentParagraph);
                         }
-                        // Start new paragraph
+                        // Start new paragraph with this sentence-starting word
                         currentParagraph = { timestamp: timestamp, words: [wordData] };
                       } else {
-                        // Add word to current paragraph (same timestamp or no timestamp)
+                        // Add word to current paragraph
                         currentParagraph.words.push(wordData);
+                        // Update timestamp if we don't have one yet and this word has one
+                        if (!currentParagraph.timestamp && timestamp) {
+                          currentParagraph.timestamp = timestamp;
+                        }
                       }
                     });
                     
