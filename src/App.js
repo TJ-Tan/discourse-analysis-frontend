@@ -1547,6 +1547,16 @@ function App() {
         throw new Error('PDF content has zero height');
       }
       
+      // Log wrapper dimensions for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('PDF wrapper dimensions:', {
+          width: pdfWrapper.scrollWidth,
+          height: pdfWrapper.scrollHeight,
+          offsetWidth: pdfWrapper.offsetWidth,
+          offsetHeight: pdfWrapper.offsetHeight
+        });
+      }
+      
       // Configure html2pdf options
       const opt = {
         margin: [15, 15, 15, 15],
@@ -1555,12 +1565,14 @@ function App() {
         html2canvas: { 
           scale: 2,
           useCORS: true,
-          logging: true, // Enable logging to debug
+          logging: process.env.NODE_ENV === 'development', // Only log in dev
           letterRendering: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
-          width: pdfWrapper.scrollWidth,
-          height: pdfWrapper.scrollHeight
+          width: pdfWrapper.scrollWidth || 794, // A4 width in pixels at 96 DPI
+          height: pdfWrapper.scrollHeight || 1123, // A4 height in pixels
+          windowWidth: pdfWrapper.scrollWidth || window.innerWidth,
+          windowHeight: pdfWrapper.scrollHeight || window.innerHeight
         },
         jsPDF: { 
           unit: 'mm', 
@@ -1575,9 +1587,19 @@ function App() {
       };
       
       // Generate PDF from the content
-      console.log('Starting PDF generation...');
-      await html2pdf().set(opt).from(pdfWrapper).save();
-      console.log('PDF generation completed');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Starting PDF generation with options:', opt);
+      }
+      
+      try {
+        await html2pdf().set(opt).from(pdfWrapper).save();
+        if (process.env.NODE_ENV === 'development') {
+          console.log('PDF generation completed successfully');
+        }
+      } catch (pdfError) {
+        console.error('html2pdf error:', pdfError);
+        throw new Error(`PDF generation failed: ${pdfError.message}`);
+      }
       
       // Clean up
       document.body.removeChild(pdfWrapper);
