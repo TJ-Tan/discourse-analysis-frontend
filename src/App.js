@@ -1105,8 +1105,8 @@ function App() {
               
               .overall-score {
                 text-align: center;
-                margin: 25px 0;
-                padding: 20px;
+                margin: 15px 0;
+                padding: 15px;
                 background: #f9fafb;
                 border-radius: 8px;
                 border: 2px solid #003D7C;
@@ -1116,7 +1116,7 @@ function App() {
                 font-size: 48pt;
                 font-weight: 900;
                 color: #003D7C;
-                margin-bottom: 8px;
+                margin-bottom: 6px;
               }
               
               .overall-score .label {
@@ -1128,13 +1128,13 @@ function App() {
               .category-scores {
                 display: grid;
                 grid-template-columns: repeat(5, 1fr);
-                gap: 12px;
-                margin: 25px 0;
+                gap: 10px;
+                margin: 15px 0;
               }
               
               .category-score {
                 text-align: center;
-                padding: 15px;
+                padding: 12px;
                 background: #f9fafb;
                 border-radius: 8px;
                 border: 1px solid #e5e7eb;
@@ -1154,14 +1154,14 @@ function App() {
               }
               
               .section {
-                margin: 25px 0;
+                margin: 12px 0;
                 page-break-inside: avoid;
               }
               
               .section-header {
                 background: #003D7C;
                 color: white;
-                padding: 12px 16px;
+                padding: 10px 14px;
                 border-radius: 6px 6px 0 0;
                 font-size: 14pt;
                 font-weight: 700;
@@ -1173,27 +1173,27 @@ function App() {
                 border: 1px solid #e5e7eb;
                 border-top: none;
                 border-radius: 0 0 6px 6px;
-                padding: 20px;
+                padding: 15px;
               }
               
               .section-score {
                 display: inline-block;
                 background: #003D7C;
                 color: white;
-                padding: 6px 14px;
+                padding: 5px 12px;
                 border-radius: 20px;
                 font-weight: 600;
                 font-size: 11pt;
-                margin-bottom: 15px;
+                margin-bottom: 12px;
               }
               
               .metric-explanations {
-                margin-top: 15px;
+                margin-top: 12px;
               }
               
               .metric-item {
-                margin-bottom: 15px;
-                padding-bottom: 15px;
+                margin-bottom: 12px;
+                padding-bottom: 12px;
                 border-bottom: 1px solid #e5e7eb;
               }
               
@@ -1247,12 +1247,12 @@ function App() {
               .raw-metrics {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-                margin-top: 15px;
+                gap: 8px;
+                margin-top: 12px;
               }
               
               .raw-metric {
-                padding: 10px;
+                padding: 8px;
                 background: #f9fafb;
                 border-radius: 6px;
                 border: 1px solid #e5e7eb;
@@ -1271,13 +1271,49 @@ function App() {
                 color: #003D7C;
               }
               
+              .disclaimer {
+                margin-top: 20px;
+                padding: 15px;
+                background: #f0f9ff;
+                border-left: 4px solid #003D7C;
+                border-radius: 6px;
+              }
+              
+              .disclaimer-title {
+                font-size: 11pt;
+                font-weight: 700;
+                color: #003D7C;
+                margin-bottom: 8px;
+              }
+              
+              .disclaimer-text {
+                font-size: 9pt;
+                color: #374151;
+                line-height: 1.6;
+                font-style: italic;
+              }
+              
               .footer {
-                margin-top: 30px;
+                margin-top: 25px;
                 padding-top: 15px;
                 border-top: 2px solid #e5e7eb;
                 text-align: center;
                 font-size: 8pt;
                 color: #6b7280;
+              }
+              
+              .developer-info {
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #e5e7eb;
+                font-size: 8pt;
+                color: #6b7280;
+                line-height: 1.8;
+              }
+              
+              .developer-info strong {
+                color: #1f2937;
+                font-weight: 600;
               }
               
               @media print {
@@ -1443,10 +1479,31 @@ function App() {
               </div>
             </div>
             
+            <!-- Disclaimer -->
+            <div class="disclaimer">
+              <div class="disclaimer-title">Disclaimer</div>
+              <div class="disclaimer-text">
+                These results are generated by AI using curated algorithms and may not fully reflect the pedagogical impact. For a more comprehensive consultation, please contact CTLT.
+              </div>
+            </div>
+            
             <!-- Footer -->
             <div class="footer">
               <p>This report is generated by MARS (Multimodal AI Reflection System) with curated algorithms.</p>
               <p>An AI Media Tool by CTLT</p>
+            </div>
+            
+            <!-- Developer Information -->
+            <div class="developer-info">
+              <div style="margin-bottom: 0.5rem;">
+                Developed by <strong>Tan Teong Jin, Prakash S/O Perumal Haridas, Maria Goh</strong>.
+              </div>
+              <div style="margin-bottom: 0.5rem;">
+                Guided by <strong>Tan Sie Wee</strong>.
+              </div>
+              <div>
+                In collaboration with <strong>Mark Gan</strong>.
+              </div>
             </div>
           </body>
           </html>
