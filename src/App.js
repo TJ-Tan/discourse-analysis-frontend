@@ -61,7 +61,10 @@ function App() {
         }
       } catch (error) {
         // Silently fail - fallback to current time
-        console.log('Could not fetch deployment time');
+        // Only log in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Could not fetch deployment time');
+        }
       }
     };
     fetchDeploymentTime();
@@ -591,7 +594,10 @@ function App() {
         ]);
       } catch (error) {
         // Silently continue if queue check fails or times out
-        console.log('Queue check failed or timed out, proceeding anyway');
+        // Only log in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Queue check failed or timed out, proceeding anyway');
+        }
       }
       
       if (queueStatus && queueStatus.warning_level !== "none") {
