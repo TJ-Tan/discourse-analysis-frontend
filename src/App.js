@@ -619,57 +619,98 @@ function App() {
       const source = CancelToken.source();
       uploadCancelToken.current = source;
 
+      // Fallback progress indicator - show minimal progress to indicate activity
+      let progressInterval = null;
+      let simulatedProgress = 0;
+      
+      // Start a fallback progress indicator in case progress events don't fire
+      progressInterval = setInterval(() => {
+        if (simulatedProgress < 5) {
+          simulatedProgress += 0.5;
+          setUploadProgress(simulatedProgress);
+        }
+      }, 500);
+
       const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 600000,
-        cancelToken: source.token,
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 600000,
+      cancelToken: source.token,
+      onUploadProgress: (progressEvent) => {
+        // Clear fallback interval once real progress starts
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+        
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+          if (process.env.NODE_ENV === 'development') {
             console.log('Upload progress:', percentCompleted + '%');
+          }
+        } else {
+          // If total is not available, show indeterminate progress
+          const mbUploaded = progressEvent.loaded / (1024 * 1024);
+          const fileSizeMB = file.size / (1024 * 1024);
+          if (fileSizeMB > 0) {
+            const estimatedProgress = Math.min((mbUploaded / fileSizeMB) * 100, 99);
+            setUploadProgress(estimatedProgress);
           } else {
-            // If total is not available, show indeterminate progress
-            setUploadProgress(Math.min(progressEvent.loaded / (1024 * 1024), 99)); // Show MB uploaded, cap at 99%
+            setUploadProgress(Math.min(mbUploaded, 99));
           }
         }
-      });
+      }
+    });
+    
+    // Clear fallback interval on success
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
 
-      if (!response.data || !response.data.analysis_id) {
-        alert('Upload succeeded but no analysis ID received. Please try again.');
-        setIsUploading(false);
-        return;
-      }
-      
-      const newAnalysisId = response.data.analysis_id;
-      setUserAnalysisId(newAnalysisId);
-      
-      // Check if video was queued
-      if (response.data.status === 'queued') {
-        setIsQueued(true);
-        setAnalysisId(newAnalysisId);
-        setUploadProgress(100);
-        setIsUploading(false);
-        // Start polling queue list
-        startQueuePolling(newAnalysisId);
-      } else {
-        // Start processing immediately
-        connectToUpdates(newAnalysisId);
-        setAnalysisId(newAnalysisId);
-        setUploadProgress(100);
-        setIsUploading(false);
-      }
-      
-      // Clear cancel token on success
-      uploadCancelToken.current = null;
+    if (!response.data || !response.data.analysis_id) {
+      alert('Upload succeeded but no analysis ID received. Please try again.');
+      setIsUploading(false);
+      return;
+    }
+    
+    const newAnalysisId = response.data.analysis_id;
+    setUserAnalysisId(newAnalysisId);
+    
+    // Check if video was queued
+    if (response.data.status === 'queued') {
+      setIsQueued(true);
+      setAnalysisId(newAnalysisId);
+      setUploadProgress(100);
+      setIsUploading(false);
+      // Start polling queue list
+      startQueuePolling(newAnalysisId);
+    } else {
+      // Start processing immediately
+      connectToUpdates(newAnalysisId);
+      setAnalysisId(newAnalysisId);
+      setUploadProgress(100);
+      setIsUploading(false);
+    }
+    
+    // Clear cancel token on success
+    uploadCancelToken.current = null;
 
     } catch (error) {
+      // Clear fallback interval on error
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+      
       // Clear cancel token
       uploadCancelToken.current = null;
       
       // Handle cancellation
       if (axios.isCancel(error)) {
-        console.log('Upload cancelled by user');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Upload cancelled by user');
+        }
         setIsUploading(false);
         setUploadProgress(0);
         setAnalysisId(null);
@@ -685,6 +726,8 @@ function App() {
         alert('Upload timeout. Please try with a smaller file or check your connection.');
       } else if (error.response) {
         alert(`Upload failed: ${error.response.data?.detail || error.response.statusText}`);
+      } else if (error.request) {
+        alert('Upload failed: No response from server. Please check your connection and try again.');
       } else {
         alert(`Upload failed: ${error.message || 'Unknown error. Please try again.'}`);
       }
