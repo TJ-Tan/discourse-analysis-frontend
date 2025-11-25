@@ -570,37 +570,62 @@ function App() {
 
   const startAnalysis = async () => {
     if (!file) return;
-
-    // Check queue status first
-    const queueStatus = await checkQueueStatus();
-    if (queueStatus && queueStatus.warning_level !== "none") {
-      const shouldProceed = window.confirm(
-        `${queueStatus.warning_message}\n\nDo you want to proceed anyway?`
-      );
-      if (!shouldProceed) {
-        return;
-      }
+    
+    // Prevent multiple clicks - set uploading state immediately
+    if (isUploading) {
+      console.log('Upload already in progress');
+      return;
     }
 
     setIsUploading(true);
     setUploadProgress(0);
     setLogMessages([]);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    // Create cancel token for this upload
-    const CancelToken = axios.CancelToken;
-    const source = CancelToken.source();
-    uploadCancelToken.current = source;
-
+    
     try {
+      // Check queue status first (with timeout to prevent hanging)
+      let queueStatus = null;
+      try {
+        queueStatus = await Promise.race([
+          checkQueueStatus(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Queue check timeout')), 3000))
+        ]);
+      } catch (error) {
+        // Silently continue if queue check fails or times out
+        console.log('Queue check failed or timed out, proceeding anyway');
+      }
+      
+      if (queueStatus && queueStatus.warning_level !== "none") {
+        const shouldProceed = window.confirm(
+          `${queueStatus.warning_message}\n\nDo you want to proceed anyway?`
+        );
+        if (!shouldProceed) {
+          setIsUploading(false);
+          setUploadProgress(0);
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Create cancel token for this upload
+      const CancelToken = axios.CancelToken;
+      const source = CancelToken.source();
+      uploadCancelToken.current = source;
+
       const response = await axios.post(`${API_BASE_URL}/upload-video`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 600000,
         cancelToken: source.token,
         onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+            console.log('Upload progress:', percentCompleted + '%');
+          } else {
+            // If total is not available, show indeterminate progress
+            setUploadProgress(Math.min(progressEvent.loaded / (1024 * 1024), 99)); // Show MB uploaded, cap at 99%
+          }
         }
       });
 
@@ -648,14 +673,17 @@ function App() {
         return;
       }
       
+      console.error('Upload error:', error);
+      
       if (error.code === 'ECONNABORTED') {
         alert('Upload timeout. Please try with a smaller file or check your connection.');
       } else if (error.response) {
         alert(`Upload failed: ${error.response.data?.detail || error.response.statusText}`);
       } else {
-        alert(`Upload failed: ${error.message}`);
+        alert(`Upload failed: ${error.message || 'Unknown error. Please try again.'}`);
       }
       setIsUploading(false);
+      setUploadProgress(0);
       setAnalysisId(null);
       setIsQueued(false);
       setQueueList([]);
