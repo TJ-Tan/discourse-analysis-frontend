@@ -132,6 +132,7 @@ function App() {
         const size = Math.random() * 3 + 1; // 1px to 4px
         star.style.width = `${size}px`;
         star.style.height = `${size}px`;
+        star.style.position = 'absolute'; // Ensure stars are positioned absolutely within fixed container
         
         // Random position across entire viewport
         star.style.left = `${Math.random() * 100}%`;
@@ -1418,6 +1419,13 @@ function App() {
               <div class="section-header">2. Body Language</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round(results.body_language?.score * 10) / 10}/10</div>
+                ${results.body_language?.remarks ? `
+                  <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+                    <p style="margin: 0; color: #92400e; font-size: 9pt; line-height: 1.5; font-style: italic;">
+                      ⚠️ ${results.body_language.remarks}
+                    </p>
+                  </div>
+                ` : ''}
                 ${results.body_language?.explanations ? renderExplanations(results.body_language.explanations) : ''}
                 ${results.body_language?.raw_metrics ? `
                   <div class="raw-metrics">
@@ -2374,14 +2382,121 @@ function App() {
                     };
                     
                     // Group words by sentence start (capital letter) to create paragraphs
-                    // Common multi-word proper nouns that should not trigger new paragraphs
+                    // Proper nouns that should not trigger new paragraphs
+                    // This list is generated from backend/proper_nouns.xlsx Excel file
+                    // To update: Edit the Excel file and regenerate this list using: python3 export_proper_nouns_for_frontend.py
                     const properNounPhrases = [
-                      'world war', 'cold war', 'civil war', 'world war ii', 'world war i',
-                      'united states', 'united kingdom', 'new york', 'los angeles',
-                      'middle east', 'south korea', 'north korea', 'south africa',
-                      'prime minister', 'president', 'supreme court', 'house of',
-                      'world health', 'world bank', 'united nations', 'european union',
-                      'great britain', 'soviet union', 'russian federation'
+                      // Proper nouns loaded from Excel file (proper_nouns.xlsx)
+                      // Update the Excel file to modify this list
+                      // Total: 530 proper nouns across 18 categories
+                      '10 downing street', '4g network', '5g network', '9/11', 'abraham', 'abraham lincoln',
+                      'academy awards', 'acquired immunodeficiency syndrome', 'acs', 'act', 'adidas', 'aha',
+                      'ai', 'aids', 'airbus', 'albert einstein', 'alexander the great', 'ama', 'amazon.com',
+                      'american cancer society', 'american college testing', 'american heart association',
+                      'american medical association', 'american revolution', 'amnesty international', 'android',
+                      'apple inc', 'ar', 'archbishop of canterbury', 'arctic ocean', 'aristotle',
+                      'artificial intelligence', 'associate degree', 'atlantic ocean', 'attorney general',
+                      'augmented reality', 'avogadro\'s number', 'bachelor of arts', 'bachelor of business',
+                      'bachelor of engineering', 'bachelor of science', 'bachelor\'s degree', 'baroque period',
+                      'battle of gettysburg', 'behaviorism', 'benjamin franklin', 'berlin wall', 'bhagavad gita',
+                      'bible', 'big bang theory', 'big data', 'bill and melinda gates foundation', 'bitcoin',
+                      'black death', 'black sea', 'blended learning', 'blockchain technology', 'bloom\'s taxonomy',
+                      'bluetooth', 'bmw', 'boeing company', 'booker prize', 'boston college', 'boston university',
+                      'british parliament', 'bronze age', 'brown university', 'buddha', 'buddhism', 'buenos aires',
+                      'cambridge university', 'cape town', 'capitol hill', 'carnegie foundation', 'carnegie mellon',
+                      'carnegie mellon university', 'catholic church', 'cdc', 'centers for disease control',
+                      'central america', 'central intelligence agency', 'charles darwin', 'charles dickens',
+                      'christianity', 'cia', 'civil war', 'cloud computing', 'coca-cola', 'cognitivism', 'cold war',
+                      'cold war era', 'columbia university', 'command economy', 'confucius', 'constructivism',
+                      'consumer price index', 'contemporary period', 'cornell university', 'coronavirus disease',
+                      'costa rica', 'covid-19', 'cpi', 'crusades', 'cryptocurrency', 'cuban missile crisis',
+                      'cubism', 'd-day', 'dalai lama', 'dark ages', 'dartmouth college', 'data science',
+                      'dead sea', 'deep learning', 'disney', 'distance learning', 'dna', 'doctor of education',
+                      'doctor of medicine', 'doctor of philosophy', 'doctoral degree', 'dot-com bubble', 'dow jones',
+                      'downing street', 'duke university', 'e=mc²', 'east africa', 'east asia', 'east timor',
+                      'eastern orthodox church', 'edd', 'edwardian era', 'einstein\'s equation', 'el salvador',
+                      'emmy awards', 'emory university', 'enlightenment', 'enlightenment era', 'esa', 'ethereum',
+                      'eu', 'european parliament', 'european space agency', 'european union', 'evolution theory',
+                      'f1', 'facebook', 'fall of berlin wall', 'far east', 'fbi', 'fda', 'fed',
+                      'federal bureau of investigation', 'federal reserve', 'federal reserve system', 'fifa world cup',
+                      'financial crisis', 'first world war', 'flipped classroom', 'food and drug administration',
+                      'ford foundation', 'ford motor', 'formula one', 'free market', 'french revolution',
+                      'galileo galilei', 'game of thrones', 'gates foundation', 'gdp', 'general motors',
+                      'general relativity', 'genetic code', 'genghis khan', 'george washington',
+                      'georgetown university', 'gmat', 'gnp', 'golden globe awards', 'google llc', 'gpa',
+                      'grade point average', 'graduate management admission test', 'graduate record examination',
+                      'grammy awards', 'grand canyon', 'gre', 'great barrier reef', 'great britain',
+                      'great depression', 'great depression era', 'great lakes', 'great recession', 'great wall',
+                      'greenpeace', 'gross domestic product', 'gross national product', 'guernica', 'gulf war',
+                      'hamlet', 'harry potter', 'harvard university', 'hdmi', 'heisenberg uncertainty principle',
+                      'hinduism', 'hiv', 'honda', 'hong kong', 'house of commons', 'house of lords',
+                      'house of representatives', 'human immunodeficiency virus', 'ielts', 'ikea', 'imf',
+                      'impressionism', 'indian ocean', 'industrial age', 'industrial revolution', 'inflation rate',
+                      'information age', 'internal revenue service', 'international english language testing system',
+                      'international monetary fund', 'internet of things', 'ios', 'iot', 'iraq war', 'iron age',
+                      'irs', 'isaac newton', 'islam', 'jane austen', 'jesus christ', 'johns hopkins university',
+                      'judaism', 'julius caesar', 'king george', 'koran', 'korean war', 'kuala lumpur',
+                      'las vegas', 'latin america', 'learning management system', 'learning styles',
+                      'leonardo da vinci', 'linux', 'lms', 'london stock exchange', 'lord of the rings',
+                      'los angeles', 'mac os', 'macbeth', 'machine learning', 'mahatma gandhi',
+                      'major league baseball', 'man booker prize', 'marie curie', 'mark twain', 'market economy',
+                      'martin luther king', 'marvel comics', 'massachusetts institute of technology',
+                      'massive open online course', 'master of arts', 'master of business administration',
+                      'master of science', 'master\'s degree', 'mba', 'mcdonald\'s corporation', 'md',
+                      'mediterranean sea', 'mercedes-benz', 'meta platforms', 'mexico city', 'michelangelo',
+                      'microsoft corporation', 'middle ages', 'middle east', 'mit', 'mixed reality', 'mlb',
+                      'modern era', 'mona lisa', 'mooc', 'moses', 'mount everest', 'mount fuji',
+                      'mount kilimanjaro', 'mount rushmore', 'mr', 'muhammad', 'multiple intelligences',
+                      'napoleon bonaparte', 'nasa', 'nascar', 'nasdaq', 'national aeronautics and space administration',
+                      'national basketball association', 'national football league', 'national hockey league',
+                      'national institutes of health', 'national science foundation', 'nato', 'natural selection',
+                      'nba', 'nba finals', 'nelson mandela', 'netflix', 'neural networks', 'new brunswick',
+                      'new delhi', 'new hampshire', 'new haven', 'new jersey', 'new mexico', 'new orleans',
+                      'new york', 'new york city', 'new york stock exchange', 'new york university', 'new zealand',
+                      'newton\'s first law', 'newton\'s laws', 'newton\'s second law', 'newton\'s third law',
+                      'nfl', 'nft', 'nhl', 'nih', 'nike inc', 'nintendo', 'noah', 'nobel prize', 'north america',
+                      'north atlantic treaty organization', 'north korea', 'north macedonia', 'northwestern university',
+                      'nsf', 'nyse', 'nyu', 'olympic games', 'olympics', 'online learning', 'operating system',
+                      'oscars', 'oxford university', 'pablo picasso', 'pacific ocean', 'parliament', 'pearl harbor',
+                      'people\'s republic of china', 'pepsico', 'periodic table', 'periodic table of elements',
+                      'phd', 'planck\'s constant', 'plato', 'playstation', 'pope francis', 'pope john paul',
+                      'post-cold war', 'premier league', 'president of the united states', 'prime minister',
+                      'princess diana', 'princeton university', 'problem-based learning', 'project-based learning',
+                      'protestant reformation', 'puerto rico', 'pulitzer prize', 'pythagorean theorem',
+                      'quantum mechanics', 'quantum theory', 'queen elizabeth', 'queen victoria', 'quran',
+                      'red crescent', 'red cross', 'red sea', 'reformation', 'renaissance', 'renaissance art',
+                      'renaissance period', 'republic of china', 'rice university', 'rio de janeiro', 'rna',
+                      'roaring twenties', 'rockefeller foundation', 'roman catholic church', 'romeo and juliet',
+                      'russian federation', 'russian revolution', 's&p 500', 'saint helens', 'saint john',
+                      'saint louis', 'saint paul', 'saint petersburg', 'samsung electronics', 'san antonio',
+                      'san diego', 'san francisco', 'san jose', 'san marino', 'sars', 'sat', 'saudi arabia',
+                      'scholastic assessment test', 'schrodinger\'s cat', 'second world war', 'secretary of defense',
+                      'secretary of state', 'security council', 'senate', 'september 11',
+                      'severe acute respiratory syndrome', 'sikhism', 'sistine chapel', 'social learning theory',
+                      'social security administration', 'socrates', 'sony corporation', 'south africa',
+                      'south america', 'south korea', 'south sudan', 'southeast asia', 'soviet union',
+                      'space race', 'spacex', 'special relativity', 'sri lanka', 'stanford university',
+                      'stanley cup', 'star wars', 'starbucks corporation', 'starry night', 'stone age',
+                      'string theory', 'student-centered learning', 'summer olympics', 'super bowl',
+                      'supply and demand', 'supreme court', 'supreme court justice', 'surrealism',
+                      'survival of the fittest', 'são paulo', 'talmud', 'target corporation', 'tel aviv',
+                      'tel aviv-yafo', 'tesla inc', 'test of english as foreign language', 'texas a&m university',
+                      'the great gatsby', 'the scream', 'theory of evolution', 'theory of relativity',
+                      'thomas jefferson', 'to kill a mockingbird', 'toefl', 'torah', 'tour de france', 'toyota',
+                      'uc berkeley', 'uc los angeles', 'uc san diego', 'ucla', 'un', 'unemployment rate',
+                      'unesco', 'unicef', 'united arab emirates', 'united kingdom', 'united nations',
+                      'united nations general assembly', 'united states', 'united states congress',
+                      'united states of america', 'university of california', 'university of cambridge',
+                      'university of chicago', 'university of michigan', 'university of oxford',
+                      'university of pennsylvania', 'university of southern california', 'university of texas',
+                      'university of washington', 'us congress', 'usb', 'usc', 'ut austin', 'uw seattle',
+                      'vanderbilt university', 'vedas', 'vice president', 'victorian era', 'vietnam war',
+                      'vincent van gogh', 'virtual reality', 'volkswagen', 'vr', 'wall street', 'walmart inc',
+                      'warner bros', 'west africa', 'white house', 'who', 'wi-fi', 'william shakespeare',
+                      'wimbledon', 'windows', 'winston churchill', 'winter olympics', 'world bank',
+                      'world health organization', 'world series', 'world trade organization', 'world war 1',
+                      'world war 2', 'world war i', 'world war ii', 'world wildlife fund', 'wto', 'xbox',
+                      'yale university', 'zone of proximal development'
                     ];
                     
                     const paragraphs = [];
@@ -3149,6 +3264,27 @@ function App() {
                     <strong>Professionalism:</strong> {results.body_language.raw_metrics?.professionalism_raw || 0}/10
                   </div>
                 </div>
+                
+                {/* Visual Analysis Remarks */}
+                {results.body_language.remarks && (
+                  <div style={{ 
+                    marginTop: '1.5rem', 
+                    padding: '1rem', 
+                    background: 'rgba(245, 158, 11, 0.1)', 
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '8px' 
+                  }}>
+                    <p style={{ 
+                      margin: 0, 
+                      color: '#92400e', 
+                      fontSize: '0.9rem', 
+                      lineHeight: '1.6',
+                      fontStyle: 'italic'
+                    }}>
+                      ⚠️ {results.body_language.remarks}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Metric Explanations */}
                 {results.body_language.explanations && (
