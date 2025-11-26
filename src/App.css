@@ -83,7 +83,7 @@ body {
 
 .app-background::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -106,7 +106,7 @@ body {
 
 .app-background::after {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
