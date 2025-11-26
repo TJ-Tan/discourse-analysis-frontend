@@ -2347,14 +2347,51 @@ function App() {
                     };
                     
                     // Group words by sentence start (capital letter) to create paragraphs
+                    // Common multi-word proper nouns that should not trigger new paragraphs
+                    const properNounPhrases = [
+                      'world war', 'cold war', 'civil war', 'world war ii', 'world war i',
+                      'united states', 'united kingdom', 'new york', 'los angeles',
+                      'middle east', 'south korea', 'north korea', 'south africa',
+                      'prime minister', 'president', 'supreme court', 'house of',
+                      'world health', 'world bank', 'united nations', 'european union',
+                      'great britain', 'soviet union', 'russian federation'
+                    ];
+                    
                     const paragraphs = [];
                     let currentParagraph = { timestamp: null, words: [] };
+                    let previousWords = []; // Track previous 2-3 words to check for proper noun phrases
                     
                     results.full_transcript.timecoded_words.forEach((wordData, idx) => {
                       // Get the word text
                       const wordText = wordData.word || '';
+                      const wordTextLower = wordText.toLowerCase();
+                      
+                      // Update previous words buffer (keep last 3 words)
+                      previousWords.push(wordTextLower);
+                      if (previousWords.length > 3) {
+                        previousWords.shift();
+                      }
+                      
+                      // Check if this could be part of a proper noun phrase
+                      let isPartOfProperNoun = false;
+                      if (previousWords.length >= 2) {
+                        // Check 2-word phrases
+                        const twoWordPhrase = `${previousWords[previousWords.length - 2]} ${previousWords[previousWords.length - 1]}`;
+                        if (properNounPhrases.some(phrase => phrase.includes(twoWordPhrase) || twoWordPhrase.includes(phrase))) {
+                          isPartOfProperNoun = true;
+                        }
+                      }
+                      if (previousWords.length >= 3) {
+                        // Check 3-word phrases
+                        const threeWordPhrase = `${previousWords[previousWords.length - 3]} ${previousWords[previousWords.length - 2]} ${previousWords[previousWords.length - 1]}`;
+                        if (properNounPhrases.some(phrase => phrase.includes(threeWordPhrase) || threeWordPhrase.includes(phrase))) {
+                          isPartOfProperNoun = true;
+                        }
+                      }
+                      
                       // Check if word starts with a capital letter (sentence start)
-                      const isSentenceStart = wordText.length > 0 && /^[A-Z]/.test(wordText);
+                      // BUT exclude if it's part of a proper noun phrase
+                      const isSentenceStart = wordText.length > 0 && /^[A-Z]/.test(wordText) && !isPartOfProperNoun;
                       
                       // Get timestamp - prefer formatted timestamp, fallback to start time
                       const timestamp = wordData.timestamp || (wordData.start ? formatTimestamp(wordData.start) : null);
@@ -2431,16 +2468,27 @@ function App() {
                 borderRadius: '16px',
                 border: '1px solid rgba(255, 255, 255, 0.1)'
               }}>
-                <h3 style={{ 
-                  margin: '0 0 1.5rem 0', 
-                  color: '#003D7C', 
-                  fontSize: '1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  📸 Extracted Video Frames
-                </h3>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{ 
+                    margin: '0 0 0.5rem 0', 
+                    color: '#003D7C', 
+                    fontSize: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    📸 Extracted Video Frames
+                  </h3>
+                  <p style={{ 
+                    margin: 0, 
+                    color: '#666', 
+                    fontSize: '0.85rem',
+                    fontStyle: 'italic'
+                  }}>
+                    {results.sample_frames.length} frame{results.sample_frames.length !== 1 ? 's' : ''} extracted (max 7 frames)
+                    {results.sample_frames.length > 3 && ' - Scroll horizontally to view all frames'}
+                  </p>
+                </div>
                 
                 <div 
                 style={{
@@ -2448,11 +2496,13 @@ function App() {
                   overflowX: 'auto',
                   overflowY: 'hidden',
                   paddingBottom: '1rem',
+                  marginBottom: '1rem',
                   cursor: results.sample_frames.length > 3 ? 'grab' : 'default',
                   WebkitOverflowScrolling: 'touch',
                   scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent'
+                  scrollbarColor: 'rgba(255, 255, 255, 0.5) rgba(0, 0, 0, 0.1)'
                 }}
+                className="frame-gallery-scroll"
                 onMouseDown={(e) => {
                   if (results.sample_frames.length <= 3) return;
                   const container = e.currentTarget;

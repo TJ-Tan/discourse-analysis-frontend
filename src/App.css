@@ -1999,3 +1999,28 @@ body {
   border-radius: 50%;
   animation: bokehFloat 12s ease-in-out infinite;
 }
+
+/* Frame Gallery Scrollbar Styling */
+.frame-gallery-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 61, 124, 0.6) rgba(0, 0, 0, 0.1);
+}
+
+.frame-gallery-scroll::-webkit-scrollbar {
+  height: 12px;
+}
+
+.frame-gallery-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.frame-gallery-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 61, 124, 0.6);
+  border-radius: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.frame-gallery-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 61, 124, 0.8);
+}
