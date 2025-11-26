@@ -9,9 +9,6 @@ import {
   AlertCircle, 
   Download,
   Settings,
-  Sparkles,
-  ArrowRight,
-  Save,
   RotateCcw,
   Sliders,
   Info
@@ -1724,9 +1721,23 @@ function App() {
         {/* Header */}
         <div className="header">
           <div className="announcement-banner">
-            <Sparkles size={16} />
-            <span>An AI Media Tools by CTLT</span>
-            <ArrowRight size={16} />
+            <a 
+              href="https://ctlt.nus.edu.sg/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+            >
+              An AI Educational Media Tool by CTLT
+            </a>
           </div>
           <h1 className="title">MARS</h1>
           <p className="subtitle">
@@ -1823,6 +1834,42 @@ function App() {
               }}>
                 {queueWarning.warning_message}
               </p>
+              
+              {/* IP Address and User Count Information */}
+              {(queueWarning.total_users > 0 || (queueWarning.active_ips && queueWarning.active_ips.length > 0) || (queueWarning.queued_ips && queueWarning.queued_ips.length > 0)) && (
+              <div style={{ 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '20px',
+                  fontSize: '14px',
+                  color: 'rgba(255, 255, 255, 0.85)'
+                }}>
+                  <div style={{ marginBottom: '8px', fontWeight: '600' }}>
+                    📊 System Status:
+                </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <strong>Total Users:</strong> {queueWarning.total_users || 0} {queueWarning.total_users === 1 ? 'user' : 'users'}
+                  </div>
+                  {queueWarning.active_ips && queueWarning.active_ips.length > 0 && (
+                    <div style={{ marginBottom: '4px' }}>
+                      <strong>Active Processing:</strong> {queueWarning.active_ips.length} {queueWarning.active_ips.length === 1 ? 'user' : 'users'} 
+                      <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.8 }}>
+                        (IP: {queueWarning.active_ips.join(', ')})
+                      </span>
+                    </div>
+                  )}
+                  {queueWarning.queued_ips && queueWarning.queued_ips.length > 0 && (
+                    <div style={{ marginBottom: '4px' }}>
+                      <strong>In Queue:</strong> {queueWarning.queued_ips.length} {queueWarning.queued_ips.length === 1 ? 'user' : 'users'}
+                      <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.8 }}>
+                        (IP: {queueWarning.queued_ips.join(', ')})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {queueWarning.warning_level === 'high' && (
               <div style={{ 
@@ -3283,7 +3330,7 @@ function App() {
                     }}>
                       ⚠️ {results.body_language.remarks}
                     </p>
-                  </div>
+              </div>
                 )}
                 
                 {/* Metric Explanations */}
