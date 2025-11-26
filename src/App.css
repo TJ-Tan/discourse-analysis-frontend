@@ -2024,3 +2024,22 @@ body {
 .frame-gallery-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 61, 124, 0.8);
 }
+
+/* System Notice Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
