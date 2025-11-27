@@ -1085,8 +1085,8 @@ function App() {
               
               .header {
                 text-align: center;
-                margin-bottom: 25px;
-                padding: 20px;
+                margin-bottom: 15px;
+                padding: 18px;
                 background: linear-gradient(135deg, #003D7C, #EF7C00);
                 color: white;
                 border-radius: 8px;
@@ -1118,8 +1118,8 @@ function App() {
               
               .overall-score {
                 text-align: center;
-                margin: 15px 0;
-                padding: 15px;
+                margin: 10px 0;
+                padding: 12px;
                 background: #f9fafb;
                 border-radius: 8px;
                 border: 2px solid #003D7C;
@@ -1141,8 +1141,8 @@ function App() {
               .category-scores {
                 display: grid;
                 grid-template-columns: repeat(5, 1fr);
-                gap: 10px;
-                margin: 15px 0;
+                gap: 8px;
+                margin: 10px 0;
               }
               
               .category-score {
@@ -1167,7 +1167,7 @@ function App() {
               }
               
               .section {
-                margin: 12px 0;
+                margin: 6px 0;
                 page-break-inside: avoid;
               }
               
@@ -1186,7 +1186,7 @@ function App() {
                 border: 1px solid #e5e7eb;
                 border-top: none;
                 border-radius: 0 0 6px 6px;
-                padding: 15px;
+                padding: 12px;
               }
               
               .section-score {
@@ -1197,16 +1197,16 @@ function App() {
                 border-radius: 20px;
                 font-weight: 600;
                 font-size: 11pt;
-                margin-bottom: 12px;
+                margin-bottom: 8px;
               }
               
               .metric-explanations {
-                margin-top: 12px;
+                margin-top: 8px;
               }
               
               .metric-item {
-                margin-bottom: 12px;
-                padding-bottom: 12px;
+                margin-bottom: 8px;
+                padding-bottom: 8px;
                 border-bottom: 1px solid #e5e7eb;
               }
               
@@ -1261,7 +1261,7 @@ function App() {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
-                margin-top: 12px;
+                margin-top: 8px;
               }
               
               .raw-metric {
@@ -1285,8 +1285,8 @@ function App() {
               }
               
               .disclaimer {
-                margin-top: 20px;
-                padding: 15px;
+                margin-top: 12px;
+                padding: 12px;
                 background: #f0f9ff;
                 border-left: 4px solid #003D7C;
                 border-radius: 6px;
@@ -1307,8 +1307,8 @@ function App() {
               }
               
               .footer {
-                margin-top: 25px;
-                padding-top: 15px;
+                margin-top: 15px;
+                padding-top: 12px;
                 border-top: 2px solid #e5e7eb;
                 text-align: center;
                 font-size: 8pt;
@@ -1316,8 +1316,8 @@ function App() {
               }
               
               .developer-info {
-                margin-top: 15px;
-                padding-top: 15px;
+                margin-top: 10px;
+                padding-top: 12px;
                 border-top: 1px solid #e5e7eb;
                 font-size: 8pt;
                 color: #6b7280;
