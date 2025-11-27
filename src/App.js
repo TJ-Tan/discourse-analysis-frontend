@@ -543,7 +543,19 @@ function App() {
   // Check queue status before upload
   const checkQueueStatus = async () => {
     try {
+      // Get client IP from a service (fallback to backend detection)
+      let clientIP = null;
+      try {
+        const ipResponse = await axios.get('https://api.ipify.org?format=json', { timeout: 2000 });
+        clientIP = ipResponse.data.ip;
+      } catch (ipError) {
+        // If IP service fails, backend will detect from request headers
+        clientIP = null;
+      }
+      
+      const params = clientIP ? { client_ip: clientIP } : {};
       const response = await axios.get(`${API_BASE_URL}/queue-status`, {
+        params: params,
         timeout: 5000, // 5 second timeout
         validateStatus: (status) => status < 500 // Don't throw on 4xx errors
       });
@@ -2420,96 +2432,41 @@ function App() {
                 lineHeight: '1.8',
                 fontSize: '0.95rem'
               }}>
-                {results.full_transcript?.timecoded_words && results.full_transcript.timecoded_words.length > 0 ? (
+                {results.full_transcript?.text ? (
+                  <div style={{ 
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: '1.8',
+                    fontSize: '0.95rem',
+                    color: '#1f2937'
+                  }}>
+                    {results.full_transcript.text}
+                  </div>
+                ) : results.full_transcript?.timecoded_words && results.full_transcript.timecoded_words.length > 0 ? (
+                  // Fallback: if no polished text, reconstruct from timecoded words
                   (() => {
-                    // Helper function to format timestamp from seconds
-                    const formatTimestamp = (seconds) => {
-                      const mins = Math.floor(seconds / 60);
-                      const secs = Math.floor(seconds % 60);
-                      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                    };
-                    
-                    // Group words by sentences - each sentence starts with a new timecode
-                    // Sentences are identified by punctuation marks (. ! ?)
-                    
-                    const paragraphs = [];
-                    let currentParagraph = { timestamp: null, words: [] };
-                    let previousWordEndedSentence = false;
-                    
+                    let transcriptText = '';
                     results.full_transcript.timecoded_words.forEach((wordData, idx) => {
-                      // Get the word text
-                      const wordText = wordData.word || '';
-                      
-                      // Check if previous word ended a sentence (had sentence-ending punctuation)
-                      const isNewSentence = previousWordEndedSentence;
-                      
-                      // Check if this word ends a sentence (contains . ! or ?)
-                      const endsSentence = wordText && /[.!?]/.test(wordText);
-                      
-                      // Get timestamp - prefer formatted timestamp, fallback to start time
-                      const timestamp = wordData.timestamp || (wordData.start ? formatTimestamp(wordData.start) : null);
-                      
-                      // If this is the start of a new sentence (after previous sentence ended), start new paragraph with timecode
-                      if (isNewSentence && timestamp) {
-                        // Save previous paragraph if it has words
-                        if (currentParagraph.words.length > 0) {
-                          paragraphs.push(currentParagraph);
-                        }
-                        // Start new paragraph with this sentence-starting word
-                        currentParagraph = { timestamp: timestamp, words: [wordData] };
-                      } else {
-                        // Add word to current paragraph
-                        currentParagraph.words.push(wordData);
-                        // Update timestamp if we don't have one yet and this word has one
-                        if (!currentParagraph.timestamp && timestamp) {
-                          currentParagraph.timestamp = timestamp;
-                        }
+                      const word = wordData.word || '';
+                      // Add space before word (except for punctuation)
+                      if (idx > 0 && !word.match(/^[.,!?;:]/)) {
+                        transcriptText += ' ';
                       }
-                      
-                      // Update flag for next iteration
-                      previousWordEndedSentence = endsSentence;
+                      transcriptText += word;
                     });
-                    
-                    // Add the last paragraph
-                    if (currentParagraph.words.length > 0) {
-                      paragraphs.push(currentParagraph);
-                    }
-                    
-                    // Render paragraphs - each timestamp starts a new paragraph
-                    return paragraphs.map((paragraph, pIdx) => (
-                      <div key={pIdx} style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'flex-start' }}>
-                        <span style={{ 
-                          display: 'inline-block',
-                          marginRight: '0.75rem',
-                          padding: '0.2rem 0.6rem',
-                          background: 'var(--nus-blue)',
-                          color: 'white',
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          fontWeight: '600',
-                          flexShrink: 0,
-                          marginTop: '0.1rem'
-                        }}>
-                          {paragraph.timestamp}
-                        </span>
-                        <p style={{ 
-                          margin: 0, 
-                          display: 'inline-block', 
-                          lineHeight: '1.8',
-                          flex: 1
-                        }}>
-                          {paragraph.words.map((wordData, wIdx) => (
-                            <span key={wIdx} style={{ marginRight: '0.3rem' }}>
-                      {wordData.word}
-                    </span>
-                          ))}
-                        </p>
+                    return (
+                      <div style={{ 
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: '1.8',
+                        fontSize: '0.95rem',
+                        color: '#1f2937'
+                      }}>
+                        {transcriptText}
                       </div>
-                    ));
+                    );
                   })()
                 ) : (
                   <div style={{ color: 'var(--gray-500)', fontStyle: 'italic' }}>
-                    {results.full_transcript?.text || 'Transcript not available'}
+                    Transcript not available
                   </div>
                 )}
               </div>
