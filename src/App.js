@@ -9,6 +9,7 @@ import {
   AlertCircle, 
   Download,
   Settings,
+  Save,
   RotateCcw,
   Sliders,
   Info
