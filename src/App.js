@@ -45,6 +45,87 @@ function App() {
   const [isQueued, setIsQueued] = useState(false);
   const [userAnalysisId, setUserAnalysisId] = useState(null);
   const uploadCancelToken = useRef(null);
+  const [summaryData, setSummaryData] = useState(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+
+  // Generate summary when results are available
+  useEffect(() => {
+    const generateSummary = async () => {
+      if (!results || summaryData) return; // Don't regenerate if already exists
+      
+      setIsGeneratingSummary(true);
+      try {
+        const summaryDataForAPI = {
+          overall_score: Math.round(results.overall_score * 10) / 10,
+          speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
+          body_language_score: Math.round(results.body_language?.score * 10) / 10,
+          teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
+          interaction_score: Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
+          presentation_score: Math.round(results.presentation_skills?.score * 10) / 10,
+          high_level_questions: results.interaction_engagement?.high_level_questions || [],
+          total_questions: results.interaction_engagement?.total_questions || 0,
+          transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
+          sample_frames_count: results.sample_frames?.length || 0,
+          filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
+          explanations: {
+            speech: results.speech_analysis?.explanations || {},
+            body_language: results.body_language?.explanations || {},
+            teaching: results.teaching_effectiveness?.explanations || {},
+            interaction: results.interaction_engagement?.explanations || {},
+            presentation: results.presentation_skills?.explanations || {}
+          }
+        };
+
+        const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, summaryDataForAPI, {
+          timeout: 30000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.data && response.data.summary) {
+          setSummaryData(response.data.summary);
+        }
+      } catch (error) {
+        console.error('Error generating summary:', error);
+        // Fallback summary
+        const overallScore = Math.round(results.overall_score * 10) / 10;
+        const totalQuestions = results.interaction_engagement?.total_questions || 0;
+        const highLevelQuestions = results.interaction_engagement?.high_level_questions || [];
+        const firstQuestion = highLevelQuestions.length > 0 ? highLevelQuestions[0].question || highLevelQuestions[0].text : '';
+        
+        const scores = {
+          'Speech Analysis': Math.round(results.speech_analysis?.score * 10) / 10,
+          'Body Language': Math.round(results.body_language?.score * 10) / 10,
+          'Teaching Effectiveness': Math.round(results.teaching_effectiveness?.score * 10) / 10,
+          'Interaction & Engagement': Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
+          'Presentation Skills': Math.round(results.presentation_skills?.score * 10) / 10
+        };
+        const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
+        const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
+        
+        setSummaryData({
+          personalized_feedback: `This lecture achieved an overall score of ${overallScore}/10, demonstrating effective teaching techniques with ${totalQuestions} questions asked throughout the session${firstQuestion ? `. For instance, the instructor asked: "${firstQuestion.substring(0, 100)}${firstQuestion.length > 100 ? '...' : ''}", which promotes analytical thinking and encourages deeper student engagement.` : ', promoting analytical thinking and student engagement.'} The delivery maintained good pacing and clarity throughout.`,
+          strongest_strength: {
+            title: strongest[0],
+            description: `Strong performance in ${strongest[0].toLowerCase()} with a score of ${strongest[1]}/10, demonstrating effective teaching techniques in this area.`,
+            evidence: `Score of ${strongest[1]}/10 in ${strongest[0]}${results.sample_frames?.length > 0 ? `, supported by ${results.sample_frames.length} analysed video frames` : ''}`
+          },
+          improvements: [
+            {
+              area: weakest[0],
+              description: `Consider focusing on improving ${weakest[0].toLowerCase()} which scored ${weakest[1]}/10.`,
+              evidence: `Current score: ${weakest[1]}/10 (below the overall average of ${overallScore}/10)`
+            }
+          ]
+        });
+      } finally {
+        setIsGeneratingSummary(false);
+      }
+    };
+
+    generateSummary();
+  }, [results]);
 
   // Fetch deployment time on mount
   useEffect(() => {
@@ -418,6 +499,7 @@ function App() {
       });
       setResults(null);
       setLogMessages([]);
+      setSummaryData(null);
     } else {
       alert('Please upload a video file');
     }
@@ -868,6 +950,7 @@ function App() {
         });
         setLogMessages([]);
         setResults(null);
+        setSummaryData(null);
         setIsStopping(false);
       }, 2000);
     }
