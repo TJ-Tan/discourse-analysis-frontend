@@ -659,24 +659,30 @@ function App() {
   };
 
   const cancelUpload = async () => {
+    // Cancel the axios request
     if (uploadCancelToken.current) {
       uploadCancelToken.current.cancel('Upload cancelled by user');
       uploadCancelToken.current = null;
     }
     
+    // Also notify backend to clean up
+    if (analysisId) {
+      try {
+        await axios.post(`${API_BASE_URL}/cancel-upload/${analysisId}`, {}, {
+          timeout: 5000
+        });
+      } catch (error) {
+        // Ignore errors - backend cleanup is best effort
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Backend cancel notification failed:', error);
+        }
+      }
+    }
+    
     setIsUploading(false);
     setUploadProgress(0);
-    
-    // If we have an analysis_id, try to cancel it on the backend
-    if (userAnalysisId) {
-      try {
-        await axios.post(`${API_BASE_URL}/cancel-upload/${userAnalysisId}`);
-      } catch (error) {
-        // Silently fail - backend cleanup is best effort
-        console.log('Backend cleanup may have failed, but upload is cancelled');
-      }
-      setUserAnalysisId(null);
-    }
+    setAnalysisId(null);
+    setUserAnalysisId(null);
     
     // Reset state
     setAnalysisId(null);
@@ -722,6 +728,46 @@ function App() {
       setIsPasskeyValid(true);
     }
   }, []);
+
+  // Cleanup on page unload/refresh - cancel ongoing uploads
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // If there's an active upload, try to cancel it
+      const currentAnalysisId = analysisId || userAnalysisId;
+      if (isUploading && currentAnalysisId) {
+        // Cancel axios request
+        if (uploadCancelToken.current) {
+          uploadCancelToken.current.cancel('Page refresh - upload cancelled');
+        }
+        
+        // Notify backend (fire and forget - use sendBeacon for reliability during page unload)
+        try {
+          // Use sendBeacon for better reliability during page unload
+          const url = `${API_BASE_URL}/cancel-upload/${currentAnalysisId}`;
+          const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        } catch (error) {
+          // Fallback: try fetch with keepalive
+          try {
+            fetch(`${API_BASE_URL}/cancel-upload/${currentAnalysisId}`, {
+              method: 'POST',
+              body: JSON.stringify({}),
+              headers: { 'Content-Type': 'application/json' },
+              keepalive: true
+            }).catch(() => {}); // Ignore errors
+          } catch (err) {
+            // Ignore all errors during unload
+          }
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isUploading, analysisId, userAnalysisId]);
 
   const startAnalysis = async () => {
     if (!file) return;
