@@ -1097,7 +1097,7 @@ function App() {
               
               .header {
                 text-align: center;
-                margin-bottom: 15px;
+                margin-bottom: 8px;
                 padding: 18px;
                 background: linear-gradient(135deg, #003D7C, #EF7C00);
                 color: white;
@@ -1107,19 +1107,19 @@ function App() {
               .header h1 {
                 font-size: 32pt;
                 font-weight: 800;
-                margin-bottom: 8px;
+                margin-bottom: 2px;
                 letter-spacing: -0.5px;
               }
               
               .header .subtitle {
                 font-size: 14pt;
-                margin-bottom: 4px;
+                margin-bottom: 2px;
                 opacity: 0.95;
               }
               
               .header .tagline {
                 font-size: 11pt;
-                margin-bottom: 12px;
+                margin-bottom: 8px;
                 opacity: 0.85;
               }
               
