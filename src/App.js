@@ -1181,10 +1181,20 @@ function App() {
               .section {
                 margin: 6px 0;
                 page-break-inside: avoid;
+                page-break-after: avoid;
               }
               
               .section.new-page {
                 page-break-before: always;
+                page-break-after: avoid;
+              }
+              
+              .questions-list {
+                page-break-inside: avoid;
+              }
+              
+              .question-item {
+                page-break-inside: avoid;
               }
               
               .transcript-section {
@@ -1656,61 +1666,97 @@ function App() {
               <div class="section-header">4. Interaction & Engagement</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round((results.interaction_engagement?.score || 0) * 10) / 10}/10</div>
+                
+                <!-- Key Metrics Grid -->
+                <div class="raw-metrics" style="margin-top: 12px; margin-bottom: 16px;">
+                  ${results.interaction_engagement?.total_questions !== undefined ? `
+                    <div class="raw-metric">
+                      <strong>Total Questions</strong>
+                      <div class="value">${results.interaction_engagement.total_questions}</div>
+                    </div>
+                  ` : results.interaction_engagement?.raw_metrics?.total_questions !== undefined ? `
+                    <div class="raw-metric">
+                      <strong>Total Questions</strong>
+                      <div class="value">${results.interaction_engagement.raw_metrics.total_questions}</div>
+                    </div>
+                  ` : ''}
+                  ${results.interaction_engagement?.interaction_frequency !== undefined ? `
+                    <div class="raw-metric">
+                      <strong>Interaction Frequency</strong>
+                      <div class="value">${results.interaction_engagement.interaction_frequency}/10</div>
+                    </div>
+                  ` : results.interaction_engagement?.raw_metrics?.interaction_frequency !== undefined ? `
+                    <div class="raw-metric">
+                      <strong>Interaction Frequency</strong>
+                      <div class="value">${results.interaction_engagement.raw_metrics.interaction_frequency}/10</div>
+                    </div>
+                  ` : ''}
+                  ${results.interaction_engagement?.question_quality !== undefined ? `
+                    <div class="raw-metric">
+                      <strong>Question Quality</strong>
+                      <div class="value">${results.interaction_engagement.question_quality}/10</div>
+                    </div>
+                  ` : results.interaction_engagement?.raw_metrics?.question_quality !== undefined ? `
+                    <div class="raw-metric">
+                      <strong>Question Quality</strong>
+                      <div class="value">${results.interaction_engagement.raw_metrics.question_quality}/10</div>
+                    </div>
+                  ` : ''}
+                  ${results.interaction_engagement?.cognitive_level ? `
+                    <div class="raw-metric">
+                      <strong>Cognitive Level</strong>
+                      <div class="value">${results.interaction_engagement.cognitive_level}</div>
+                    </div>
+                  ` : ''}
+                </div>
+                
+                <!-- Metric Explanations -->
                 ${results.interaction_engagement?.explanations ? renderExplanations(results.interaction_engagement.explanations) : ''}
-                ${results.interaction_engagement?.raw_metrics ? `
-                  <div class="raw-metrics">
-                    ${results.interaction_engagement.raw_metrics.total_questions !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Total Questions</strong>
-                        <div class="value">${results.interaction_engagement.raw_metrics.total_questions}</div>
-                      </div>
-                    ` : ''}
-                    ${results.interaction_engagement?.high_level_questions_count !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>High-Level Questions</strong>
-                        <div class="value">${results.interaction_engagement.high_level_questions_count}</div>
-                      </div>
-                    ` : ''}
-                    ${results.interaction_engagement.raw_metrics.interaction_frequency !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Interaction Frequency</strong>
-                        <div class="value">${results.interaction_engagement.raw_metrics.interaction_frequency}/10</div>
-                      </div>
-                    ` : ''}
-                    ${results.interaction_engagement.raw_metrics.question_quality !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Question Quality</strong>
-                        <div class="value">${results.interaction_engagement.raw_metrics.question_quality}/10</div>
-                      </div>
-                    ` : ''}
-                    ${results.interaction_engagement.raw_metrics.student_engagement_opportunities !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Student Engagement</strong>
-                        <div class="value">${results.interaction_engagement.raw_metrics.student_engagement_opportunities}/10</div>
-                      </div>
-                    ` : ''}
-                    ${results.interaction_engagement?.cognitive_level ? `
-                      <div class="raw-metric">
-                        <strong>Cognitive Level</strong>
-                        <div class="value">${results.interaction_engagement.cognitive_level}</div>
-                      </div>
-                    ` : ''}
+                
+                <!-- High-Level Questions -->
+                ${results.interaction_engagement?.high_level_questions && results.interaction_engagement.high_level_questions.length > 0 ? `
+                  <div class="questions-list">
+                    <h3 style="font-size: 12pt; color: #003D7C; margin-top: 20px; margin-bottom: 12px; font-weight: 700;">💡 High-Level Questions Detected</h3>
+                    ${results.interaction_engagement.high_level_questions.map((question, idx) => {
+                      const questionText = question.question || question.text || '';
+                      const timestamp = question.precise_timestamp || question.timestamp || question.approx_time || '';
+                      const questionType = question.type || 'High-Level Question';
+                      return `
+                        <div class="question-item">
+                          <div class="question-text" style="font-size: 10pt; margin-bottom: 6px;">
+                            ${idx + 1}. "${questionText}"
+                          </div>
+                          <div class="question-meta" style="font-size: 8pt;">
+                            ${timestamp ? `<span style="background: #EF7C00; color: white; padding: 2px 8px; border-radius: 8px; margin-right: 8px;">⏱️ ${timestamp}</span>` : ''}
+                            ${questionType ? `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 8px;">📋 ${questionType}</span>` : ''}
+                            ${question.cognitive_level ? `<span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 8px; margin-left: 8px;">🧠 ${question.cognitive_level}</span>` : ''}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
                   </div>
                 ` : ''}
                 
-                ${results.interaction_engagement?.high_level_questions && results.interaction_engagement.high_level_questions.length > 0 ? `
-                  <div class="questions-list">
-                    <h3 style="font-size: 12pt; color: #003D7C; margin-top: 16px; margin-bottom: 12px;">High-Level Questions Detected</h3>
-                    ${results.interaction_engagement.high_level_questions.map((question, idx) => `
-                      <div class="question-item">
-                        <div class="question-text">${idx + 1}. ${question.question || question.text || ''}</div>
-                        <div class="question-meta">
-                          ${question.precise_timestamp || question.timestamp ? `<span>⏱️ ${question.precise_timestamp || question.timestamp}</span>` : ''}
-                          ${question.type ? `<span>📋 Type: ${question.type}</span>` : ''}
-                          ${question.cognitive_level ? `<span>🧠 Level: ${question.cognitive_level}</span>` : ''}
+                <!-- Interaction Moments -->
+                ${results.interaction_engagement?.interaction_moments && results.interaction_engagement.interaction_moments.length > 0 ? `
+                  <div class="questions-list" style="margin-top: 20px;">
+                    <h3 style="font-size: 12pt; color: #003D7C; margin-top: 20px; margin-bottom: 12px; font-weight: 700;">👥 Student Interaction Moments</h3>
+                    ${results.interaction_engagement.interaction_moments.map((moment, idx) => {
+                      const momentText = moment.moment || moment.text || '';
+                      const timestamp = moment.precise_timestamp || moment.timestamp || moment.approx_time || '';
+                      const momentType = moment.type || 'Interaction';
+                      return `
+                        <div class="question-item" style="background: #f0fdf4; border-left-color: #22c55e;">
+                          <div class="question-text" style="font-size: 10pt; margin-bottom: 6px;">
+                            ${idx + 1}. ${momentText}
+                          </div>
+                          <div class="question-meta" style="font-size: 8pt;">
+                            ${timestamp ? `<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 8px; margin-right: 8px;">⏱️ ${timestamp}</span>` : ''}
+                            ${momentType ? `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 8px;">📋 ${momentType}</span>` : ''}
+                          </div>
                         </div>
-                      </div>
-                    `).join('')}
+                      `;
+                    }).join('')}
                   </div>
                 ` : ''}
               </div>
