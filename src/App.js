@@ -1183,6 +1183,107 @@ function App() {
                 page-break-inside: avoid;
               }
               
+              .section.new-page {
+                page-break-before: always;
+              }
+              
+              .transcript-section {
+                margin: 6px 0;
+                page-break-inside: avoid;
+              }
+              
+              .transcript-text {
+                font-size: 9pt;
+                line-height: 1.8;
+                color: #374151;
+                white-space: pre-wrap;
+                padding: 12px;
+                background: #f9fafb;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+                max-height: none;
+              }
+              
+              .frame-gallery {
+                display: flex;
+                gap: 12px;
+                margin-top: 12px;
+                flex-wrap: wrap;
+              }
+              
+              .frame-item {
+                flex: 0 0 calc(33.333% - 8px);
+                text-align: center;
+              }
+              
+              .frame-item img {
+                width: 100%;
+                height: auto;
+                border-radius: 6px;
+                border: 2px solid #e5e7eb;
+                max-width: 200px;
+              }
+              
+              .frame-timestamp {
+                margin-top: 6px;
+                font-size: 8pt;
+                color: #6b7280;
+                font-weight: 600;
+              }
+              
+              .questions-list {
+                margin-top: 12px;
+              }
+              
+              .question-item {
+                padding: 10px;
+                margin-bottom: 8px;
+                background: #f0f9ff;
+                border-left: 4px solid #003D7C;
+                border-radius: 4px;
+              }
+              
+              .question-text {
+                font-size: 10pt;
+                color: #1f2937;
+                line-height: 1.6;
+                margin-bottom: 4px;
+              }
+              
+              .question-meta {
+                font-size: 8pt;
+                color: #6b7280;
+                display: flex;
+                gap: 12px;
+              }
+              
+              .filler-words-list {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin-top: 12px;
+              }
+              
+              .filler-word-item {
+                padding: 8px;
+                background: #f9fafb;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+                text-align: center;
+              }
+              
+              .filler-word {
+                font-size: 11pt;
+                font-weight: 600;
+                color: #003D7C;
+                margin-bottom: 4px;
+              }
+              
+              .filler-count {
+                font-size: 9pt;
+                color: #6b7280;
+              }
+              
               .section-header {
                 background: #003D7C;
                 color: white;
@@ -1387,8 +1488,59 @@ function App() {
               </div>
             </div>
             
+            <!-- Full Lecture Transcript -->
+            <div class="transcript-section new-page">
+              <div class="section-header">Full Lecture Transcript</div>
+              <div class="section-content">
+                ${results.full_transcript?.text ? `
+                  <div class="transcript-text">${results.full_transcript.text}</div>
+                ` : results.full_transcript?.timecoded_transcript && results.full_transcript.timecoded_transcript.length > 0 ? `
+                  <div class="transcript-text">
+                    ${results.full_transcript.timecoded_transcript.map(sentence => 
+                      `[${sentence.timestamp}] ${sentence.text}`
+                    ).join('\n\n')}
+                  </div>
+                ` : '<p>Transcript not available</p>'}
+                ${results.full_transcript?.word_count ? `
+                  <div style="margin-top: 12px; font-size: 9pt; color: #6b7280;">
+                    <strong>Total Words:</strong> ${results.full_transcript.word_count} | 
+                    <strong>Duration:</strong> ${results.full_transcript.duration_formatted || '00:00'}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <!-- Extracted Video Frames -->
+            ${results.sample_frames && results.sample_frames.length > 0 ? `
+            <div class="section new-page">
+              <div class="section-header">Extracted Video Frames</div>
+              <div class="section-content">
+                <div class="frame-gallery">
+                  ${results.sample_frames.slice(0, 3).map((frame, idx) => {
+                    const formatTimestamp = (seconds) => {
+                      const mins = Math.floor(seconds / 60);
+                      const secs = Math.floor(seconds % 60);
+                      return `${mins}:${secs.toString().padStart(2, '0')}`;
+                    };
+                    const timestamp = frame.timestamp || frame.start_time || 0;
+                    const imageSrc = frame.image || frame.frame_data || frame.image_data || '';
+                    return `
+                      <div class="frame-item">
+                        ${imageSrc ? `<img src="${imageSrc}" alt="Frame ${idx + 1}" />` : '<div style="width: 100%; height: 150px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b7280;">Frame ${idx + 1}</div>'}
+                        <div class="frame-timestamp">${formatTimestamp(timestamp)}</div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+                <p style="margin-top: 12px; font-size: 9pt; color: #6b7280; text-align: center;">
+                  ${results.sample_frames.length} frame${results.sample_frames.length !== 1 ? 's' : ''} extracted from video
+                </p>
+              </div>
+            </div>
+            ` : ''}
+            
             <!-- 1. Speech Analysis -->
-            <div class="section">
+            <div class="section new-page">
               <div class="section-header">1. Speech Analysis</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round(results.speech_analysis?.score * 10) / 10}/10</div>
@@ -1424,8 +1576,30 @@ function App() {
               </div>
             </div>
             
+            <!-- Filler Words -->
+            ${results.speech_analysis?.filler_details && results.speech_analysis.filler_details.length > 0 ? `
+            <div class="section" style="margin-top: 12px;">
+              <div class="section-header" style="font-size: 12pt;">Filler Words Detected</div>
+              <div class="section-content">
+                <div class="filler-words-list">
+                  ${results.speech_analysis.filler_details.slice(0, 20).map(filler => `
+                    <div class="filler-word-item">
+                      <div class="filler-word">${filler.word}</div>
+                      <div class="filler-count">${filler.count} time${filler.count !== 1 ? 's' : ''}</div>
+                    </div>
+                  `).join('')}
+                </div>
+                ${results.speech_analysis.filler_details.length > 20 ? `
+                  <p style="margin-top: 12px; font-size: 9pt; color: #6b7280; text-align: center;">
+                    Showing top 20 filler words (${results.speech_analysis.filler_details.length} total detected)
+                  </p>
+                ` : ''}
+              </div>
+            </div>
+            ` : ''}
+            
             <!-- 2. Body Language -->
-            <div class="section">
+            <div class="section new-page">
               <div class="section-header">2. Body Language</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round(results.body_language?.score * 10) / 10}/10</div>
@@ -1469,7 +1643,7 @@ function App() {
             </div>
             
             <!-- 3. Teaching Effectiveness -->
-            <div class="section">
+            <div class="section new-page">
               <div class="section-header">3. Teaching Effectiveness</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round(results.teaching_effectiveness?.score * 10) / 10}/10</div>
@@ -1478,7 +1652,7 @@ function App() {
             </div>
             
             <!-- 4. Interaction & Engagement -->
-            <div class="section">
+            <div class="section new-page">
               <div class="section-header">4. Interaction & Engagement</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round((results.interaction_engagement?.score || 0) * 10) / 10}/10</div>
@@ -1491,19 +1665,59 @@ function App() {
                         <div class="value">${results.interaction_engagement.raw_metrics.total_questions}</div>
                       </div>
                     ` : ''}
-                    ${results.interaction_engagement.raw_metrics.engagement_score !== undefined ? `
+                    ${results.interaction_engagement?.high_level_questions_count !== undefined ? `
                       <div class="raw-metric">
-                        <strong>Engagement Score</strong>
-                        <div class="value">${results.interaction_engagement.raw_metrics.engagement_score}/10</div>
+                        <strong>High-Level Questions</strong>
+                        <div class="value">${results.interaction_engagement.high_level_questions_count}</div>
                       </div>
                     ` : ''}
+                    ${results.interaction_engagement.raw_metrics.interaction_frequency !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Interaction Frequency</strong>
+                        <div class="value">${results.interaction_engagement.raw_metrics.interaction_frequency}/10</div>
+                      </div>
+                    ` : ''}
+                    ${results.interaction_engagement.raw_metrics.question_quality !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Question Quality</strong>
+                        <div class="value">${results.interaction_engagement.raw_metrics.question_quality}/10</div>
+                      </div>
+                    ` : ''}
+                    ${results.interaction_engagement.raw_metrics.student_engagement_opportunities !== undefined ? `
+                      <div class="raw-metric">
+                        <strong>Student Engagement</strong>
+                        <div class="value">${results.interaction_engagement.raw_metrics.student_engagement_opportunities}/10</div>
+                      </div>
+                    ` : ''}
+                    ${results.interaction_engagement?.cognitive_level ? `
+                      <div class="raw-metric">
+                        <strong>Cognitive Level</strong>
+                        <div class="value">${results.interaction_engagement.cognitive_level}</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                ` : ''}
+                
+                ${results.interaction_engagement?.high_level_questions && results.interaction_engagement.high_level_questions.length > 0 ? `
+                  <div class="questions-list">
+                    <h3 style="font-size: 12pt; color: #003D7C; margin-top: 16px; margin-bottom: 12px;">High-Level Questions Detected</h3>
+                    ${results.interaction_engagement.high_level_questions.map((question, idx) => `
+                      <div class="question-item">
+                        <div class="question-text">${idx + 1}. ${question.question || question.text || ''}</div>
+                        <div class="question-meta">
+                          ${question.precise_timestamp || question.timestamp ? `<span>⏱️ ${question.precise_timestamp || question.timestamp}</span>` : ''}
+                          ${question.type ? `<span>📋 Type: ${question.type}</span>` : ''}
+                          ${question.cognitive_level ? `<span>🧠 Level: ${question.cognitive_level}</span>` : ''}
+                        </div>
+                      </div>
+                    `).join('')}
                   </div>
                 ` : ''}
               </div>
             </div>
             
             <!-- 5. Presentation Skills -->
-            <div class="section">
+            <div class="section new-page">
               <div class="section-header">5. Presentation Skills</div>
               <div class="section-content">
                 <div class="section-score">Score: ${Math.round(results.presentation_skills?.score * 10) / 10}/10</div>
