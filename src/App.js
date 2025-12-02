@@ -47,6 +47,9 @@ function App() {
   const uploadCancelToken = useRef(null);
   const [summaryData, setSummaryData] = useState(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [passkey, setPasskey] = useState('');
+  const [isPasskeyValid, setIsPasskeyValid] = useState(false);
+  const [passkeyError, setPasskeyError] = useState('');
 
   // Generate summary when results are available
   useEffect(() => {
@@ -500,6 +503,9 @@ function App() {
       setResults(null);
       setLogMessages([]);
       setSummaryData(null);
+      setIsPasskeyValid(false);
+      setPasskey('');
+      sessionStorage.removeItem('mars_passkey');
     } else {
       alert('Please upload a video file');
     }
@@ -678,8 +684,53 @@ function App() {
     setQueueList([]);
   };
 
+  // Validate passkey function
+  const validatePasskey = async () => {
+    if (!passkey.trim()) {
+      setPasskeyError('Please enter a passkey');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/validate-passkey`, {
+        passkey: passkey.trim()
+      }, {
+        timeout: 5000
+      });
+
+      if (response.data && response.data.valid) {
+        setIsPasskeyValid(true);
+        setPasskeyError('');
+        // Store passkey in sessionStorage for this session
+        sessionStorage.setItem('mars_passkey', passkey.trim());
+      } else {
+        setPasskeyError('Invalid passkey. Please try again.');
+        setIsPasskeyValid(false);
+      }
+    } catch (error) {
+      console.error('Passkey validation error:', error);
+      setPasskeyError('Failed to validate passkey. Please try again.');
+      setIsPasskeyValid(false);
+    }
+  };
+
+  // Check if passkey is already validated in this session
+  useEffect(() => {
+    const storedPasskey = sessionStorage.getItem('mars_passkey');
+    if (storedPasskey) {
+      setPasskey(storedPasskey);
+      setIsPasskeyValid(true);
+    }
+  }, []);
+
   const startAnalysis = async () => {
     if (!file) return;
+    
+    // Check passkey before starting analysis
+    if (!isPasskeyValid) {
+      alert('Please enter and verify the passkey first');
+      return;
+    }
     
     // Prevent multiple clicks - set uploading state immediately
     if (isUploading) {
@@ -721,8 +772,13 @@ function App() {
         }
       }
 
-    const formData = new FormData();
-    formData.append('file', file);
+      const formData = new FormData();
+      formData.append('file', file);
+      // Include passkey in the request
+      const storedPasskey = sessionStorage.getItem('mars_passkey');
+      if (storedPasskey) {
+        formData.append('passkey', storedPasskey);
+      }
 
       // Create cancel token for this upload
       const CancelToken = axios.CancelToken;
@@ -2493,31 +2549,115 @@ function App() {
         {/* Upload Section */}
         {!analysisId && analysisStatus?.status === 'idle' && !results && (
           <div className="upload-container">
-            <div
-              {...getRootProps()}
-              className={`upload-area ${isDragActive ? 'active' : ''}`}
-            >
-              <input {...getInputProps()} />
-              <div className="upload-icon">
-                <Upload size={48} />
+            {/* Passkey Input */}
+            {!isPasskeyValid && (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                border: '2px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '16px',
+                padding: '2rem',
+                marginBottom: '2rem',
+                maxWidth: '500px',
+                margin: '0 auto 2rem auto'
+              }}>
+                <h3 style={{
+                  color: 'white',
+                  marginBottom: '1rem',
+                  fontSize: '1.2rem',
+                  fontWeight: '600',
+                  textAlign: 'center'
+                }}>
+                  🔐 Enter Passkey
+                </h3>
+                <div style={{ marginBottom: '1rem' }}>
+                  <input
+                    type="password"
+                    value={passkey}
+                    onChange={(e) => {
+                      setPasskey(e.target.value);
+                      setPasskeyError('');
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && passkey.trim()) {
+                        validatePasskey();
+                      }
+                    }}
+                    placeholder="Enter passkey to continue"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      fontSize: '1rem',
+                      borderRadius: '8px',
+                      border: passkeyError ? '2px solid #ef4444' : '2px solid rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: 'white',
+                      outline: 'none',
+                      transition: 'all 0.3s'
+                    }}
+                  />
+                  {passkeyError && (
+                    <div style={{
+                      color: '#ef4444',
+                      fontSize: '0.9rem',
+                      marginTop: '0.5rem',
+                      textAlign: 'center'
+                    }}>
+                      {passkeyError}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={validatePasskey}
+                  disabled={!passkey.trim()}
+                  style={{
+                    width: '100%',
+                    padding: '12px 24px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: passkey.trim() 
+                      ? 'linear-gradient(135deg, var(--nus-blue), var(--nus-orange))'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
+                    cursor: passkey.trim() ? 'pointer' : 'not-allowed',
+                    opacity: passkey.trim() ? 1 : 0.5,
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  Verify Passkey
+                </button>
               </div>
-              {isDragActive ? (
-                <div>
-                  <p className="upload-text">Drop your lecture video here</p>
-                  <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB • Analyses 100 frames
-                  </p>
+            )}
+            
+            {isPasskeyValid && (
+              <div
+                {...getRootProps()}
+                className={`upload-area ${isDragActive ? 'active' : ''}`}
+              >
+                <input {...getInputProps()} />
+                <div className="upload-icon">
+                  <Upload size={48} />
                 </div>
-              ) : (
-                <div>
-                  <p className="upload-text">Upload your lecture video</p>
-                  <p className="upload-subtext">
-                    Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB
-                  </p>
-                </div>
-              )}
-            </div>
+                {isDragActive ? (
+                  <div>
+                    <p className="upload-text">Drop your lecture video here</p>
+                    <p className="upload-subtext">Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB • Analyses 100 frames
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="upload-text">Upload your lecture video</p>
+                    <p className="upload-subtext">
+                      Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
-            {file && (
+            {file && isPasskeyValid && (
               <div className="file-info">
                 <div className="file-details">
                   <div>
@@ -2582,20 +2722,22 @@ function App() {
               </div>
             )}
 
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-              <button
-                onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
-                className="parameter-button"
-                style={{ 
-                  background: showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-100)',
-                  color: showAdvancedConfig ? 'white' : 'var(--gray-700)',
-                  border: `1px solid ${showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-300)'}`
-                }}
-              >
-                <Sliders size={16} />
-                {showAdvancedConfig ? 'Hide' : 'Show'} Advanced Configuration
-              </button>
-            </div>
+            {isPasskeyValid && (
+              <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                <button
+                  onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
+                  className="parameter-button"
+                  style={{ 
+                    background: showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-100)',
+                    color: showAdvancedConfig ? 'white' : 'var(--gray-700)',
+                    border: `1px solid ${showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-300)'}`
+                  }}
+                >
+                  <Sliders size={16} />
+                  {showAdvancedConfig ? 'Hide' : 'Show'} Advanced Configuration
+                </button>
+              </div>
+            )}
           </div>
         )}
 
