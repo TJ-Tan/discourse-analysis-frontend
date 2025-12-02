@@ -772,13 +772,8 @@ function App() {
         }
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
-      // Include passkey in the request
-      const storedPasskey = sessionStorage.getItem('mars_passkey');
-      if (storedPasskey) {
-        formData.append('passkey', storedPasskey);
-      }
+    const formData = new FormData();
+    formData.append('file', file);
 
       // Create cancel token for this upload
       const CancelToken = axios.CancelToken;
