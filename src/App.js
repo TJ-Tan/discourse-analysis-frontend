@@ -632,12 +632,18 @@ function App() {
   const checkQueueStatus = async () => {
     try {
       // Get client IP from a service (fallback to backend detection)
+      // Silently fail - backend will detect IP from request headers
       let clientIP = null;
       try {
-        const ipResponse = await axios.get('https://api.ipify.org?format=json', { timeout: 2000 });
-        clientIP = ipResponse.data.ip;
+        const ipResponse = await axios.get('https://api.ipify.org?format=json', { 
+          timeout: 2000,
+          validateStatus: () => true // Don't throw on any status
+        });
+        if (ipResponse && ipResponse.data && ipResponse.data.ip) {
+          clientIP = ipResponse.data.ip;
+        }
       } catch (ipError) {
-        // If IP service fails, backend will detect from request headers
+        // Silently ignore - backend will detect from request headers
         clientIP = null;
       }
       
@@ -683,9 +689,6 @@ function App() {
     setUploadProgress(0);
     setAnalysisId(null);
     setUserAnalysisId(null);
-    
-    // Reset state
-    setAnalysisId(null);
     setIsQueued(false);
     setQueueList([]);
   };
