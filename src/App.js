@@ -3782,6 +3782,163 @@ function App() {
                 </div>
               )}
 
+              {/* Summary Section */}
+              {(summaryData || isGeneratingSummary) && (
+                <div style={{ 
+                  background: 'linear-gradient(135deg, var(--primary-50), var(--accent-50))', 
+                  padding: '2rem', 
+                  borderRadius: '16px',
+                  marginBottom: '2rem',
+                  border: '2px solid var(--nus-blue)'
+                }}>
+                  <h3 style={{ 
+                    color: 'var(--nus-blue)', 
+                    marginBottom: '1.5rem',
+                    fontSize: '1.5rem',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    📋 Summary
+                  </h3>
+
+                  {isGeneratingSummary ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                      <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Generating personalised summary...</div>
+                      <div style={{ fontSize: '0.9rem' }}>Please wait</div>
+                    </div>
+                  ) : summaryData ? (
+                    <>
+                      {/* Personalized Feedback */}
+                      <div style={{ 
+                        marginBottom: '2rem',
+                        padding: '1.5rem',
+                        background: 'white',
+                        borderRadius: '12px',
+                        border: '1px solid var(--gray-200)'
+                      }}>
+                        <h4 style={{ 
+                          color: 'var(--nus-blue)', 
+                          marginBottom: '1rem',
+                          fontSize: '1.1rem',
+                          fontWeight: '600'
+                        }}>
+                          Personalised Feedback
+                        </h4>
+                        <p style={{ 
+                          fontSize: '1rem', 
+                          lineHeight: '1.8', 
+                          color: '#374151',
+                          textAlign: 'justify'
+                        }}>
+                          {summaryData.personalized_feedback}
+                        </p>
+                      </div>
+
+                      {/* Strongest Strength */}
+                      {summaryData.strongest_strength && (
+                        <div style={{ 
+                          marginBottom: '2rem',
+                          padding: '1.5rem',
+                          background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                          borderRadius: '12px',
+                          border: '2px solid #22c55e'
+                        }}>
+                          <h4 style={{ 
+                            color: '#166534', 
+                            marginBottom: '1rem',
+                            fontSize: '1.1rem',
+                            fontWeight: '700',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            ✅ Strongest Strength: {summaryData.strongest_strength.title}
+                          </h4>
+                          <p style={{ 
+                            fontSize: '1rem', 
+                            lineHeight: '1.8', 
+                            color: '#374151',
+                            marginBottom: '1rem'
+                          }}>
+                            {summaryData.strongest_strength.description}
+                          </p>
+                          {summaryData.strongest_strength.evidence && (
+                            <div style={{ 
+                              fontSize: '0.9rem', 
+                              color: '#166534', 
+                              fontStyle: 'italic',
+                              padding: '1rem',
+                              background: 'white',
+                              borderRadius: '8px',
+                              border: '1px solid #22c55e'
+                            }}>
+                              <strong>Evidence:</strong> {summaryData.strongest_strength.evidence}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Areas for Improvement */}
+                      {summaryData.improvements && summaryData.improvements.length > 0 && (
+                        <div style={{ 
+                          marginBottom: '0'
+                        }}>
+                          <h4 style={{ 
+                            color: 'var(--nus-blue)', 
+                            marginBottom: '1rem',
+                            fontSize: '1.1rem',
+                            fontWeight: '700'
+                          }}>
+                            📈 Areas for Improvement
+                          </h4>
+                          {summaryData.improvements.map((improvement, idx) => (
+                            <div key={idx} style={{ 
+                              marginBottom: '1rem',
+                              padding: '1.5rem',
+                              background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+                              borderRadius: '12px',
+                              border: '2px solid #f59e0b'
+                            }}>
+                              <h5 style={{ 
+                                color: '#92400e', 
+                                marginBottom: '0.75rem',
+                                fontSize: '1rem',
+                                fontWeight: '600'
+                              }}>
+                                {idx + 1}. {improvement.area}
+                              </h5>
+                              <p style={{ 
+                                fontSize: '1rem', 
+                                lineHeight: '1.8', 
+                                color: '#374151',
+                                marginBottom: '1rem'
+                              }}>
+                                {improvement.description}
+                              </p>
+                              {improvement.evidence && (
+                                <div style={{ 
+                                  fontSize: '0.9rem', 
+                                  color: '#92400e', 
+                                  fontStyle: 'italic',
+                                  padding: '1rem',
+                                  background: 'white',
+                                  borderRadius: '8px',
+                                  border: '1px solid #f59e0b'
+                                }}>
+                                  <strong>Based on:</strong> {improvement.evidence}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              )}
+
               {/* Score Calculation Breakdown */}
               <div style={{ 
                 background: 'white', 
