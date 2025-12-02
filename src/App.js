@@ -1407,6 +1407,28 @@ function App() {
                 color: #003D7C;
               }
               
+              .pdf-export-notice {
+                margin: 12px 0;
+                padding: 14px;
+                background: #fef3c7;
+                border: 2px solid #f59e0b;
+                border-radius: 8px;
+                page-break-inside: avoid;
+              }
+              
+              .pdf-export-notice-title {
+                font-size: 11pt;
+                font-weight: 700;
+                color: #92400e;
+                margin-bottom: 8px;
+              }
+              
+              .pdf-export-notice-text {
+                font-size: 9pt;
+                color: #78350f;
+                line-height: 1.6;
+              }
+              
               .disclaimer {
                 margin-top: 12px;
                 padding: 12px;
@@ -1466,6 +1488,14 @@ function App() {
               <div class="subtitle">Multimodal AI Reflection System</div>
               <div class="tagline">Discourse Analysis with Agentic AI</div>
               <div class="date">Generated on ${genDate}</div>
+            </div>
+            
+            <!-- PDF Export Notice -->
+            <div class="pdf-export-notice">
+              <div class="pdf-export-notice-title">⚠️ PDF Export Feature Notice</div>
+              <div class="pdf-export-notice-text">
+                The PDF Export feature is still under development and not fully furnished. There may be issues with layout and not all content displayed on the webpage may be fully exported. Please use the direct printing option from your browser, or save the page as a full HTML page to preserve all analysis information.
+              </div>
             </div>
             
             <!-- Overall Score -->
