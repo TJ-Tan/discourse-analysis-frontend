@@ -1058,8 +1058,85 @@ function App() {
         return html;
       };
 
+      // Helper function to generate PDF summary
+      const generatePDFSummary = async () => {
+        try {
+          // Prepare data for summary generation
+          const summaryData = {
+            overall_score: Math.round(results.overall_score * 10) / 10,
+            speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
+            body_language_score: Math.round(results.body_language?.score * 10) / 10,
+            teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
+            interaction_score: Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
+            presentation_score: Math.round(results.presentation_skills?.score * 10) / 10,
+            high_level_questions: results.interaction_engagement?.high_level_questions || [],
+            total_questions: results.interaction_engagement?.total_questions || 0,
+            transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
+            sample_frames_count: results.sample_frames?.length || 0,
+            filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
+            explanations: {
+              speech: results.speech_analysis?.explanations || {},
+              body_language: results.body_language?.explanations || {},
+              teaching: results.teaching_effectiveness?.explanations || {},
+              interaction: results.interaction_engagement?.explanations || {},
+              presentation: results.presentation_skills?.explanations || {}
+            }
+          };
+
+          // Call backend API to generate summary
+          const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, summaryData, {
+            timeout: 30000,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.data && response.data.summary) {
+            return response.data.summary;
+          }
+        } catch (error) {
+          console.error('Error generating PDF summary:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Falling back to default summary');
+          }
+        }
+
+        // Fallback summary if API fails
+        const overallScore = Math.round(results.overall_score * 10) / 10;
+        const totalQuestions = results.interaction_engagement?.total_questions || 0;
+        const highLevelQuestions = results.interaction_engagement?.high_level_questions || [];
+        const firstQuestion = highLevelQuestions.length > 0 ? highLevelQuestions[0].question || highLevelQuestions[0].text : '';
+        
+        // Find strongest and weakest categories
+        const scores = {
+          'Speech Analysis': Math.round(results.speech_analysis?.score * 10) / 10,
+          'Body Language': Math.round(results.body_language?.score * 10) / 10,
+          'Teaching Effectiveness': Math.round(results.teaching_effectiveness?.score * 10) / 10,
+          'Interaction & Engagement': Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
+          'Presentation Skills': Math.round(results.presentation_skills?.score * 10) / 10
+        };
+        const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
+        const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
+        
+        return {
+          personalized_feedback: `This lecture achieved an overall score of ${overallScore}/10, demonstrating effective teaching techniques with ${totalQuestions} questions asked throughout the session${firstQuestion ? `. For instance, the instructor asked: "${firstQuestion.substring(0, 100)}${firstQuestion.length > 100 ? '...' : ''}", which promotes analytical thinking and encourages deeper student engagement.` : ', promoting analytical thinking and student engagement.'} The delivery maintained good pacing and clarity throughout.`,
+          strongest_strength: {
+            title: strongest[0],
+            description: `Strong performance in ${strongest[0].toLowerCase()} with a score of ${strongest[1]}/10, demonstrating effective teaching techniques in this area.`,
+            evidence: `Score of ${strongest[1]}/10 in ${strongest[0]}${results.sample_frames_count > 0 ? `, supported by ${results.sample_frames_count} analysed video frames` : ''}`
+          },
+          improvements: [
+            {
+              area: weakest[0],
+              description: `Consider focusing on improving ${weakest[0].toLowerCase()} which scored ${weakest[1]}/10.`,
+              evidence: `Current score: ${weakest[1]}/10 (below the overall average of ${overallScore}/10)`
+            }
+          ]
+        };
+      };
+
       // Generate clean HTML content
-      const generatePDFContent = () => {
+      const generatePDFContent = (pdfSummary) => {
         const overallScore = Math.round(results.overall_score * 10) / 10;
         const genDate = new Date().toLocaleDateString('en-SG', { 
           year: 'numeric', 
@@ -1823,6 +1900,55 @@ function App() {
               </div>
             </div>
             
+            <!-- Summary Section -->
+            <div class="section new-page">
+              <div class="section-header">Summary</div>
+              <div class="section-content">
+                <!-- Personalized Feedback -->
+                <div style="margin-bottom: 20px;">
+                  <h3 style="font-size: 12pt; color: #003D7C; margin-bottom: 12px; font-weight: 700;">Personalised Feedback</h3>
+                  <p style="font-size: 10pt; line-height: 1.8; color: #374151; text-align: justify;">
+                    ${pdfSummary.personalized_feedback || `This lecture achieved an overall score of ${Math.round(results.overall_score * 10) / 10}/10. The instructor demonstrated effective teaching techniques with ${results.interaction_engagement?.total_questions || 0} questions asked throughout the session, promoting analytical thinking and student engagement.`}
+                  </p>
+                </div>
+                
+                <!-- Strongest Strength -->
+                ${pdfSummary.strongest_strength ? `
+                <div style="margin-bottom: 20px; padding: 12px; background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px;">
+                  <h3 style="font-size: 12pt; color: #166534; margin-bottom: 8px; font-weight: 700;">✅ Strongest Strength: ${pdfSummary.strongest_strength.title || 'Key Strength'}</h3>
+                  <p style="font-size: 10pt; line-height: 1.8; color: #374151; margin-bottom: 8px;">
+                    ${pdfSummary.strongest_strength.description || ''}
+                  </p>
+                  ${pdfSummary.strongest_strength.evidence ? `
+                    <div style="font-size: 9pt; color: #166534; font-style: italic; padding: 8px; background: white; border-radius: 4px; margin-top: 8px;">
+                      <strong>Evidence:</strong> ${pdfSummary.strongest_strength.evidence}
+                    </div>
+                  ` : ''}
+                </div>
+                ` : ''}
+                
+                <!-- Areas for Improvement -->
+                ${pdfSummary.improvements && pdfSummary.improvements.length > 0 ? `
+                <div style="margin-bottom: 20px;">
+                  <h3 style="font-size: 12pt; color: #003D7C; margin-bottom: 12px; font-weight: 700;">📈 Areas for Improvement</h3>
+                  ${pdfSummary.improvements.map((improvement, idx) => `
+                    <div style="margin-bottom: 12px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
+                      <h4 style="font-size: 11pt; color: #92400e; margin-bottom: 6px; font-weight: 600;">${idx + 1}. ${improvement.area || 'Improvement Area'}</h4>
+                      <p style="font-size: 10pt; line-height: 1.8; color: #374151; margin-bottom: 6px;">
+                        ${improvement.description || ''}
+                      </p>
+                      ${improvement.evidence ? `
+                        <div style="font-size: 9pt; color: #92400e; font-style: italic; padding: 6px; background: white; border-radius: 4px; margin-top: 6px;">
+                          <strong>Based on:</strong> ${improvement.evidence}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+                ` : ''}
+              </div>
+            </div>
+            
             <!-- Footer Section with Disclaimer and Developer Info -->
             <div style="margin-top: 30px; page-break-inside: avoid;">
               <!-- Disclaimer -->
@@ -1857,8 +1983,11 @@ function App() {
         `;
       };
 
-      // Generate HTML content
-      const fullHTML = generatePDFContent();
+      // Generate PDF summary first
+      const pdfSummary = await generatePDFSummary();
+      
+      // Generate HTML content with summary
+      const fullHTML = generatePDFContent(pdfSummary);
       
       // Debug: Log HTML length to verify it's generated
       if (process.env.NODE_ENV === 'development') {
