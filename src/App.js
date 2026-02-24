@@ -3389,6 +3389,45 @@ function App() {
                     <strong>Cognitive Level:</strong> {results.interaction_engagement.cognitive_level}
                   </div>
                 </div>
+
+                {/* ICAP distribution (Interactive / Constructive / Active / Passive) */}
+                {results.interaction_engagement.icap_counts && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <span style={{ padding: '0.35rem 0.75rem', background: '#dbeafe', color: '#1e40af', borderRadius: '8px', fontSize: '0.9rem' }}>Interactive: {results.interaction_engagement.icap_counts.interactive || 0}</span>
+                    <span style={{ padding: '0.35rem 0.75rem', background: '#d1fae5', color: '#065f46', borderRadius: '8px', fontSize: '0.9rem' }}>Constructive: {results.interaction_engagement.icap_counts.constructive || 0}</span>
+                    <span style={{ padding: '0.35rem 0.75rem', background: '#fef3c7', color: '#92400e', borderRadius: '8px', fontSize: '0.9rem' }}>Active: {results.interaction_engagement.icap_counts.active || 0}</span>
+                    <span style={{ padding: '0.35rem 0.75rem', background: '#f3f4f6', color: '#4b5563', borderRadius: '8px', fontSize: '0.9rem' }}>Passive: {results.interaction_engagement.icap_counts.passive || 0}</span>
+                  </div>
+                )}
+
+                {/* Download question list (Excel with ICAP: Interactive / Constructive / Active / Passive) */}
+                {(results.interaction_engagement.questions_excel_filename || results.questions_excel_filename) && (analysisId || userAnalysisId) && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <a
+                      href={`${API_BASE_URL}/analysis/${analysisId || userAnalysisId}/questions-excel`}
+                      download={`${(results.interaction_engagement.questions_excel_filename || results.questions_excel_filename) || 'questions.xlsx'}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1.25rem',
+                        background: 'var(--nus-blue)',
+                        color: 'white',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontWeight: '600',
+                        fontSize: '0.95rem'
+                      }}
+                    >
+                      📥 Download question list (Excel)
+                    </a>
+                    <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#555' }}>
+                      All questions with ICAP labels: Interactive, Constructive, Active, Passive
+                    </p>
+                  </div>
+                )}
                 
                 {/* Metric Explanations */}
                 {results.interaction_engagement.explanations && (
@@ -3447,6 +3486,17 @@ function App() {
                             }}>
                               {question.precise_timestamp || question.approx_time}
                             </span>
+                            {question.icap && (
+                              <span style={{ 
+                                padding: '0.25rem 0.75rem', 
+                                background: question.icap === 'Interactive' ? '#1e40af' : question.icap === 'Constructive' ? '#065f46' : '#92400e',
+                                color: 'white',
+                                borderRadius: '12px',
+                                fontSize: '0.85rem'
+                              }}>
+                                {question.icap}
+                              </span>
+                            )}
                             <span style={{ 
                               padding: '0.25rem 0.75rem', 
                               background: 'var(--success-100)', 
