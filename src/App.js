@@ -8,7 +8,6 @@ import {
   CheckCircle, 
   AlertCircle, 
   Download,
-  Settings,
   Save,
   RotateCcw,
   Sliders,
@@ -31,7 +30,7 @@ function App() {
   const [results, setResults] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [showParameters, setShowParameters] = useState(false);
+  const [, setShowParameters] = useState(false);
   const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
@@ -128,6 +127,7 @@ function App() {
     };
 
     generateSummary();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- summaryData intentionally excluded to avoid re-run on summary change
   }, [results]);
 
   // Fetch deployment time on mount
@@ -429,6 +429,7 @@ function App() {
       
       requestAnimationFrame(animate);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- animate only when progress changes
   }, [analysisStatus?.progress]);
 
   // Enhanced configuration state
@@ -1848,7 +1849,7 @@ function App() {
                     const imageSrc = frame.image || frame.frame_data || frame.image_data || '';
                     return `
                       <div class="frame-item">
-                        ${imageSrc ? `<img src="${imageSrc}" alt="Frame ${idx + 1}" />` : '<div style="width: 100%; height: 150px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b7280;">Frame ${idx + 1}</div>'}
+                        ${imageSrc ? `<img src="${imageSrc}" alt="Frame ${idx + 1}" />` : `<div style="width: 100%; height: 150px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b7280;">Frame ${idx + 1}</div>`}
                         <div class="frame-timestamp">${formatTimestamp(timestamp)}</div>
                       </div>
                     `;
