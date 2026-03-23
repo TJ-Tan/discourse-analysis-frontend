@@ -49,6 +49,8 @@ function App() {
   const [passkey, setPasskey] = useState('');
   const [isPasskeyValid, setIsPasskeyValid] = useState(false);
   const [passkeyError, setPasskeyError] = useState('');
+  /** Optional: subject, topic, ILOs — sent to backend for LLM context (future rubric scoring). */
+  const [lectureContext, setLectureContext] = useState('');
 
   // Generate summary when results are available
   useEffect(() => {
@@ -824,6 +826,7 @@ function App() {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('lecture_context', lectureContext);
 
       // Create cancel token for this upload
       const CancelToken = axios.CancelToken;
@@ -1993,26 +1996,44 @@ function App() {
                       <div class="value">${results.interaction_engagement.raw_metrics.total_questions}</div>
                     </div>
                   ` : ''}
-                  ${results.interaction_engagement?.interaction_frequency !== undefined ? `
+                  ${results.interaction_engagement?.interaction_frequency_pct != null ? `
+                    <div class="raw-metric">
+                      <strong>Interaction Frequency</strong>
+                      <div class="value">${results.interaction_engagement.interaction_frequency_pct}%</div>
+                    </div>
+                  ` : results.interaction_engagement?.interaction_frequency !== undefined ? `
                     <div class="raw-metric">
                       <strong>Interaction Frequency</strong>
                       <div class="value">${results.interaction_engagement.interaction_frequency}/10</div>
                     </div>
-                  ` : results.interaction_engagement?.raw_metrics?.interaction_frequency !== undefined ? `
-                    <div class="raw-metric">
-                      <strong>Interaction Frequency</strong>
-                      <div class="value">${results.interaction_engagement.raw_metrics.interaction_frequency}/10</div>
-                    </div>
                   ` : ''}
-                  ${results.interaction_engagement?.question_quality !== undefined ? `
+                  ${results.interaction_engagement?.question_quality_pct != null ? `
+                    <div class="raw-metric">
+                      <strong>Question Quality</strong>
+                      <div class="value">${results.interaction_engagement.question_quality_pct}%</div>
+                    </div>
+                  ` : results.interaction_engagement?.question_quality !== undefined ? `
                     <div class="raw-metric">
                       <strong>Question Quality</strong>
                       <div class="value">${results.interaction_engagement.question_quality}/10</div>
                     </div>
-                  ` : results.interaction_engagement?.raw_metrics?.question_quality !== undefined ? `
+                  ` : ''}
+                  ${results.interaction_engagement?.student_uptake_index_pct != null ? `
                     <div class="raw-metric">
-                      <strong>Question Quality</strong>
-                      <div class="value">${results.interaction_engagement.raw_metrics.question_quality}/10</div>
+                      <strong>Student Uptake Index (SUI)</strong>
+                      <div class="value">${results.interaction_engagement.student_uptake_index_pct}%</div>
+                    </div>
+                  ` : ''}
+                  ${results.interaction_engagement?.question_distribution_stability_pct != null ? `
+                    <div class="raw-metric">
+                      <strong>Question Distribution Stability (QDS)</strong>
+                      <div class="value">${results.interaction_engagement.question_distribution_stability_pct}%</div>
+                    </div>
+                  ` : ''}
+                  ${results.interaction_engagement?.overall_interaction_pct != null ? `
+                    <div class="raw-metric">
+                      <strong>Overall (20% category)</strong>
+                      <div class="value">${results.interaction_engagement.overall_interaction_pct}%</div>
                     </div>
                   ` : ''}
                   ${results.interaction_engagement?.cognitive_level ? `
@@ -2702,6 +2723,61 @@ function App() {
               </div>
             )}
 
+            {isPasskeyValid && (
+              <div
+                style={{
+                  marginTop: '1.25rem',
+                  maxWidth: '640px',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  textAlign: 'left',
+                }}
+              >
+                <label
+                  htmlFor="lecture-context-input"
+                  style={{
+                    display: 'block',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    color: 'var(--gray-800)',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  Lecture context <span style={{ fontWeight: 400, color: 'var(--gray-500)' }}>(optional)</span>
+                </label>
+                <textarea
+                  id="lecture-context-input"
+                  value={lectureContext}
+                  onChange={(e) => setLectureContext(e.target.value)}
+                  placeholder="e.g. Subject: Biology. Topic: Cell division. Intended learning outcomes: students explain mitosis vs meiosis; apply terminology to diagrams…"
+                  rows={5}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '12px 14px',
+                    fontSize: '0.95rem',
+                    lineHeight: 1.5,
+                    borderRadius: '8px',
+                    border: '1px solid var(--gray-300)',
+                    background: 'var(--white)',
+                    color: 'var(--gray-900)',
+                    resize: 'vertical',
+                    minHeight: '100px',
+                  }}
+                />
+                <p
+                  style={{
+                    marginTop: '0.5rem',
+                    fontSize: '0.8rem',
+                    color: 'var(--gray-500)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Describe what the session is about, the subject, and intended learning outcomes. This text is sent with your video so the analysis can use it for context-aware scoring (detailed rubric to follow).
+                </p>
+              </div>
+            )}
+
             {file && isPasskeyValid && (
               <div className="file-info">
                 <div className="file-details">
@@ -3376,15 +3452,24 @@ function App() {
                   🤝 Interaction & Engagement Analysis
                 </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
                     <strong>Total Questions:</strong> {results.interaction_engagement.total_questions}
                   </div>
                   <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
-                    <strong>Interaction Frequency:</strong> {results.interaction_engagement.interaction_frequency}/10
+                    <strong>Interaction Frequency:</strong> {results.interaction_engagement.interaction_frequency_pct != null ? `${results.interaction_engagement.interaction_frequency_pct}%` : `${results.interaction_engagement.interaction_frequency ?? 0}/10`}
                   </div>
                   <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
-                    <strong>Question Quality:</strong> {results.interaction_engagement.question_quality}/10
+                    <strong>Question Quality:</strong> {results.interaction_engagement.question_quality_pct != null ? `${results.interaction_engagement.question_quality_pct}%` : `${results.interaction_engagement.question_quality ?? 0}/10`}
+                  </div>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Student Uptake Index (SUI):</strong> {results.interaction_engagement.student_uptake_index_pct != null ? `${results.interaction_engagement.student_uptake_index_pct}%` : (results.interaction_engagement.student_uptake_index ?? results.interaction_engagement.student_engagement_opportunities ?? 0) + '/10'}
+                  </div>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Question Distribution Stability (QDS):</strong> {results.interaction_engagement.question_distribution_stability_pct != null ? `${results.interaction_engagement.question_distribution_stability_pct}%` : `${results.interaction_engagement.question_distribution_stability ?? 0}/10`}
+                  </div>
+                  <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
+                    <strong>Overall (20% category):</strong> {results.interaction_engagement.overall_interaction_pct != null ? `${results.interaction_engagement.overall_interaction_pct}%` : (results.interaction_engagement.score ?? 0) + '/10'}
                   </div>
                   <div style={{ padding: '1rem', background: 'white', borderRadius: '8px' }}>
                     <strong>Cognitive Level:</strong> {results.interaction_engagement.cognitive_level}
