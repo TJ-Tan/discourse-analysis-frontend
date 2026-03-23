@@ -10,7 +10,6 @@ import {
   Download,
   Save,
   RotateCcw,
-  Sliders,
   Info
 } from 'lucide-react';
 import {
@@ -37,7 +36,6 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [, setShowParameters] = useState(false);
-  const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
   const [logMessages, setLogMessages] = useState([]);
@@ -2390,6 +2388,16 @@ function App() {
     );
   };
 
+  const getQuantitativeReason = (score) => {
+    const s = Number(score);
+    if (Number.isNaN(s)) return 'Score unavailable.';
+    if (s >= 8.5) return `Strong performance (${s.toFixed(1)}/10): consistently meets high-quality indicators.`;
+    if (s >= 7.0) return `Good performance (${s.toFixed(1)}/10): mostly effective with minor gaps.`;
+    if (s >= 5.5) return `Moderate performance (${s.toFixed(1)}/10): mixed evidence; improvement needed for consistency.`;
+    if (s >= 4.0) return `Below target (${s.toFixed(1)}/10): multiple weaknesses reduced this score.`;
+    return `Low performance (${s.toFixed(1)}/10): substantial gaps in this criterion.`;
+  };
+
   return (
     <div className="app-background">
       {/* Enhanced Bokeh Background Effects */}
@@ -2769,8 +2777,8 @@ function App() {
                     lineHeight: 1.5,
                     borderRadius: '8px',
                     border: '1px solid var(--gray-300)',
-                    background: 'var(--white)',
-                    color: 'var(--gray-900)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: 'white',
                     resize: 'vertical',
                     minHeight: '100px',
                   }}
@@ -2853,21 +2861,8 @@ function App() {
               </div>
             )}
 
-            {isPasskeyValid && (
-              <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                <button
-                  onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
-                  className="parameter-button"
-                  style={{ 
-                    background: showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-100)',
-                    color: showAdvancedConfig ? 'white' : 'var(--gray-700)',
-                    border: `1px solid ${showAdvancedConfig ? 'var(--nus-orange)' : 'var(--gray-300)'}`
-                  }}
-                >
-                  <Sliders size={16} />
-                  {showAdvancedConfig ? 'Hide' : 'Show'} Advanced Configuration
-                </button>
-              </div>
+            {false && isPasskeyValid && (
+              <div />
             )}
           </div>
         )}
@@ -3162,6 +3157,31 @@ function App() {
                     Content {results.mars_rubric.content_score ?? '-'} + Delivery {results.mars_rubric.delivery_score ?? '-'} + Engagement {results.mars_rubric.engagement_score ?? '-'} weighted by 20/40/40
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Score Calculation Breakdown (moved near top) */}
+            <div style={{ 
+              background: 'white', 
+              padding: '1.5rem', 
+              borderRadius: '12px',
+              border: '1px solid var(--gray-200)',
+              marginTop: '1rem'
+            }}>
+              <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
+                🧮 Score Calculation Breakdown
+              </h4>
+              <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                <strong>Formula:</strong>
+                <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                  {results.calculation_breakdown?.final_calculation?.formula}
+                </div>
+                <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--nus-blue)' }}>
+                  = {results.calculation_breakdown?.final_calculation?.calculation}
+                </div>
+                <div style={{ marginTop: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
+                  = {results.calculation_breakdown?.final_calculation?.result}/10
+                </div>
               </div>
             </div>
 
@@ -3719,6 +3739,11 @@ function App() {
                         <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup} · {row.weightInSubgroup}</div>
                         <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
                         <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                        {v != null && (
+                          <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
+                            <strong>Why this score:</strong> {getQuantitativeReason(v)}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -3732,20 +3757,81 @@ function App() {
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
                       <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
                       <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                      {row.key === 'speech' && results.speech_analysis?.score != null && (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
+                          <strong>Why this score:</strong> {getQuantitativeReason(results.speech_analysis.score)}
+                        </p>
+                      )}
+                      {row.key === 'body' && results.body_language?.score != null && (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
+                          <strong>Why this score:</strong> {getQuantitativeReason(results.body_language.score)}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
 
+                {/* Delivery details merged from legacy speech/body sections */}
+                <div style={{ marginTop: '0.75rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '10px' }}>
+                  <h5 style={{ margin: '0 0 0.6rem', color: 'var(--nus-blue)' }}>Speech Analysis (quantitative details)</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
+                    <div><strong>Speaking rate:</strong> {results.speech_analysis?.raw_metrics?.words_per_minute ?? 0} WPM</div>
+                    <div><strong>Filler ratio:</strong> {results.speech_analysis?.raw_metrics?.filler_ratio_percentage ?? 0}%</div>
+                    <div><strong>Voice variety:</strong> {results.speech_analysis?.raw_metrics?.voice_variety_index ?? 0}</div>
+                    <div><strong>Pause effectiveness:</strong> {results.speech_analysis?.raw_metrics?.pause_effectiveness_index ?? 0}</div>
+                    <div><strong>Transcription confidence:</strong> {results.speech_analysis?.raw_metrics?.transcription_confidence ?? 0}%</div>
+                  </div>
+                  {results.detailed_insights?.filler_word_analysis?.length > 0 && (
+                    <div style={{ marginTop: '0.75rem', fontSize: '0.88rem' }}>
+                      <strong>Filler words detected:</strong>{' '}
+                      {results.detailed_insights.filler_word_analysis.slice(0, 10).map((f, i) => `${i ? ', ' : ''}"${f.word}" (${f.count}x)`)}
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop: '0.75rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '10px' }}>
+                  <h5 style={{ margin: '0 0 0.6rem', color: 'var(--nus-blue)' }}>Body Language (quantitative details)</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
+                    <div><strong>Eye contact:</strong> {results.body_language?.raw_metrics?.eye_contact_raw ?? 0}/10</div>
+                    <div><strong>Gestures:</strong> {results.body_language?.raw_metrics?.gestures_raw ?? 0}/10</div>
+                    <div><strong>Posture:</strong> {results.body_language?.raw_metrics?.posture_raw ?? 0}/10</div>
+                    <div><strong>Facial engagement:</strong> {results.body_language?.raw_metrics?.engagement_raw ?? 0}/10</div>
+                    <div><strong>Professionalism:</strong> {results.body_language?.raw_metrics?.professionalism_raw ?? 0}/10</div>
+                  </div>
+                  {results.body_language?.remarks && (
+                    <p style={{ margin: '0.75rem 0 0', color: '#92400e', fontStyle: 'italic', fontSize: '0.88rem' }}>
+                      ⚠️ {results.body_language.remarks}
+                    </p>
+                  )}
+                </div>
+
                 <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Engagement</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {MARS_ENGAGEMENT_CRITERIA.map((row) => (
+                  {MARS_ENGAGEMENT_CRITERIA.map((row) => {
+                    const engagementValueMap = {
+                      question_density: results.interaction_engagement?.interaction_frequency,
+                      cli_block: results.interaction_engagement?.question_quality,
+                      sui: results.interaction_engagement?.student_uptake_index,
+                      qds: results.interaction_engagement?.question_distribution_stability,
+                      learner_feedback:
+                        ((Number(results.interaction_engagement?.student_question_frequency_score || 0) +
+                          Number(results.interaction_engagement?.student_question_cognitive_score || 0)) / 2),
+                    };
+                    const ev = engagementValueMap[row.key];
+                    return (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
-                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label}</div>
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
+                        {row.label} {ev != null && !Number.isNaN(Number(ev)) && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({Number(ev).toFixed(1)}/10)</span>}
+                      </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
                       <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
                       <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                      {ev != null && !Number.isNaN(Number(ev)) && (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
+                          <strong>Why this score:</strong> {getQuantitativeReason(Number(ev))}
+                        </p>
+                      )}
                     </div>
-                  ))}
+                  );})}
                 </div>
               </div>
             )}
@@ -3978,7 +4064,7 @@ function App() {
             )}
 
             {/* Filler Words with Timecodes */}
-            {results.filler_words_detailed && results.filler_words_detailed.timecoded_occurrences && results.filler_words_detailed.timecoded_occurrences.length > 0 && (
+            {false && results.filler_words_detailed && results.filler_words_detailed.timecoded_occurrences && results.filler_words_detailed.timecoded_occurrences.length > 0 && (
               <div style={{ 
                 marginTop: '2rem', 
                 padding: '2rem', 
@@ -4053,7 +4139,7 @@ function App() {
             )}
 
             {/* Comprehensive Summary */}
-            {results.comprehensive_summary && (
+            {false && results.comprehensive_summary && (
               <div style={{ 
                 marginTop: '2rem', 
                 padding: '2.5rem', 
@@ -4203,7 +4289,7 @@ function App() {
             )}
 
               {/* Speech Metrics */}
-              <div style={{ 
+              {false && <div style={{ 
                 background: 'white', 
                 padding: '1.5rem', 
                 borderRadius: '12px', 
@@ -4281,10 +4367,10 @@ function App() {
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Visual Metrics */}
-              <div style={{ 
+              {false && <div style={{ 
                 background: 'white', 
                 padding: '1.5rem', 
                 borderRadius: '12px', 
@@ -4336,7 +4422,7 @@ function App() {
                     }}>
                       ⚠️ {results.body_language.remarks}
                     </p>
-              </div>
+              </div>}
                 )}
                 
                 {/* Metric Explanations */}
@@ -4574,13 +4660,35 @@ function App() {
                           ))}
                         </div>
                       )}
+
+                      {/* Merge legacy strengths/growth into summary */}
+                      {(results.strengths?.length > 0 || results.improvement_suggestions?.length > 0) && (
+                        <div style={{ marginTop: '1.25rem' }}>
+                          {results.strengths?.length > 0 && (
+                            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #86efac' }}>
+                              <h5 style={{ margin: '0 0 0.5rem', color: '#166534' }}>Additional strengths</h5>
+                              <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#14532d' }}>
+                                {results.strengths.slice(0, 5).map((s, i) => <li key={i}>{s}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          {results.improvement_suggestions?.length > 0 && (
+                            <div style={{ padding: '1rem', background: '#fff7ed', borderRadius: '10px', border: '1px solid #fdba74' }}>
+                              <h5 style={{ margin: '0 0 0.5rem', color: '#9a3412' }}>Additional growth opportunities</h5>
+                              <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#7c2d12' }}>
+                                {results.improvement_suggestions.slice(0, 5).map((s, i) => <li key={i}>{s}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </>
                   ) : null}
                 </div>
               )}
 
               {/* Score Calculation Breakdown */}
-              <div style={{ 
+              {false && <div style={{ 
                 background: 'white', 
                 padding: '1.5rem', 
                 borderRadius: '12px',
@@ -4625,7 +4733,7 @@ function App() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div>}
             </div>
 
             {/* Real-time Server Logs (KEEP VISIBLE) */}
@@ -4697,7 +4805,7 @@ function App() {
             </div>
 
             {/* Feedback Grid */}
-            <div className="feedback-grid">
+              {false && <div className="feedback-grid">
               <div className="feedback-section strengths">
                 <h3 className="feedback-title">
                   <CheckCircle size={20} />
@@ -4711,7 +4819,7 @@ function App() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </div>}
 
               <div className="feedback-section improvements">
                 <h3 className="feedback-title">
@@ -4785,10 +4893,10 @@ function App() {
       </div>
       
       {/* Configuration Panel - Moved to Bottom */}
-      {showAdvancedConfig && (
+      {false && (
         <div className="results-container" style={{ marginBottom: '2rem' }}>
           <div className="results-header">
-            <Sliders size={32} style={{ color: 'var(--nus-orange)' }} />
+            <Info size={32} style={{ color: 'var(--nus-orange)' }} />
             <h2 className="results-title">Advanced Configuration</h2>
             <div className="results-actions">
               <button 
