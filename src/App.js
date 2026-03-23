@@ -67,6 +67,10 @@ function App() {
       try {
         const summaryDataForAPI = {
           overall_score: Math.round(results.overall_score * 10) / 10,
+          content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
+          delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
+          engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
+          // Legacy fields kept for backward compatibility with summary endpoint
           speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
           body_language_score: Math.round(results.body_language?.score * 10) / 10,
           teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
@@ -105,11 +109,9 @@ function App() {
         const firstQuestion = highLevelQuestions.length > 0 ? highLevelQuestions[0].question || highLevelQuestions[0].text : '';
         
         const scores = {
-          'Speech Analysis': Math.round(results.speech_analysis?.score * 10) / 10,
-          'Body Language': Math.round(results.body_language?.score * 10) / 10,
-          'Teaching Effectiveness': Math.round(results.teaching_effectiveness?.score * 10) / 10,
-          'Interaction & Engagement': Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
-          'Presentation Skills': Math.round(results.presentation_skills?.score * 10) / 10
+          Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
+          Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
+          Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
         };
         const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
         const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
@@ -1257,6 +1259,10 @@ function App() {
           // Prepare data for summary generation
           const summaryData = {
             overall_score: Math.round(results.overall_score * 10) / 10,
+            content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
+            delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
+            engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
+            // Legacy fields kept for backward compatibility with summary endpoint
             speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
             body_language_score: Math.round(results.body_language?.score * 10) / 10,
             teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
@@ -1302,11 +1308,9 @@ function App() {
         
         // Find strongest and weakest categories
         const scores = {
-          'Speech Analysis': Math.round(results.speech_analysis?.score * 10) / 10,
-          'Body Language': Math.round(results.body_language?.score * 10) / 10,
-          'Teaching Effectiveness': Math.round(results.teaching_effectiveness?.score * 10) / 10,
-          'Interaction & Engagement': Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
-          'Presentation Skills': Math.round(results.presentation_skills?.score * 10) / 10
+          Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
+          Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
+          Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
         };
         const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
         const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
@@ -3153,35 +3157,34 @@ function App() {
               <div className="score-display">
                 <div className="score-number">{Math.round(results.overall_score * 10) / 10}/10</div>
                 <div className="score-label">Teaching Excellence Score</div>
+                {results.mars_rubric && (
+                  <div style={{ marginTop: '0.65rem', fontSize: '0.9rem', color: 'var(--gray-700)' }}>
+                    Content {results.mars_rubric.content_score ?? '-'} + Delivery {results.mars_rubric.delivery_score ?? '-'} + Engagement {results.mars_rubric.engagement_score ?? '-'} weighted by 20/40/40
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Detailed Scores - Now with 5 categories */}
-            <div className="scores-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-              <ScoreDisplay 
-                score={results.speech_analysis.score} 
-                label="Speech Analysis" 
-              />
-              <ScoreDisplay 
-                score={results.body_language.score} 
-                label="Body Language" 
-              />
-              <ScoreDisplay 
-                score={results.teaching_effectiveness.score} 
-                label="Teaching Effectiveness" 
-              />
-              <ScoreDisplay 
-                score={results.interaction_engagement?.score || 7} 
-                label="Interaction & Engagement" 
-              />
-              <ScoreDisplay 
-                score={results.presentation_skills.score} 
-                label="Presentation Skills" 
-              />
-            </div>
+            {/* MARS-only top scores */}
+            {false && results.mars_rubric && (
+              <div className="scores-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                <ScoreDisplay
+                  score={results.mars_rubric.content_score || 0}
+                  label="Content"
+                />
+                <ScoreDisplay
+                  score={results.mars_rubric.delivery_score || 0}
+                  label="Delivery"
+                />
+                <ScoreDisplay
+                  score={results.mars_rubric.engagement_score || 0}
+                  label="Engagement"
+                />
+              </div>
+            )}
 
-            {/* MARS rubric: definitions + how each criterion is computed */}
-            {results.mars_rubric && (
+            {/* Hidden (moved below transcript/frames): MARS rubric breakdown */}
+            {false && results.mars_rubric && (
               <div
                 style={{
                   marginTop: '1.5rem',
@@ -3678,8 +3681,77 @@ function App() {
               </div>
             )}
 
+            {/* MARS breakdown after transcript and extracted frames */}
+            {results.mars_rubric && (
+              <div
+                style={{
+                  marginTop: '2rem',
+                  padding: '1.5rem',
+                  background: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid var(--gray-200)',
+                  textAlign: 'left',
+                }}
+              >
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--nus-blue)', fontSize: '1.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Info size={22} />
+                  {MARS_INTRO.title}
+                </h3>
+                <p style={{ margin: '0 0 1rem', color: 'var(--gray-700)', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                  {MARS_INTRO.summary}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '12px', fontSize: '0.9rem' }}>
+                  <div><strong>Content</strong> (20%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.content_score != null ? `${results.mars_rubric.content_score}/10` : '—'}</span></div>
+                  <div><strong>Delivery</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.delivery_score != null ? `${results.mars_rubric.delivery_score}/10` : '—'}</span></div>
+                  <div><strong>Engagement</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.engagement_score != null ? `${results.mars_rubric.engagement_score}/10` : '—'}</span></div>
+                  <div style={{ gridColumn: '1 / -1', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                    <strong>Overall formula:</strong> {results.mars_rubric.formula || '0.20×Content + 0.40×Delivery + 0.40×Engagement'}
+                  </div>
+                </div>
+
+                <h4 style={{ margin: '1rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Content criteria</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {MARS_CONTENT_CRITERIA.map((row) => {
+                    const v = results.mars_rubric.content_criteria?.[row.key] ?? results.teaching_effectiveness?.mars_content_criteria?.[row.key];
+                    return (
+                      <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
+                        <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label} {v != null && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({v}/10)</span>}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup} · {row.weightInSubgroup}</div>
+                        <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Delivery</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {MARS_DELIVERY_CRITERIA.map((row) => (
+                    <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
+                      <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
+                      <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Engagement</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {MARS_ENGAGEMENT_CRITERIA.map((row) => (
+                    <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
+                      <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
+                      <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Interaction & Engagement Analysis */}
-            {results.interaction_engagement && (
+            {false && results.interaction_engagement && (
               <div style={{ 
                 marginTop: '2rem', 
                 padding: '2rem', 
@@ -4268,7 +4340,7 @@ function App() {
                 )}
                 
                 {/* Metric Explanations */}
-                {results.body_language.explanations && (
+                {false && results.body_language.explanations && (
                   <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0, 61, 124, 0.05)', borderRadius: '8px' }}>
                     <h5 style={{ color: 'var(--nus-blue)', marginBottom: '1rem', fontSize: '1rem' }}>Metric Explanations</h5>
                     {Object.entries(results.body_language.explanations).map(([metric, explanation]) => (
@@ -4291,7 +4363,7 @@ function App() {
               </div>
 
               {/* Teaching Effectiveness Explanations */}
-              {results.teaching_effectiveness?.explanations && (
+              {false && results.teaching_effectiveness?.explanations && (
                 <div style={{ 
                   background: 'white', 
                   padding: '1.5rem', 
@@ -4321,7 +4393,7 @@ function App() {
               )}
 
               {/* Presentation Skills Explanations */}
-              {results.presentation_skills?.explanations && (
+              {false && results.presentation_skills?.explanations && (
                 <div style={{ 
                   background: 'white', 
                   padding: '1.5rem', 
