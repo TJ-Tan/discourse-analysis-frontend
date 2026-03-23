@@ -2373,6 +2373,48 @@ function App() {
     }
   };
 
+  // Export exactly what user sees in results panel (excluding app background)
+  const exportFullAnalysisView = async () => {
+    if (!resultsContainerRef.current) return;
+    try {
+      const exportNode = resultsContainerRef.current.cloneNode(true);
+      exportNode.style.background = '#ffffff';
+      exportNode.style.padding = '16px';
+      exportNode.style.borderRadius = '0';
+      exportNode.style.maxWidth = '100%';
+      exportNode.style.color = '#111827';
+
+      const wrapper = document.createElement('div');
+      wrapper.style.background = '#ffffff';
+      wrapper.style.padding = '12px';
+      wrapper.appendChild(exportNode);
+      document.body.appendChild(wrapper);
+
+      const opt = {
+        margin: 8,
+        filename: `MARS-full-analysis-${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait',
+        },
+        pagebreak: { mode: ['css', 'legacy'] },
+      };
+
+      await html2pdf().set(opt).from(wrapper).save();
+      document.body.removeChild(wrapper);
+    } catch (e) {
+      console.error('Full analysis export failed:', e);
+      alert(`Export failed: ${e.message}`);
+    }
+  };
+
   // Render score with color coding
   const ScoreDisplay = ({ score, label, max = 10 }) => {
     const percentage = (score / max) * 100;
@@ -3831,7 +3873,8 @@ function App() {
                         </p>
                       )}
                     </div>
-                  );})}
+                  );
+                  })}
                 </div>
               </div>
             )}
@@ -4422,7 +4465,7 @@ function App() {
                     }}>
                       ⚠️ {results.body_language.remarks}
                     </p>
-              </div>}
+                  </div>
                 )}
                 
                 {/* Metric Explanations */}
@@ -4446,7 +4489,7 @@ function App() {
                     ))}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Teaching Effectiveness Explanations */}
               {false && results.teaching_effectiveness?.explanations && (
@@ -4805,37 +4848,38 @@ function App() {
             </div>
 
             {/* Feedback Grid */}
-              {false && <div className="feedback-grid">
-              <div className="feedback-section strengths">
-                <h3 className="feedback-title">
-                  <CheckCircle size={20} />
-                  Key Strengths
-                </h3>
-                <ul className="feedback-list">
-                  {results.strengths.map((strength, index) => (
-                    <li key={index} className="feedback-item">
-                      <span className="feedback-bullet"></span>
-                      {strength}
-                    </li>
-                  ))}
-                </ul>
-              </div>}
-
-              <div className="feedback-section improvements">
-                <h3 className="feedback-title">
-                  <AlertCircle size={20} />
-                  Areas for Growth
-                </h3>
-                <ul className="feedback-list">
-                  {results.improvement_suggestions.map((suggestion, index) => (
-                    <li key={index} className="feedback-item">
-                      <span className="feedback-bullet"></span>
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
+            {false && (
+              <div className="feedback-grid">
+                <div className="feedback-section strengths">
+                  <h3 className="feedback-title">
+                    <CheckCircle size={20} />
+                    Key Strengths
+                  </h3>
+                  <ul className="feedback-list">
+                    {results.strengths.map((strength, index) => (
+                      <li key={index} className="feedback-item">
+                        <span className="feedback-bullet"></span>
+                        {strength}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="feedback-section improvements">
+                  <h3 className="feedback-title">
+                    <AlertCircle size={20} />
+                    Areas for Growth
+                  </h3>
+                  <ul className="feedback-list">
+                    {results.improvement_suggestions.map((suggestion, index) => (
+                      <li key={index} className="feedback-item">
+                        <span className="feedback-bullet"></span>
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Disclaimer */}
             <div style={{
@@ -4866,8 +4910,16 @@ function App() {
               </p>
             </div>
 
-            {/* Reset Button */}
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+            {/* Bottom actions */}
+            <div style={{ textAlign: 'center', marginTop: '2rem', display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={exportFullAnalysisView}
+                className="export-button"
+                style={{ minWidth: '220px' }}
+              >
+                <Download size={16} />
+                Export Full Analysis View
+              </button>
               <button
                 onClick={() => {
                   setFile(null);
