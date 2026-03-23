@@ -13,6 +13,12 @@ import {
   Sliders,
   Info
 } from 'lucide-react';
+import {
+  MARS_INTRO,
+  MARS_CONTENT_CRITERIA,
+  MARS_DELIVERY_CRITERIA,
+  MARS_ENGAGEMENT_CRITERIA,
+} from './marsRubricHelp';
 import './App.css';
 
 // Use environment variable for API URL, fallback to production
@@ -3173,6 +3179,246 @@ function App() {
                 label="Presentation Skills" 
               />
             </div>
+
+            {/* MARS rubric: definitions + how each criterion is computed */}
+            {results.mars_rubric && (
+              <div
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '1.5rem',
+                  background: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid var(--gray-200)',
+                  textAlign: 'left',
+                }}
+              >
+                <h3
+                  style={{
+                    margin: '0 0 0.5rem 0',
+                    color: 'var(--nus-blue)',
+                    fontSize: '1.35rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Info size={22} />
+                  {MARS_INTRO.title}
+                </h3>
+                <p style={{ margin: '0 0 1rem', color: 'var(--gray-700)', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                  {MARS_INTRO.summary}
+                </p>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '0.75rem',
+                    marginBottom: '1.25rem',
+                    padding: '1rem',
+                    background: 'var(--primary-50)',
+                    borderRadius: '12px',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <div>
+                    <strong>Content</strong> (20% of overall){' '}
+                    <span style={{ color: 'var(--nus-blue)' }}>
+                      {results.mars_rubric.content_score != null ? `${results.mars_rubric.content_score}/10` : '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Delivery</strong> (40%){' '}
+                    <span style={{ color: 'var(--nus-blue)' }}>
+                      {results.mars_rubric.delivery_score != null ? `${results.mars_rubric.delivery_score}/10` : '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Engagement</strong> (40%){' '}
+                    <span style={{ color: 'var(--nus-blue)' }}>
+                      {results.mars_rubric.engagement_score != null ? `${results.mars_rubric.engagement_score}/10` : '—'}
+                    </span>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                    <strong>Overall formula:</strong> {results.mars_rubric.formula || '0.20×Content + 0.40×Delivery + 0.40×Engagement'}
+                  </div>
+                </div>
+
+                {results.mars_rubric.content_subscores && (
+                  <div
+                    style={{
+                      marginBottom: '1rem',
+                      padding: '0.75rem',
+                      background: 'var(--gray-50)',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      color: 'var(--gray-800)',
+                    }}
+                  >
+                    <strong>Content sub-scores (0–10 each):</strong> Organisation{' '}
+                    {results.mars_rubric.content_subscores.content_organisation}, Explanation Quality{' '}
+                    {results.mars_rubric.content_subscores.explanation_quality}, Examples / Representation{' '}
+                    {results.mars_rubric.content_subscores.use_of_examples_representation}.
+                    <br />
+                    <span style={{ color: 'var(--gray-600)' }}>
+                      {results.mars_rubric.content_subscores.content_formula}
+                    </span>
+                  </div>
+                )}
+
+                <h4 style={{ margin: '1rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>
+                  Content criteria
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {MARS_CONTENT_CRITERIA.map((row) => {
+                    const v =
+                      results.mars_rubric.content_criteria?.[row.key] ??
+                      results.teaching_effectiveness?.mars_content_criteria?.[row.key];
+                    return (
+                      <div
+                        key={row.key}
+                        style={{
+                          padding: '0.85rem 1rem',
+                          border: '1px solid var(--gray-200)',
+                          borderRadius: '10px',
+                          background: '#fafafa',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
+                          {row.label}{' '}
+                          {v != null && (
+                            <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({v}/10)</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                          {row.subgroup} · {row.weightInSubgroup}
+                        </div>
+                        <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                          <strong>What it means:</strong> {row.meaning}
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                          <strong>How it is computed:</strong> {row.how}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>
+                  Delivery
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {MARS_DELIVERY_CRITERIA.map((row) => (
+                    <div
+                      key={row.key}
+                      style={{
+                        padding: '0.85rem 1rem',
+                        border: '1px solid var(--gray-200)',
+                        borderRadius: '10px',
+                        background: '#fafafa',
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                        {row.subgroup}
+                      </div>
+                      <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                        <strong>What it means:</strong> {row.meaning}
+                      </p>
+                      <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                        <strong>How it is computed:</strong> {row.how}
+                      </p>
+                      {row.key === 'speech' && results.speech_analysis?.score != null && (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Your speech category score:</strong> {results.speech_analysis.score}/10
+                        </p>
+                      )}
+                      {row.key === 'body' && results.body_language?.score != null && (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Your body language category score:</strong> {results.body_language.score}/10
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>
+                  Engagement
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {MARS_ENGAGEMENT_CRITERIA.map((row) => {
+                    let extra = null;
+                    if (row.key === 'question_density' && results.interaction_engagement?.interaction_frequency != null) {
+                      extra = (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Your question-density score:</strong>{' '}
+                          {results.interaction_engagement.interaction_frequency}/10
+                        </p>
+                      );
+                    }
+                    if (row.key === 'cli_block' && results.interaction_engagement?.question_quality != null) {
+                      extra = (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Your CLI-based question quality score:</strong>{' '}
+                          {results.interaction_engagement.question_quality}/10
+                        </p>
+                      );
+                    }
+                    if (row.key === 'sui' && results.interaction_engagement?.student_uptake_index != null) {
+                      extra = (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Your SUI:</strong> {results.interaction_engagement.student_uptake_index}/10
+                        </p>
+                      );
+                    }
+                    if (row.key === 'qds' && results.interaction_engagement?.question_distribution_stability != null) {
+                      extra = (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Your QDS:</strong> {results.interaction_engagement.question_distribution_stability}/10
+                        </p>
+                      );
+                    }
+                    if (row.key === 'learner_feedback') {
+                      extra = (
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)' }}>
+                          <strong>Learner Q frequency / cognitive:</strong>{' '}
+                          {results.interaction_engagement?.student_question_frequency_score ?? '—'}/10 ·{' '}
+                          {results.interaction_engagement?.student_question_cognitive_score ?? '—'}/10
+                          {results.interaction_engagement?.student_feedback_remarks && (
+                            <span style={{ color: 'var(--gray-600)' }}>
+                              {' '}
+                              — {results.interaction_engagement.student_feedback_remarks}
+                            </span>
+                          )}
+                        </p>
+                      );
+                    }
+                    return (
+                      <div
+                        key={row.key}
+                        style={{
+                          padding: '0.85rem 1rem',
+                          border: '1px solid var(--gray-200)',
+                          borderRadius: '10px',
+                          background: '#fafafa',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                          {row.subgroup}
+                        </div>
+                        <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                          <strong>What it means:</strong> {row.meaning}
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                          <strong>How it is computed:</strong> {row.how}
+                        </p>
+                        {extra}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Detailed Metrics Breakdown */}
             <div style={{ 
