@@ -8,6 +8,7 @@ import {
   CheckCircle, 
   AlertCircle, 
   Download,
+  FileText,
   Save,
   RotateCcw,
   Info
@@ -15,7 +16,11 @@ import {
 import {
   MARS_INTRO,
   MARS_CONTENT_CRITERIA,
+  MARS_CONTENT_MAIN,
+  MARS_CONTENT_SECTIONS,
+  MARS_DELIVERY_MAIN,
   MARS_DELIVERY_CRITERIA,
+  MARS_ENGAGEMENT_MAIN,
   MARS_ENGAGEMENT_CRITERIA,
 } from './marsRubricHelp';
 import './App.css';
@@ -36,7 +41,6 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [, setShowParameters] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
   const [logMessages, setLogMessages] = useState([]);
   const logContainerRef = useRef(null);
@@ -68,17 +72,23 @@ function App() {
           content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
           delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
           engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
-          // Legacy fields kept for backward compatibility with summary endpoint
           speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
           body_language_score: Math.round(results.body_language?.score * 10) / 10,
           teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
           interaction_score: Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
           presentation_score: Math.round(results.presentation_skills?.score * 10) / 10,
           high_level_questions: results.interaction_engagement?.high_level_questions || [],
+          all_questions: results.interaction_engagement?.all_questions || [],
+          audience_questions: results.interaction_engagement?.audience_questions || [],
+          icap_counts: results.interaction_engagement?.icap_counts || {},
           total_questions: results.interaction_engagement?.total_questions || 0,
+          questions_per_minute: results.interaction_engagement?.questions_per_minute ?? 0,
+          eqd_per_minute: results.interaction_engagement?.eqd_per_minute ?? 0,
           transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
           sample_frames_count: results.sample_frames?.length || 0,
           filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
+          extra_strengths: results.strengths || [],
+          extra_growth: results.improvement_suggestions || [],
           explanations: {
             speech: results.speech_analysis?.explanations || {},
             body_language: results.body_language?.explanations || {},
@@ -114,18 +124,31 @@ function App() {
         const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
         const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
         
+        const strengthsExtra = (results.strengths || []).slice(0, 5).filter(Boolean);
+        const growthExtra = (results.improvement_suggestions || []).slice(0, 5).filter(Boolean);
+        const mergedTail = [
+          strengthsExtra.length ? `Further strengths noted in the rubric: ${strengthsExtra.join(' ')}` : '',
+          growthExtra.length ? `Growth opportunities to consider: ${growthExtra.join(' ')}` : '',
+        ].filter(Boolean).join(' ');
+        const qPart = totalQuestions === 0
+          ? `No instructor questions ending with "?" were detected; engagement scores should be read in that light.`
+          : `${totalQuestions} instructor question(s) were detected${firstQuestion ? ` (e.g. "${firstQuestion.substring(0, 140)}${firstQuestion.length > 140 ? '…' : ''}")` : ''}.`;
         setSummaryData({
-          personalized_feedback: `This lecture achieved an overall score of ${overallScore}/10, demonstrating effective teaching techniques with ${totalQuestions} questions asked throughout the session${firstQuestion ? `. For instance, the instructor asked: "${firstQuestion.substring(0, 100)}${firstQuestion.length > 100 ? '...' : ''}", which promotes analytical thinking and encourages deeper student engagement.` : ', promoting analytical thinking and student engagement.'} The delivery maintained good pacing and clarity throughout.`,
+          personalized_feedback: [
+            `MARS Evaluated Final Score ${overallScore}/10 (Content ${scores.Content}/10, Delivery ${scores.Delivery}/10, Engagement ${scores.Engagement}/10).`,
+            qPart,
+            mergedTail,
+          ].filter(Boolean).join(' '),
           strongest_strength: {
             title: strongest[0],
-            description: `Strong performance in ${strongest[0].toLowerCase()} with a score of ${strongest[1]}/10, demonstrating effective teaching techniques in this area.`,
-            evidence: `Score of ${strongest[1]}/10 in ${strongest[0]}${results.sample_frames?.length > 0 ? `, supported by ${results.sample_frames.length} analysed video frames` : ''}`
+            description: `Stronger MARS block: ${strongest[0]} (${strongest[1]}/10).`,
+            evidence: `MARS ${strongest[0]} score ${strongest[1]}/10${results.sample_frames?.length ? `; ${results.sample_frames.length} video frames analysed` : ''}${totalQuestions ? `; ${totalQuestions} instructor question(s) in transcript` : ''}.`
           },
           improvements: [
             {
               area: weakest[0],
-              description: `Consider focusing on improving ${weakest[0].toLowerCase()} which scored ${weakest[1]}/10.`,
-              evidence: `Current score: ${weakest[1]}/10 (below the overall average of ${overallScore}/10)`
+              description: `Growth opportunity: strengthen ${weakest[0].toLowerCase()} (currently ${weakest[1]}/10).`,
+              evidence: `MARS block score ${weakest[1]}/10 vs overall ${overallScore}/10.`
             }
           ]
         });
@@ -512,9 +535,6 @@ function App() {
       setResults(null);
       setLogMessages([]);
       setSummaryData(null);
-      setIsPasskeyValid(false);
-      setPasskey('');
-      sessionStorage.removeItem('mars_passkey');
     } else {
       alert('Please upload a video file');
     }
@@ -705,7 +725,7 @@ function App() {
   // Validate passkey function
   const validatePasskey = async () => {
     if (!passkey.trim()) {
-      setPasskeyError('Please enter a passkey');
+      setPasskeyError('Please enter the passcode');
       return;
     }
 
@@ -722,12 +742,12 @@ function App() {
         // Store passkey in sessionStorage for this session
         sessionStorage.setItem('mars_passkey', passkey.trim());
       } else {
-        setPasskeyError('Invalid passkey. Please try again.');
+        setPasskeyError('Invalid passcode. Please try again.');
         setIsPasskeyValid(false);
       }
     } catch (error) {
       console.error('Passkey validation error:', error);
-      setPasskeyError('Failed to validate passkey. Please try again.');
+      setPasskeyError('Failed to validate passcode. Please try again.');
       setIsPasskeyValid(false);
     }
   };
@@ -786,7 +806,7 @@ function App() {
     
     // Check passkey before starting analysis
     if (!isPasskeyValid) {
-      alert('Please enter and verify the passkey first');
+      alert('Please enter and verify the passcode first');
       return;
     }
     
@@ -1218,1162 +1238,54 @@ function App() {
     }, 500); // Poll every 500ms (twice per second)
   };
 
-  // Enhanced PDF export - Clean format with only metrics and analysis
-  const exportToPDF = async () => {
-    if (!results || !analysisId) return;
-
-    setIsGeneratingPDF(true);
-    try {
-      // Helper function to format metric names
-      const formatMetricName = (name) => {
-        return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      };
-
-      // Helper function to render metric explanations
-      const renderExplanations = (explanations) => {
-        if (!explanations || Object.keys(explanations).length === 0) return '';
-        
-        let html = '<div class="metric-explanations">';
-        Object.entries(explanations).forEach(([metric, explanation]) => {
-          html += `
-            <div class="metric-item">
-              <div class="metric-header">
-                <strong>${formatMetricName(metric)}</strong>
-                <span class="rating-badge">${explanation.rating}</span>
-                <span class="score-range">${explanation.score_range}</span>
-              </div>
-              <div class="metric-justification">${explanation.justification}</div>
-              ${explanation.remarks ? `<div class="metric-remarks">Note: ${explanation.remarks}</div>` : ''}
-            </div>
-          `;
-        });
-        html += '</div>';
-        return html;
-      };
-
-      // Helper function to generate PDF summary
-      const generatePDFSummary = async () => {
-        try {
-          // Prepare data for summary generation
-          const summaryData = {
-            overall_score: Math.round(results.overall_score * 10) / 10,
-            content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
-            delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
-            engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
-            // Legacy fields kept for backward compatibility with summary endpoint
-            speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
-            body_language_score: Math.round(results.body_language?.score * 10) / 10,
-            teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
-            interaction_score: Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
-            presentation_score: Math.round(results.presentation_skills?.score * 10) / 10,
-            high_level_questions: results.interaction_engagement?.high_level_questions || [],
-            total_questions: results.interaction_engagement?.total_questions || 0,
-            transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
-            sample_frames_count: results.sample_frames?.length || 0,
-            filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
-            explanations: {
-              speech: results.speech_analysis?.explanations || {},
-              body_language: results.body_language?.explanations || {},
-              teaching: results.teaching_effectiveness?.explanations || {},
-              interaction: results.interaction_engagement?.explanations || {},
-              presentation: results.presentation_skills?.explanations || {}
-            }
-          };
-
-          // Call backend API to generate summary
-          const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, summaryData, {
-            timeout: 30000,
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (response.data && response.data.summary) {
-            return response.data.summary;
-          }
-        } catch (error) {
-          console.error('Error generating PDF summary:', error);
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Falling back to default summary');
-          }
-        }
-
-        // Fallback summary if API fails
-        const overallScore = Math.round(results.overall_score * 10) / 10;
-        const totalQuestions = results.interaction_engagement?.total_questions || 0;
-        const highLevelQuestions = results.interaction_engagement?.high_level_questions || [];
-        const firstQuestion = highLevelQuestions.length > 0 ? highLevelQuestions[0].question || highLevelQuestions[0].text : '';
-        
-        // Find strongest and weakest categories
-        const scores = {
-          Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
-          Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
-          Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
-        };
-        const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
-        const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
-        
-        return {
-          personalized_feedback: `This lecture achieved an overall score of ${overallScore}/10, demonstrating effective teaching techniques with ${totalQuestions} questions asked throughout the session${firstQuestion ? `. For instance, the instructor asked: "${firstQuestion.substring(0, 100)}${firstQuestion.length > 100 ? '...' : ''}", which promotes analytical thinking and encourages deeper student engagement.` : ', promoting analytical thinking and student engagement.'} The delivery maintained good pacing and clarity throughout.`,
-          strongest_strength: {
-            title: strongest[0],
-            description: `Strong performance in ${strongest[0].toLowerCase()} with a score of ${strongest[1]}/10, demonstrating effective teaching techniques in this area.`,
-            evidence: `Score of ${strongest[1]}/10 in ${strongest[0]}${results.sample_frames_count > 0 ? `, supported by ${results.sample_frames_count} analysed video frames` : ''}`
-          },
-          improvements: [
-            {
-              area: weakest[0],
-              description: `Consider focusing on improving ${weakest[0].toLowerCase()} which scored ${weakest[1]}/10.`,
-              evidence: `Current score: ${weakest[1]}/10 (below the overall average of ${overallScore}/10)`
-            }
-          ]
-        };
-      };
-
-      // Generate clean HTML content
-      const generatePDFContent = (pdfSummary) => {
-        const overallScore = Math.round(results.overall_score * 10) / 10;
-        const genDate = new Date().toLocaleDateString('en-SG', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-
-        return `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>MARS Analysis Report</title>
-            <style>
-              @page {
-                size: A4;
-                margin: 15mm;
-              }
-              
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              
-              body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                font-size: 10pt;
-                line-height: 1.6;
-                color: #1f2937;
-                background: white;
-              }
-              
-              .header {
-                text-align: center;
-                margin-bottom: 8px;
-                padding: 18px;
-                background: linear-gradient(135deg, #003D7C, #EF7C00);
-                color: white;
-                border-radius: 8px;
-              }
-              
-              .header h1 {
-                font-size: 32pt;
-                font-weight: 800;
-                margin-bottom: 2px;
-                letter-spacing: -0.5px;
-              }
-              
-              .header .subtitle {
-                font-size: 14pt;
-                margin-bottom: 2px;
-                opacity: 0.95;
-              }
-              
-              .header .tagline {
-                font-size: 11pt;
-                margin-bottom: 8px;
-                opacity: 0.85;
-              }
-              
-              .header .date {
-                font-size: 9pt;
-                opacity: 0.8;
-              }
-              
-              .overall-score {
-                text-align: center;
-                margin: 10px 0;
-                padding: 12px;
-                background: #f9fafb;
-                border-radius: 8px;
-                border: 2px solid #003D7C;
-              }
-              
-              .overall-score .score {
-                font-size: 48pt;
-                font-weight: 900;
-                color: #003D7C;
-                margin-bottom: 6px;
-              }
-              
-              .overall-score .label {
-                font-size: 14pt;
-                color: #6b7280;
-                font-weight: 600;
-              }
-              
-              .category-scores {
-                display: grid;
-                grid-template-columns: repeat(5, 1fr);
-                gap: 8px;
-                margin: 10px 0;
-              }
-              
-              .category-score {
-                text-align: center;
-                padding: 12px;
-                background: #f9fafb;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
-              }
-              
-              .category-score .score {
-                font-size: 24pt;
-                font-weight: 700;
-                color: #003D7C;
-                margin-bottom: 4px;
-              }
-              
-              .category-score .label {
-                font-size: 9pt;
-                color: #6b7280;
-                font-weight: 500;
-              }
-              
-              .section {
-                margin: 6px 0;
-                page-break-inside: avoid;
-                page-break-after: auto;
-              }
-              
-              .section.new-page {
-                page-break-before: always;
-                page-break-after: auto;
-              }
-              
-              .section-content {
-                page-break-inside: auto;
-              }
-              
-              .questions-list {
-                page-break-inside: avoid;
-              }
-              
-              .question-item {
-                page-break-inside: avoid;
-              }
-              
-              .transcript-section {
-                margin: 6px 0;
-                page-break-inside: avoid;
-              }
-              
-              .transcript-text {
-                font-size: 9pt;
-                line-height: 1.8;
-                color: #374151;
-                white-space: pre-wrap;
-                padding: 12px;
-                background: #f9fafb;
-                border-radius: 6px;
-                border: 1px solid #e5e7eb;
-                max-height: none;
-              }
-              
-              .frame-gallery {
-                display: flex;
-                gap: 12px;
-                margin-top: 12px;
-                flex-wrap: wrap;
-              }
-              
-              .frame-item {
-                flex: 0 0 calc(33.333% - 8px);
-                text-align: center;
-              }
-              
-              .frame-item img {
-                width: 100%;
-                height: auto;
-                border-radius: 6px;
-                border: 2px solid #e5e7eb;
-                max-width: 200px;
-              }
-              
-              .frame-timestamp {
-                margin-top: 6px;
-                font-size: 8pt;
-                color: #6b7280;
-                font-weight: 600;
-              }
-              
-              .questions-list {
-                margin-top: 12px;
-              }
-              
-              .question-item {
-                padding: 10px;
-                margin-bottom: 8px;
-                background: #f0f9ff;
-                border-left: 4px solid #003D7C;
-                border-radius: 4px;
-              }
-              
-              .question-text {
-                font-size: 10pt;
-                color: #1f2937;
-                line-height: 1.6;
-                margin-bottom: 4px;
-              }
-              
-              .question-meta {
-                font-size: 8pt;
-                color: #6b7280;
-                display: flex;
-                gap: 12px;
-              }
-              
-              .filler-words-list {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 8px;
-                margin-top: 12px;
-              }
-              
-              .filler-word-item {
-                padding: 8px;
-                background: #f9fafb;
-                border-radius: 6px;
-                border: 1px solid #e5e7eb;
-                text-align: center;
-              }
-              
-              .filler-word {
-                font-size: 11pt;
-                font-weight: 600;
-                color: #003D7C;
-                margin-bottom: 4px;
-              }
-              
-              .filler-count {
-                font-size: 9pt;
-                color: #6b7280;
-              }
-              
-              .section-header {
-                background: #003D7C;
-                color: white;
-                padding: 10px 14px;
-                border-radius: 6px 6px 0 0;
-                font-size: 14pt;
-                font-weight: 700;
-                margin-bottom: 0;
-              }
-              
-              .section-content {
-                background: #ffffff;
-                border: 1px solid #e5e7eb;
-                border-top: none;
-                border-radius: 0 0 6px 6px;
-                padding: 12px;
-              }
-              
-              .section-score {
-                display: inline-block;
-                background: #003D7C;
-                color: white;
-                padding: 5px 12px;
-                border-radius: 20px;
-                font-weight: 600;
-                font-size: 11pt;
-                margin-bottom: 8px;
-              }
-              
-              .metric-explanations {
-                margin-top: 8px;
-              }
-              
-              .metric-item {
-                margin-bottom: 8px;
-                padding-bottom: 8px;
-                border-bottom: 1px solid #e5e7eb;
-              }
-              
-              .metric-item:last-child {
-                border-bottom: none;
-                margin-bottom: 0;
-                padding-bottom: 0;
-              }
-              
-              .metric-header {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-bottom: 8px;
-                flex-wrap: wrap;
-              }
-              
-              .metric-header strong {
-                font-size: 11pt;
-                color: #1f2937;
-              }
-              
-              .rating-badge {
-                background: #EF7C00;
-                color: white;
-                padding: 3px 10px;
-                border-radius: 12px;
-                font-size: 9pt;
-                font-weight: 600;
-              }
-              
-              .score-range {
-                color: #6b7280;
-                font-size: 9pt;
-              }
-              
-              .metric-justification {
-                font-size: 10pt;
-                color: #374151;
-                line-height: 1.6;
-                margin-bottom: 4px;
-              }
-              
-              .metric-remarks {
-                font-size: 9pt;
-                color: #6b7280;
-                font-style: italic;
-                margin-top: 4px;
-              }
-              
-              .raw-metrics {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-                margin-top: 8px;
-              }
-              
-              .raw-metric {
-                padding: 8px;
-                background: #f9fafb;
-                border-radius: 6px;
-                border: 1px solid #e5e7eb;
-              }
-              
-              .raw-metric strong {
-                display: block;
-                font-size: 9pt;
-                color: #6b7280;
-                margin-bottom: 4px;
-              }
-              
-              .raw-metric .value {
-                font-size: 12pt;
-                font-weight: 700;
-                color: #003D7C;
-              }
-              
-              .pdf-export-notice {
-                margin: 12px 0;
-                padding: 14px;
-                background: #fef3c7;
-                border: 2px solid #f59e0b;
-                border-radius: 8px;
-                page-break-inside: avoid;
-              }
-              
-              .pdf-export-notice-title {
-                font-size: 11pt;
-                font-weight: 700;
-                color: #92400e;
-                margin-bottom: 8px;
-              }
-              
-              .pdf-export-notice-text {
-                font-size: 9pt;
-                color: #78350f;
-                line-height: 1.6;
-              }
-              
-              .disclaimer {
-                margin-top: 20px;
-                padding: 12px;
-                background: #f0f9ff;
-                border-left: 4px solid #003D7C;
-                border-radius: 6px;
-                page-break-inside: avoid;
-              }
-              
-              .disclaimer-title {
-                font-size: 11pt;
-                font-weight: 700;
-                color: #003D7C;
-                margin-bottom: 8px;
-              }
-              
-              .disclaimer-text {
-                font-size: 9pt;
-                color: #374151;
-                line-height: 1.6;
-                font-style: italic;
-              }
-              
-              .footer {
-                margin-top: 15px;
-                padding-top: 12px;
-                border-top: 2px solid #e5e7eb;
-                text-align: center;
-                font-size: 8pt;
-                color: #6b7280;
-                page-break-inside: avoid;
-              }
-              
-              .developer-info {
-                margin-top: 10px;
-                padding-top: 12px;
-                border-top: 1px solid #e5e7eb;
-                font-size: 8pt;
-                color: #6b7280;
-                line-height: 1.8;
-                page-break-inside: avoid;
-              }
-              
-              .developer-info strong {
-                color: #1f2937;
-                font-weight: 600;
-              }
-              
-              /* Ensure all content is included */
-              body {
-                min-height: 100vh;
-              }
-              
-              /* Allow sections to break across pages if needed */
-              .section {
-                page-break-after: auto;
-              }
-              
-              .section.new-page {
-                page-break-before: always;
-                page-break-after: auto;
-              }
-              
-              @media print {
-                .section {
-                  page-break-inside: avoid;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <!-- Header -->
-            <div class="header">
-              <h1>MARS</h1>
-              <div class="subtitle">Multimodal AI Reflection System</div>
-              <div class="tagline">Discourse Analysis with Agentic AI</div>
-              <div class="date">Generated on ${genDate}</div>
-            </div>
-            
-            <!-- PDF Export Notice -->
-            <div class="pdf-export-notice">
-              <div class="pdf-export-notice-title">⚠️ PDF Export Feature Notice</div>
-              <div class="pdf-export-notice-text">
-                The PDF Export feature is still under development and not fully furnished. There may be issues with layout and not all content displayed on the webpage may be fully exported. Please use the direct printing option from your browser, or save the page as a full HTML page to preserve all analysis information.
-              </div>
-            </div>
-            
-            <!-- Overall Score -->
-            <div class="overall-score">
-              <div class="score">${overallScore}/10</div>
-              <div class="label">Overall Teaching Excellence Score</div>
-            </div>
-            
-            <!-- Category Scores -->
-            <div class="category-scores">
-              <div class="category-score">
-                <div class="score">${Math.round(results.speech_analysis?.score * 10) / 10}</div>
-                <div class="label">Speech Analysis</div>
-              </div>
-              <div class="category-score">
-                <div class="score">${Math.round(results.body_language?.score * 10) / 10}</div>
-                <div class="label">Body Language</div>
-              </div>
-              <div class="category-score">
-                <div class="score">${Math.round(results.teaching_effectiveness?.score * 10) / 10}</div>
-                <div class="label">Teaching Effectiveness</div>
-              </div>
-              <div class="category-score">
-                <div class="score">${Math.round((results.interaction_engagement?.score || 0) * 10) / 10}</div>
-                <div class="label">Interaction & Engagement</div>
-              </div>
-              <div class="category-score">
-                <div class="score">${Math.round(results.presentation_skills?.score * 10) / 10}</div>
-                <div class="label">Presentation Skills</div>
-              </div>
-            </div>
-            
-            <!-- Full Lecture Transcript -->
-            <div class="transcript-section new-page">
-              <div class="section-header">Full Lecture Transcript</div>
-              <div class="section-content">
-                ${results.full_transcript?.text ? `
-                  <div class="transcript-text">${results.full_transcript.text}</div>
-                ` : results.full_transcript?.timecoded_transcript && results.full_transcript.timecoded_transcript.length > 0 ? `
-                  <div class="transcript-text">
-                    ${results.full_transcript.timecoded_transcript.map(sentence => 
-                      `[${sentence.timestamp}] ${sentence.text}`
-                    ).join('\n\n')}
-                  </div>
-                ` : '<p>Transcript not available</p>'}
-                ${results.full_transcript?.word_count ? `
-                  <div style="margin-top: 12px; font-size: 9pt; color: #6b7280;">
-                    <strong>Total Words:</strong> ${results.full_transcript.word_count} | 
-                    <strong>Duration:</strong> ${results.full_transcript.duration_formatted || '00:00'}
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-            
-            <!-- Extracted Video Frames -->
-            ${results.sample_frames && results.sample_frames.length > 0 ? `
-            <div class="section new-page">
-              <div class="section-header">Extracted Video Frames</div>
-              <div class="section-content">
-                <div class="frame-gallery">
-                  ${results.sample_frames.slice(0, 3).map((frame, idx) => {
-                    const formatTimestamp = (seconds) => {
-                      const mins = Math.floor(seconds / 60);
-                      const secs = Math.floor(seconds % 60);
-                      return `${mins}:${secs.toString().padStart(2, '0')}`;
-                    };
-                    const timestamp = frame.timestamp || frame.start_time || 0;
-                    const imageSrc = frame.image || frame.frame_data || frame.image_data || '';
-                    return `
-                      <div class="frame-item">
-                        ${imageSrc ? `<img src="${imageSrc}" alt="Frame ${idx + 1}" />` : `<div style="width: 100%; height: 150px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b7280;">Frame ${idx + 1}</div>`}
-                        <div class="frame-timestamp">${formatTimestamp(timestamp)}</div>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
-                <p style="margin-top: 12px; font-size: 9pt; color: #6b7280; text-align: center;">
-                  ${results.sample_frames.length} frame${results.sample_frames.length !== 1 ? 's' : ''} extracted from video
-                </p>
-              </div>
-            </div>
-            ` : ''}
-            
-            <!-- 1. Speech Analysis -->
-            <div class="section new-page">
-              <div class="section-header">1. Speech Analysis</div>
-              <div class="section-content">
-                <div class="section-score">Score: ${Math.round(results.speech_analysis?.score * 10) / 10}/10</div>
-                ${results.speech_analysis?.explanations ? renderExplanations(results.speech_analysis.explanations) : ''}
-                ${results.speech_analysis?.raw_metrics ? `
-                  <div class="raw-metrics">
-                    ${results.speech_analysis.raw_metrics.total_words ? `
-                      <div class="raw-metric">
-                        <strong>Total Words</strong>
-                        <div class="value">${results.speech_analysis.raw_metrics.total_words}</div>
-                      </div>
-                    ` : ''}
-                    ${results.speech_analysis.raw_metrics.words_per_minute ? `
-                      <div class="raw-metric">
-                        <strong>Speaking Rate (WPM)</strong>
-                        <div class="value">${results.speech_analysis.raw_metrics.words_per_minute}</div>
-                      </div>
-                    ` : ''}
-                    ${results.speech_analysis.raw_metrics.filler_word_count !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Filler Words</strong>
-                        <div class="value">${results.speech_analysis.raw_metrics.filler_word_count} (${results.speech_analysis.raw_metrics.filler_ratio_percentage || 0}%)</div>
-                      </div>
-                    ` : ''}
-                    ${results.speech_analysis.raw_metrics.transcription_confidence !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Transcription Accuracy</strong>
-                        <div class="value">${results.speech_analysis.raw_metrics.transcription_confidence}%</div>
-                      </div>
-                    ` : ''}
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-            
-            <!-- Filler Words -->
-            ${results.speech_analysis?.filler_details && results.speech_analysis.filler_details.length > 0 ? `
-            <div class="section" style="margin-top: 12px;">
-              <div class="section-header" style="font-size: 12pt;">Filler Words Detected</div>
-              <div class="section-content">
-                <div class="filler-words-list">
-                  ${results.speech_analysis.filler_details.slice(0, 20).map(filler => `
-                    <div class="filler-word-item">
-                      <div class="filler-word">${filler.word}</div>
-                      <div class="filler-count">${filler.count} time${filler.count !== 1 ? 's' : ''}</div>
-                    </div>
-                  `).join('')}
-                </div>
-                ${results.speech_analysis.filler_details.length > 20 ? `
-                  <p style="margin-top: 12px; font-size: 9pt; color: #6b7280; text-align: center;">
-                    Showing top 20 filler words (${results.speech_analysis.filler_details.length} total detected)
-                  </p>
-                ` : ''}
-              </div>
-            </div>
-            ` : ''}
-            
-            <!-- 2. Body Language -->
-            <div class="section new-page">
-              <div class="section-header">2. Body Language</div>
-              <div class="section-content">
-                <div class="section-score">Score: ${Math.round(results.body_language?.score * 10) / 10}/10</div>
-                ${results.body_language?.remarks ? `
-                  <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
-                    <p style="margin: 0; color: #92400e; font-size: 9pt; line-height: 1.5; font-style: italic;">
-                      ⚠️ ${results.body_language.remarks}
-                    </p>
-                  </div>
-                ` : ''}
-                ${results.body_language?.explanations ? renderExplanations(results.body_language.explanations) : ''}
-                ${results.body_language?.raw_metrics ? `
-                  <div class="raw-metrics">
-                    ${results.body_language.raw_metrics.total_frames_extracted ? `
-                      <div class="raw-metric">
-                        <strong>Frames Analysed</strong>
-                        <div class="value">${results.body_language.raw_metrics.total_frames_extracted}</div>
-                      </div>
-                    ` : ''}
-                    ${results.body_language.raw_metrics.eye_contact_raw !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Eye Contact Score</strong>
-                        <div class="value">${results.body_language.raw_metrics.eye_contact_raw}/10</div>
-                      </div>
-                    ` : ''}
-                    ${results.body_language.raw_metrics.gestures_raw !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Gestures Score</strong>
-                        <div class="value">${results.body_language.raw_metrics.gestures_raw}/10</div>
-                      </div>
-                    ` : ''}
-                    ${results.body_language.raw_metrics.posture_raw !== undefined ? `
-                      <div class="raw-metric">
-                        <strong>Posture Score</strong>
-                        <div class="value">${results.body_language.raw_metrics.posture_raw}/10</div>
-                      </div>
-                    ` : ''}
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-            
-            <!-- 3. Teaching Effectiveness -->
-            <div class="section new-page">
-              <div class="section-header">3. Teaching Effectiveness</div>
-              <div class="section-content">
-                <div class="section-score">Score: ${Math.round(results.teaching_effectiveness?.score * 10) / 10}/10</div>
-                ${results.teaching_effectiveness?.explanations ? renderExplanations(results.teaching_effectiveness.explanations) : ''}
-              </div>
-            </div>
-            
-            <!-- 4. Interaction & Engagement -->
-            <div class="section new-page">
-              <div class="section-header">4. Interaction & Engagement</div>
-              <div class="section-content">
-                <div class="section-score">Score: ${Math.round((results.interaction_engagement?.score || 0) * 10) / 10}/10</div>
-                
-                <!-- Key Metrics Grid -->
-                <div class="raw-metrics" style="margin-top: 12px; margin-bottom: 16px;">
-                  ${results.interaction_engagement?.total_questions !== undefined ? `
-                    <div class="raw-metric">
-                      <strong>Total Questions</strong>
-                      <div class="value">${results.interaction_engagement.total_questions}</div>
-                    </div>
-                  ` : results.interaction_engagement?.raw_metrics?.total_questions !== undefined ? `
-                    <div class="raw-metric">
-                      <strong>Total Questions</strong>
-                      <div class="value">${results.interaction_engagement.raw_metrics.total_questions}</div>
-                    </div>
-                  ` : ''}
-                  ${results.interaction_engagement?.interaction_frequency_pct != null ? `
-                    <div class="raw-metric">
-                      <strong>Interaction Frequency</strong>
-                      <div class="value">${results.interaction_engagement.interaction_frequency_pct}%</div>
-                    </div>
-                  ` : results.interaction_engagement?.interaction_frequency !== undefined ? `
-                    <div class="raw-metric">
-                      <strong>Interaction Frequency</strong>
-                      <div class="value">${results.interaction_engagement.interaction_frequency}/10</div>
-                    </div>
-                  ` : ''}
-                  ${results.interaction_engagement?.question_quality_pct != null ? `
-                    <div class="raw-metric">
-                      <strong>Question Quality</strong>
-                      <div class="value">${results.interaction_engagement.question_quality_pct}%</div>
-                    </div>
-                  ` : results.interaction_engagement?.question_quality !== undefined ? `
-                    <div class="raw-metric">
-                      <strong>Question Quality</strong>
-                      <div class="value">${results.interaction_engagement.question_quality}/10</div>
-                    </div>
-                  ` : ''}
-                  ${results.interaction_engagement?.student_uptake_index_pct != null ? `
-                    <div class="raw-metric">
-                      <strong>Student Uptake Index (SUI)</strong>
-                      <div class="value">${results.interaction_engagement.student_uptake_index_pct}%</div>
-                    </div>
-                  ` : ''}
-                  ${results.interaction_engagement?.question_distribution_stability_pct != null ? `
-                    <div class="raw-metric">
-                      <strong>Question Distribution Stability (QDS)</strong>
-                      <div class="value">${results.interaction_engagement.question_distribution_stability_pct}%</div>
-                    </div>
-                  ` : ''}
-                  ${results.interaction_engagement?.overall_interaction_pct != null ? `
-                    <div class="raw-metric">
-                      <strong>Overall (20% category)</strong>
-                      <div class="value">${results.interaction_engagement.overall_interaction_pct}%</div>
-                    </div>
-                  ` : ''}
-                  ${results.interaction_engagement?.cognitive_level ? `
-                    <div class="raw-metric">
-                      <strong>Cognitive Level</strong>
-                      <div class="value">${results.interaction_engagement.cognitive_level}</div>
-                    </div>
-                  ` : ''}
-                </div>
-                
-                <!-- Metric Explanations -->
-                ${results.interaction_engagement?.explanations ? renderExplanations(results.interaction_engagement.explanations) : ''}
-                
-                <!-- High-Level Questions -->
-                ${results.interaction_engagement?.high_level_questions && results.interaction_engagement.high_level_questions.length > 0 ? `
-                  <div class="questions-list">
-                    <h3 style="font-size: 12pt; color: #003D7C; margin-top: 20px; margin-bottom: 12px; font-weight: 700;">💡 High-Level Questions Detected</h3>
-                    ${results.interaction_engagement.high_level_questions.map((question, idx) => {
-                      const questionText = question.question || question.text || '';
-                      const timestamp = question.precise_timestamp || question.timestamp || question.approx_time || '';
-                      const questionType = question.type || 'High-Level Question';
-                      return `
-                        <div class="question-item">
-                          <div class="question-text" style="font-size: 10pt; margin-bottom: 6px;">
-                            ${idx + 1}. "${questionText}"
-                          </div>
-                          <div class="question-meta" style="font-size: 8pt;">
-                            ${timestamp ? `<span style="background: #EF7C00; color: white; padding: 2px 8px; border-radius: 8px; margin-right: 8px;">⏱️ ${timestamp}</span>` : ''}
-                            ${questionType ? `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 8px;">📋 ${questionType}</span>` : ''}
-                            ${question.cognitive_level ? `<span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 8px; margin-left: 8px;">🧠 ${question.cognitive_level}</span>` : ''}
-                          </div>
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                ` : ''}
-                
-                <!-- Interaction Moments -->
-                ${results.interaction_engagement?.interaction_moments && results.interaction_engagement.interaction_moments.length > 0 ? `
-                  <div class="questions-list" style="margin-top: 20px;">
-                    <h3 style="font-size: 12pt; color: #003D7C; margin-top: 20px; margin-bottom: 12px; font-weight: 700;">👥 Student Interaction Moments</h3>
-                    ${results.interaction_engagement.interaction_moments.map((moment, idx) => {
-                      const momentText = moment.moment || moment.text || '';
-                      const timestamp = moment.precise_timestamp || moment.timestamp || moment.approx_time || '';
-                      const momentType = moment.type || 'Interaction';
-                      return `
-                        <div class="question-item" style="background: #f0fdf4; border-left-color: #22c55e;">
-                          <div class="question-text" style="font-size: 10pt; margin-bottom: 6px;">
-                            ${idx + 1}. ${momentText}
-                          </div>
-                          <div class="question-meta" style="font-size: 8pt;">
-                            ${timestamp ? `<span style="background: #22c55e; color: white; padding: 2px 8px; border-radius: 8px; margin-right: 8px;">⏱️ ${timestamp}</span>` : ''}
-                            ${momentType ? `<span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 8px;">📋 ${momentType}</span>` : ''}
-                          </div>
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-            
-            <!-- 5. Presentation Skills -->
-            <div class="section new-page">
-              <div class="section-header">5. Presentation Skills</div>
-              <div class="section-content">
-                <div class="section-score">Score: ${Math.round(results.presentation_skills?.score * 10) / 10}/10</div>
-                ${results.presentation_skills?.explanations ? renderExplanations(results.presentation_skills.explanations) : ''}
-              </div>
-            </div>
-            
-            <!-- Summary Section -->
-            <div class="section new-page">
-              <div class="section-header">Summary</div>
-              <div class="section-content">
-                <!-- Personalized Feedback -->
-                <div style="margin-bottom: 20px;">
-                  <h3 style="font-size: 12pt; color: #003D7C; margin-bottom: 12px; font-weight: 700;">Personalised Feedback</h3>
-                  <p style="font-size: 10pt; line-height: 1.8; color: #374151; text-align: justify;">
-                    ${pdfSummary.personalized_feedback || `This lecture achieved an overall score of ${Math.round(results.overall_score * 10) / 10}/10. The instructor demonstrated effective teaching techniques with ${results.interaction_engagement?.total_questions || 0} questions asked throughout the session, promoting analytical thinking and student engagement.`}
-                  </p>
-                </div>
-                
-                <!-- Strongest Strength -->
-                ${pdfSummary.strongest_strength ? `
-                <div style="margin-bottom: 20px; padding: 12px; background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px;">
-                  <h3 style="font-size: 12pt; color: #166534; margin-bottom: 8px; font-weight: 700;">✅ Strongest Strength: ${pdfSummary.strongest_strength.title || 'Key Strength'}</h3>
-                  <p style="font-size: 10pt; line-height: 1.8; color: #374151; margin-bottom: 8px;">
-                    ${pdfSummary.strongest_strength.description || ''}
-                  </p>
-                  ${pdfSummary.strongest_strength.evidence ? `
-                    <div style="font-size: 9pt; color: #166534; font-style: italic; padding: 8px; background: white; border-radius: 4px; margin-top: 8px;">
-                      <strong>Evidence:</strong> ${pdfSummary.strongest_strength.evidence}
-                    </div>
-                  ` : ''}
-                </div>
-                ` : ''}
-                
-                <!-- Areas for Improvement -->
-                ${pdfSummary.improvements && pdfSummary.improvements.length > 0 ? `
-                <div style="margin-bottom: 20px;">
-                  <h3 style="font-size: 12pt; color: #003D7C; margin-bottom: 12px; font-weight: 700;">📈 Areas for Improvement</h3>
-                  ${pdfSummary.improvements.map((improvement, idx) => `
-                    <div style="margin-bottom: 12px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
-                      <h4 style="font-size: 11pt; color: #92400e; margin-bottom: 6px; font-weight: 600;">${idx + 1}. ${improvement.area || 'Improvement Area'}</h4>
-                      <p style="font-size: 10pt; line-height: 1.8; color: #374151; margin-bottom: 6px;">
-                        ${improvement.description || ''}
-                      </p>
-                      ${improvement.evidence ? `
-                        <div style="font-size: 9pt; color: #92400e; font-style: italic; padding: 6px; background: white; border-radius: 4px; margin-top: 6px;">
-                          <strong>Based on:</strong> ${improvement.evidence}
-                        </div>
-                      ` : ''}
-                    </div>
-                  `).join('')}
-                </div>
-                ` : ''}
-              </div>
-            </div>
-            
-            <!-- Footer Section with Disclaimer and Developer Info -->
-            <div style="margin-top: 30px; page-break-inside: avoid;">
-              <!-- Disclaimer -->
-              <div class="disclaimer">
-                <div class="disclaimer-title">Disclaimer</div>
-                <div class="disclaimer-text">
-                  These results are generated by AI using curated algorithms and may not be accurate. The results may not fully reflect the pedagogical impact. For a more comprehensive consultation, please contact CTLT.
-                </div>
-              </div>
-              
-              <!-- Footer -->
-              <div class="footer">
-                <p>This report is generated by MARS (Multimodal AI Reflection System) with curated algorithms.</p>
-                <p>An AI Media Tool by CTLT</p>
-              </div>
-              
-              <!-- Developer Information -->
-              <div class="developer-info">
-                <div style="margin-bottom: 0.5rem;">
-                  Developed by <strong>Tan Teong Jin, Prakash S/O Perumal Haridas, Maria Goh</strong>.
-                </div>
-                <div style="margin-bottom: 0.5rem;">
-                  Guided by <strong>Tan Sie Wee</strong>.
-                </div>
-                <div>
-                  In collaboration with <strong>Mark Gan</strong>.
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-      };
-
-      // Generate PDF summary first
-      const pdfSummary = await generatePDFSummary();
-      
-      // Generate HTML content with summary
-      const fullHTML = generatePDFContent(pdfSummary);
-      
-      // Debug: Log HTML length to verify it's generated
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Generated HTML length:', fullHTML.length);
-        console.log('Generated HTML preview:', fullHTML.substring(0, 500));
-      }
-      
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(fullHTML, 'text/html');
-      
-      // Verify parsing was successful
-      const parserError = doc.querySelector('parsererror');
-      if (parserError) {
-        console.error('HTML parsing error:', parserError.textContent);
-        throw new Error('Failed to parse HTML content: ' + parserError.textContent);
-      }
-      
-      // Get the body content and styles
-      const bodyContent = doc.body;
-      const styles = doc.head.querySelectorAll('style');
-      
-      if (!bodyContent || bodyContent.children.length === 0) {
-        console.error('Body content is empty or has no children');
-        throw new Error('PDF HTML body is empty');
-      }
-      
-      // Create a temporary container for PDF content
-      const pdfWrapper = document.createElement('div');
-      pdfWrapper.id = 'pdf-export-wrapper';
-      pdfWrapper.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 210mm;
-        min-height: 100vh;
-        background: white;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        padding: 20mm;
-        z-index: 999999;
-        overflow: auto;
-      `;
-      
-      // Create a style element and append all styles
-      const styleElement = document.createElement('style');
-      styles.forEach(style => {
-        styleElement.textContent += style.textContent;
-      });
-      pdfWrapper.appendChild(styleElement);
-      
-      // Clone and append body children
-      const bodyChildren = Array.from(bodyContent.children);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Body children count:', bodyChildren.length);
-      }
-      
-      bodyChildren.forEach((child, idx) => {
-        const cloned = child.cloneNode(true);
-        pdfWrapper.appendChild(cloned);
-        if (process.env.NODE_ENV === 'development' && idx < 3) {
-          console.log(`Appended child ${idx}:`, cloned.tagName, cloned.className || cloned.id);
-        }
-      });
-      
-      // Append to document (will briefly overlay, but that's okay)
-      document.body.appendChild(pdfWrapper);
-      
-      // Force a reflow to ensure rendering
-      void pdfWrapper.offsetHeight;
-      
-      // Wait for fonts and rendering
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Verify content exists
-      const contentElements = pdfWrapper.querySelectorAll('.header, .overall-score, .section');
-      const allChildren = pdfWrapper.querySelectorAll('*');
-      const sections = pdfWrapper.querySelectorAll('.section');
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('PDF wrapper children count:', pdfWrapper.children.length);
-        console.log('PDF wrapper total elements:', allChildren.length);
-        console.log('PDF wrapper content elements:', contentElements.length);
-        console.log('PDF sections found:', sections.length);
-        console.log('Section details:', Array.from(sections).map(s => s.querySelector('.section-header')?.textContent || 'No header'));
-      }
-      
-      if (contentElements.length === 0 && pdfWrapper.children.length === 0) {
-        console.error('PDF content verification failed. Elements found:', pdfWrapper.children.length);
-        document.body.removeChild(pdfWrapper);
-        throw new Error('PDF content is empty or not properly rendered');
-      }
-      
-      // Make sure wrapper has content and is visible
-      if (pdfWrapper.scrollHeight === 0) {
-        console.error('PDF wrapper has zero height');
-        document.body.removeChild(pdfWrapper);
-        throw new Error('PDF content has zero height');
-      }
-      
-      // Log wrapper dimensions for debugging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('PDF wrapper dimensions:', {
-          width: pdfWrapper.scrollWidth,
-          height: pdfWrapper.scrollHeight,
-          offsetWidth: pdfWrapper.offsetWidth,
-          offsetHeight: pdfWrapper.offsetHeight
-        });
-        console.log('Expected sections: 5 (Speech, Body Language, Teaching Effectiveness, Interaction & Engagement, Presentation Skills)');
-        console.log('Found sections:', sections.length);
-      }
-      
-      // Ensure we wait a bit more for all content to render
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Configure html2pdf options
-      const opt = {
-        margin: [15, 15, 15, 15],
-        filename: `MARS-analysis-report-${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          logging: process.env.NODE_ENV === 'development', // Only log in dev
-          letterRendering: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          width: pdfWrapper.scrollWidth || 794, // A4 width in pixels at 96 DPI
-          height: pdfWrapper.scrollHeight || 1123, // A4 height in pixels - will auto-extend
-          windowWidth: pdfWrapper.scrollWidth || window.innerWidth,
-          windowHeight: pdfWrapper.scrollHeight || window.innerHeight,
-          scrollY: 0,
-          scrollX: 0
-        },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait',
-          compress: true
-        },
-        pagebreak: { 
-          mode: ['css', 'legacy'],
-          avoid: ['.pdf-export-notice', '.disclaimer', '.footer', '.developer-info'],
-          before: '.section.new-page',
-          after: []
-        }
-      };
-      
-      // Generate PDF from the content
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Starting PDF generation with options:', opt);
-      }
-      
-      try {
-        await html2pdf().set(opt).from(pdfWrapper).save();
-        if (process.env.NODE_ENV === 'development') {
-          console.log('PDF generation completed successfully');
-        }
-      } catch (pdfError) {
-        console.error('html2pdf error:', pdfError);
-        throw new Error(`PDF generation failed: ${pdfError.message}`);
-      }
-      
-      // Clean up
-      document.body.removeChild(pdfWrapper);
-
-    } catch (error) {
-      console.error('PDF generation failed:', error);
-      alert(`PDF export failed: ${error.message}. Please try again.`);
-    } finally {
-      setIsGeneratingPDF(false);
+  const exportTranscriptAndQuestions = () => {
+    if (!results) return;
+    const transcript = (results.full_transcript?.text || '').trim();
+    const timecoded = results.full_transcript?.timecoded_words;
+    const lines = [];
+    lines.push('MARS — Transcript and instructor questions export');
+    lines.push(`Exported: ${new Date().toLocaleString('en-SG')}`);
+    lines.push('');
+    lines.push('=== LECTURE CONTEXT & SUPPLEMENTARY INFORMATION (as submitted) ===');
+    lines.push((results.lecture_context || '').trim() || '(none provided)');
+    lines.push('');
+    lines.push('=== FULL TRANSCRIPT ===');
+    if (transcript) {
+      lines.push(transcript);
+    } else if (timecoded && timecoded.length > 0) {
+      lines.push(
+        timecoded.map((w) => w.word || '').join(' ').replace(/\s+([.,!?;:])/g, '$1')
+      );
+    } else {
+      lines.push('(transcript not available in plain text)');
     }
+    lines.push('');
+    lines.push('=== INSTRUCTOR QUESTIONS AND CLI (ICAP) ===');
+    const qs = results.interaction_engagement?.all_questions || [];
+    if (qs.length === 0) {
+      lines.push(`(no questions detected; total_questions=${results.interaction_engagement?.total_questions ?? 0})`);
+    } else {
+      qs.forEach((q, idx) => {
+        const t = q.precise_timestamp || q.timestamp || '';
+        const icap = q.icap || '—';
+        const qt = (q.question || q.text || '').replace(/\r?\n/g, ' ');
+        lines.push(`${idx + 1}\t${t}\t${icap}\t${qt}`);
+      });
+      lines.push('');
+      lines.push('(Tab-separated: index, time, CLI/ICAP, question text)');
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mars-transcript-questions-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  // Export exactly what user sees in results panel (excluding app background)
+  // PDF: export of the on-screen results view (html2pdf)
   const exportFullAnalysisView = async () => {
     if (!resultsContainerRef.current) return;
     try {
@@ -2438,6 +1350,70 @@ function App() {
     if (s >= 5.5) return `Moderate performance (${s.toFixed(1)}/10): mixed evidence; improvement needed for consistency.`;
     if (s >= 4.0) return `Below target (${s.toFixed(1)}/10): multiple weaknesses reduced this score.`;
     return `Low performance (${s.toFixed(1)}/10): substantial gaps in this criterion.`;
+  };
+
+  const secToClock = (s) => {
+    const n = Number(s);
+    if (Number.isNaN(n) || n < 0) return '—';
+    const m = Math.floor(n / 60);
+    const sec = Math.floor(n % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const getWhyContent = (key, score, r) => {
+    const ev = r?.mars_rubric?.content_criteria_evidence?.[key];
+    if (ev && String(ev).trim()) return ev;
+    return getQuantitativeReason(score);
+  };
+
+  const getWhyDelivery = (key, score, r) => {
+    const ev = r?.mars_rubric?.delivery_criteria_evidence?.[key];
+    if (ev && String(ev).trim()) return ev;
+    return getQuantitativeReason(score);
+  };
+
+  const buildEngagementWhy = (rowKey, score, r) => {
+    const ie = r?.interaction_engagement || {};
+    const dm = Number(ie.duration_minutes ?? r.speech_analysis?.raw_metrics?.duration_minutes ?? r.speech_analysis?.duration_minutes ?? 1) || 1;
+    const s = Number(score);
+    const band = Number.isNaN(s) ? '' : getQuantitativeReason(s);
+    if (rowKey === 'question_density') {
+      const n = ie.total_questions ?? 0;
+      const qpm = ie.questions_per_minute != null ? ie.questions_per_minute : (n / dm);
+      return `Evidence: ${n} instructor question(s) detected (~${Number(qpm).toFixed(2)} per minute over ~${dm.toFixed(1)} min). ${band}`;
+    }
+    if (rowKey === 'cli_block') {
+      const ic = ie.icap_counts || {};
+      return `Evidence: ICAP counts — Passive ${ic.passive ?? 0}, Active ${ic.active ?? 0}, Constructive ${ic.constructive ?? 0}, Interactive ${ic.interactive ?? 0}. CLI score reflects the mix of deeper question types. ${band}`;
+    }
+    if (rowKey === 'sui') {
+      const eqd = ie.eqd_per_minute ?? 0;
+      const aq = ie.audience_questions || [];
+      const nAud = ie.audience_question_count ?? aq.length;
+      let t = `Evidence: Instructor Constructive+Interactive rate ≈ ${Number(eqd).toFixed(3)} per minute (feeds the SUI formula). `;
+      if (nAud > 0 && aq.length) {
+        t += `Student/audience questions flagged (${nAud}): ${aq.slice(0, 4).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 140)}"`).join('; ')}${aq.length > 4 ? '…' : ''}. `;
+      } else {
+        t += `${ie.student_feedback_remarks || 'Often no separate audience audio on webcasts; student questions may be absent or unclear.'} `;
+      }
+      return `${t}${band}`;
+    }
+    if (rowKey === 'qds') {
+      const n = ie.total_questions ?? 0;
+      return `Evidence: QDS measures how evenly questions fall across the timeline (entropy across bins; needs ≥2 questions). Total instructor questions: ${n}. ${band}`;
+    }
+    if (rowKey === 'learner_feedback') {
+      const sf = Number(ie.student_question_frequency_score ?? 0).toFixed(1);
+      const sc = Number(ie.student_question_cognitive_score ?? 0).toFixed(1);
+      const conf = ie.student_feedback_confidence || 'none';
+      const aq = ie.audience_questions || [];
+      let t = `Evidence: Learner question frequency ${sf}/10; cognitive depth ${sc}/10; detector confidence ${conf}. ${ie.student_feedback_remarks || ''} `;
+      if (aq.length) {
+        t += `Listed audience/student questions: ${aq.slice(0, 5).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 120)}"`).join('; ')}.`;
+      }
+      return t.trim();
+    }
+    return band;
   };
 
   return (
@@ -2675,7 +1651,7 @@ function App() {
         {/* Upload Section */}
         {!analysisId && analysisStatus?.status === 'idle' && !results && (
           <div className="upload-container">
-            {/* Passkey Input */}
+            {/* Passcode — verify once per session before upload */}
             {!isPasskeyValid && (
               <div style={{
                 background: 'rgba(255, 255, 255, 0.05)',
@@ -2684,7 +1660,7 @@ function App() {
                 borderRadius: '16px',
                 padding: '2rem',
                 marginBottom: '2rem',
-                maxWidth: '500px',
+                maxWidth: '700px',
                 margin: '0 auto 2rem auto'
               }}>
                 <h3 style={{
@@ -2694,7 +1670,7 @@ function App() {
                   fontWeight: '600',
                   textAlign: 'center'
                 }}>
-                  🔐 Enter Passkey
+                  Enter passcode
                 </h3>
                 <div style={{ marginBottom: '1rem' }}>
                   <input
@@ -2709,7 +1685,7 @@ function App() {
                         validatePasskey();
                       }
                     }}
-                    placeholder="Enter passkey to continue"
+                    placeholder="Enter passcode"
                     style={{
                       width: '100%',
                       padding: '12px 16px',
@@ -2752,7 +1728,7 @@ function App() {
                     transition: 'all 0.3s'
                   }}
                 >
-                  Verify Passkey
+                  Continue
                 </button>
               </div>
             )}
@@ -2787,7 +1763,8 @@ function App() {
               <div
                 style={{
                   marginTop: '1.25rem',
-                  maxWidth: '640px',
+                  maxWidth: '700px',
+                  width: '100%',
                   marginLeft: 'auto',
                   marginRight: 'auto',
                   textAlign: 'left',
@@ -2799,17 +1776,18 @@ function App() {
                     display: 'block',
                     fontSize: '0.95rem',
                     fontWeight: 600,
-                    color: 'var(--gray-800)',
+                    color: '#ffffff',
                     marginBottom: '0.5rem',
                   }}
                 >
-                  Lecture context <span style={{ fontWeight: 400, color: 'var(--gray-500)' }}>(optional)</span>
+                  Lecture Context &amp; Supplementary Information{' '}
+                  <span style={{ fontWeight: 400, color: 'rgba(255, 255, 255, 0.75)' }}>(optional)</span>
                 </label>
                 <textarea
                   id="lecture-context-input"
                   value={lectureContext}
                   onChange={(e) => setLectureContext(e.target.value)}
-                  placeholder="e.g. Subject: Biology. Topic: Cell division. Intended learning outcomes: students explain mitosis vs meiosis; apply terminology to diagrams…"
+                  placeholder="Optional: course name, module/week, topic, audience level, and learning outcomes. This helps the model interpret discipline-specific language and align scores with your teaching intent."
                   rows={5}
                   style={{
                     width: '100%',
@@ -2818,7 +1796,7 @@ function App() {
                     fontSize: '0.95rem',
                     lineHeight: 1.5,
                     borderRadius: '8px',
-                    border: '1px solid var(--gray-300)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
                     background: 'rgba(255, 255, 255, 0.08)',
                     color: 'white',
                     resize: 'vertical',
@@ -2829,11 +1807,11 @@ function App() {
                   style={{
                     marginTop: '0.5rem',
                     fontSize: '0.8rem',
-                    color: 'var(--gray-500)',
-                    lineHeight: 1.4,
+                    color: 'rgba(255, 255, 255, 0.72)',
+                    lineHeight: 1.45,
                   }}
                 >
-                  Describe what the session is about, the subject, and intended learning outcomes. This text is sent with your video so the analysis can use it for context-aware scoring (detailed rubric to follow).
+                  Anything you add here is sent with the recording to the analyser only. It does not change the video; it gives the system extra context so content-related scoring can match your module and goals more fairly.
                 </p>
               </div>
             )}
@@ -3168,37 +2146,16 @@ function App() {
             <div className="results-header">
               <CheckCircle size={32} style={{ color: 'var(--success-500)' }} />
               <h2 className="results-title">Enhanced Analysis Complete</h2>
-              <div className="results-actions">
-                <button 
-                  onClick={exportToPDF} 
-                  className={`export-button ${isGeneratingPDF ? 'pdf-generating' : ''}`}
-                  disabled={isGeneratingPDF}
-                >
-                  {isGeneratingPDF ? (
-                    <>
-                      <div className="spinner"></div>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={16} />
-                      Export PDF
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
 
             {/* Overall Score */}
             <div className="overall-score">
               <div className="score-display">
                 <div className="score-number">{Math.round(results.overall_score * 10) / 10}/10</div>
-                <div className="score-label">Teaching Excellence Score</div>
-                {results.mars_rubric && (
-                  <div style={{ marginTop: '0.65rem', fontSize: '0.9rem', color: 'var(--gray-700)' }}>
-                    Content {results.mars_rubric.content_score ?? '-'} + Delivery {results.mars_rubric.delivery_score ?? '-'} + Engagement {results.mars_rubric.engagement_score ?? '-'} weighted by 20/40/40
-                  </div>
-                )}
+                <div className="score-label">MARS Evaluated Final Score</div>
+                <div style={{ marginTop: '0.65rem', fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.65)', maxWidth: '42rem', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.45 }}>
+                  The scoring is interpreted based on the webcast lecture recording through a collective algorithm with LLM and may not fully reflect pedagogical impact in teaching and learning.
+                </div>
               </div>
             </div>
 
@@ -3225,6 +2182,29 @@ function App() {
                   = {results.calculation_breakdown?.final_calculation?.result}/10
                 </div>
               </div>
+            </div>
+
+            {/* Submitted lecture context (mirrors upload form) */}
+            <div style={{
+              marginTop: '1rem',
+              padding: '1.25rem 1.5rem',
+              background: 'white',
+              borderRadius: '12px',
+              border: '1px solid var(--gray-200)',
+              textAlign: 'left',
+            }}>
+              <h4 style={{ color: 'var(--nus-blue)', marginBottom: '0.75rem', fontSize: '1.05rem' }}>
+                Lecture Context &amp; Supplementary Information
+              </h4>
+              {(results.lecture_context && String(results.lecture_context).trim()) ? (
+                <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#1f2937', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                  {String(results.lecture_context).trim()}
+                </p>
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--gray-600)', fontStyle: 'italic' }}>
+                  No supplementary context was submitted for this recording.
+                </p>
+              )}
             </div>
 
             {/* MARS-only top scores */}
@@ -3538,6 +2518,41 @@ function App() {
                 <div><strong>Frames Analysed:</strong> {results.configuration_used?.frames_analyzed || 0}</div>
               </div>
 
+              {results.interaction_engagement && (
+                <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid var(--gray-200)' }}>
+                  <h4 style={{ margin: '0 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1rem' }}>Instructor questions &amp; CLI</h4>
+                  <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--gray-700)' }}>
+                    Total questions detected: <strong>{results.interaction_engagement.total_questions ?? 0}</strong>
+                  </p>
+                  {(results.interaction_engagement.all_questions || []).length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--gray-300)' }}>
+                            <th style={{ padding: '0.35rem 0.5rem' }}>#</th>
+                            <th style={{ padding: '0.35rem 0.5rem' }}>Time</th>
+                            <th style={{ padding: '0.35rem 0.5rem' }}>CLI (ICAP)</th>
+                            <th style={{ padding: '0.35rem 0.5rem' }}>Question</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(results.interaction_engagement.all_questions || []).map((q, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                              <td style={{ padding: '0.35rem 0.5rem', verticalAlign: 'top' }}>{idx + 1}</td>
+                              <td style={{ padding: '0.35rem 0.5rem', verticalAlign: 'top', whiteSpace: 'nowrap' }}>{q.precise_timestamp || secToClock(q.start_time)}</td>
+                              <td style={{ padding: '0.35rem 0.5rem', verticalAlign: 'top' }}>{q.icap || '—'}</td>
+                              <td style={{ padding: '0.35rem 0.5rem', verticalAlign: 'top' }}>{q.question}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--gray-600)', fontStyle: 'italic' }}>No instructor questions ending with &quot;?&quot; were matched in the transcript.</p>
+                  )}
+                </div>
+              )}
+
               <div style={{ 
                 maxHeight: '400px', 
                 overflowY: 'auto', 
@@ -3771,84 +2786,114 @@ function App() {
                   </div>
                 </div>
 
-                <h4 style={{ margin: '1rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Content criteria</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {MARS_CONTENT_CRITERIA.map((row) => {
-                    const v = results.mars_rubric.content_criteria?.[row.key] ?? results.teaching_effectiveness?.mars_content_criteria?.[row.key];
-                    return (
-                      <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
-                        <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label} {v != null && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({v}/10)</span>}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup} · {row.weightInSubgroup}</div>
-                        <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
-                        {v != null && (
-                          <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
-                            <strong>Why this score:</strong> {getQuantitativeReason(v)}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <h4 style={{ margin: '1rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {MARS_CONTENT_MAIN.code} — {MARS_CONTENT_MAIN.title}
+                </h4>
+                {MARS_CONTENT_SECTIONS.map((sec) => (
+                  <div key={sec.code} style={{ marginBottom: '1.15rem' }}>
+                    <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', fontSize: '0.98rem' }}>
+                      {sec.code} {sec.title}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {sec.criteriaKeys.map((ck) => {
+                        const row = MARS_CONTENT_CRITERIA.find((r) => r.key === ck);
+                        if (!row) return null;
+                        const v = results.mars_rubric.content_criteria?.[row.key] ?? results.teaching_effectiveness?.mars_content_criteria?.[row.key];
+                        return (
+                          <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
+                            <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
+                              {sec.code}.{sec.criteriaKeys.indexOf(ck) + 1} {row.label} {v != null && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({v}/10)</span>}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.weightInSubgroup}</div>
+                            <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
+                            <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
+                            {v != null && (
+                              <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
+                                <strong>Why this score:</strong> {getWhyContent(row.key, v, results)}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
 
-                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Delivery</h4>
+                <h4 style={{ margin: '1.35rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {MARS_DELIVERY_MAIN.code} — {MARS_DELIVERY_MAIN.title}
+                </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {MARS_DELIVERY_CRITERIA.map((row) => (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
-                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>{row.label}</div>
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
+                        {row.key === 'speech' ? '2.1' : '2.2'} {row.label}
+                        {row.key === 'speech' && results.speech_analysis?.score != null && (
+                          <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({results.speech_analysis.score}/10)</span>
+                        )}
+                        {row.key === 'body' && results.body_language?.score != null && (
+                          <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({results.body_language.score}/10)</span>
+                        )}
+                      </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
+
+                      {row.key === 'speech' && (
+                        <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative speech metrics (50% of Delivery)</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
+                            <div><strong>Speaking rate:</strong> {results.speech_analysis?.raw_metrics?.words_per_minute ?? 0} WPM</div>
+                            <div><strong>Filler ratio:</strong> {results.speech_analysis?.raw_metrics?.filler_ratio_percentage ?? 0}%</div>
+                            <div><strong>Voice variety:</strong> {results.speech_analysis?.raw_metrics?.voice_variety_index ?? 0}</div>
+                            <div><strong>Pause effectiveness:</strong> {results.speech_analysis?.raw_metrics?.pause_effectiveness_index ?? 0}</div>
+                            <div><strong>Transcription confidence:</strong> {results.speech_analysis?.raw_metrics?.transcription_confidence ?? 0}%</div>
+                          </div>
+                          {results.detailed_insights?.filler_word_analysis?.length > 0 && (
+                            <div style={{ marginTop: '0.75rem', fontSize: '0.88rem' }}>
+                              <strong>Filler words detected:</strong>{' '}
+                              {results.detailed_insights.filler_word_analysis.slice(0, 10).map((f, i) => `${i ? ', ' : ''}"${f.word}" (${f.count}x)`)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {row.key === 'body' && (
+                        <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative body language metrics (50% of Delivery)</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
+                            <div><strong>Eye contact:</strong> {results.body_language?.raw_metrics?.eye_contact_raw ?? 0}/10</div>
+                            <div><strong>Gestures:</strong> {results.body_language?.raw_metrics?.gestures_raw ?? 0}/10</div>
+                            <div><strong>Posture:</strong> {results.body_language?.raw_metrics?.posture_raw ?? 0}/10</div>
+                            <div><strong>Facial engagement:</strong> {results.body_language?.raw_metrics?.engagement_raw ?? 0}/10</div>
+                            <div><strong>Professionalism:</strong> {results.body_language?.raw_metrics?.professionalism_raw ?? 0}/10</div>
+                          </div>
+                          {results.body_language?.remarks && (
+                            <p style={{ margin: '0.75rem 0 0', color: '#92400e', fontStyle: 'italic', fontSize: '0.88rem' }}>
+                              ⚠️ {results.body_language.remarks}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
                       <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
                       {row.key === 'speech' && results.speech_analysis?.score != null && (
                         <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
-                          <strong>Why this score:</strong> {getQuantitativeReason(results.speech_analysis.score)}
+                          <strong>Why this score:</strong> {getWhyDelivery('speech', results.speech_analysis.score, results)}
                         </p>
                       )}
                       {row.key === 'body' && results.body_language?.score != null && (
                         <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
-                          <strong>Why this score:</strong> {getQuantitativeReason(results.body_language.score)}
+                          <strong>Why this score:</strong> {getWhyDelivery('body', results.body_language.score, results)}
                         </p>
                       )}
                     </div>
                   ))}
                 </div>
 
-                {/* Delivery details merged from legacy speech/body sections */}
-                <div style={{ marginTop: '0.75rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '10px' }}>
-                  <h5 style={{ margin: '0 0 0.6rem', color: 'var(--nus-blue)' }}>Speech Analysis (quantitative details)</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
-                    <div><strong>Speaking rate:</strong> {results.speech_analysis?.raw_metrics?.words_per_minute ?? 0} WPM</div>
-                    <div><strong>Filler ratio:</strong> {results.speech_analysis?.raw_metrics?.filler_ratio_percentage ?? 0}%</div>
-                    <div><strong>Voice variety:</strong> {results.speech_analysis?.raw_metrics?.voice_variety_index ?? 0}</div>
-                    <div><strong>Pause effectiveness:</strong> {results.speech_analysis?.raw_metrics?.pause_effectiveness_index ?? 0}</div>
-                    <div><strong>Transcription confidence:</strong> {results.speech_analysis?.raw_metrics?.transcription_confidence ?? 0}%</div>
-                  </div>
-                  {results.detailed_insights?.filler_word_analysis?.length > 0 && (
-                    <div style={{ marginTop: '0.75rem', fontSize: '0.88rem' }}>
-                      <strong>Filler words detected:</strong>{' '}
-                      {results.detailed_insights.filler_word_analysis.slice(0, 10).map((f, i) => `${i ? ', ' : ''}"${f.word}" (${f.count}x)`)}
-                    </div>
-                  )}
-                </div>
-                <div style={{ marginTop: '0.75rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '10px' }}>
-                  <h5 style={{ margin: '0 0 0.6rem', color: 'var(--nus-blue)' }}>Body Language (quantitative details)</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
-                    <div><strong>Eye contact:</strong> {results.body_language?.raw_metrics?.eye_contact_raw ?? 0}/10</div>
-                    <div><strong>Gestures:</strong> {results.body_language?.raw_metrics?.gestures_raw ?? 0}/10</div>
-                    <div><strong>Posture:</strong> {results.body_language?.raw_metrics?.posture_raw ?? 0}/10</div>
-                    <div><strong>Facial engagement:</strong> {results.body_language?.raw_metrics?.engagement_raw ?? 0}/10</div>
-                    <div><strong>Professionalism:</strong> {results.body_language?.raw_metrics?.professionalism_raw ?? 0}/10</div>
-                  </div>
-                  {results.body_language?.remarks && (
-                    <p style={{ margin: '0.75rem 0 0', color: '#92400e', fontStyle: 'italic', fontSize: '0.88rem' }}>
-                      ⚠️ {results.body_language.remarks}
-                    </p>
-                  )}
-                </div>
-
-                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.1rem' }}>Engagement</h4>
+                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {MARS_ENGAGEMENT_MAIN.code} — {MARS_ENGAGEMENT_MAIN.title}
+                </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {MARS_ENGAGEMENT_CRITERIA.map((row) => {
+                  {MARS_ENGAGEMENT_CRITERIA.map((row, ei) => {
                     const engagementValueMap = {
                       question_density: results.interaction_engagement?.interaction_frequency,
                       cli_block: results.interaction_engagement?.question_quality,
@@ -3859,17 +2904,60 @@ function App() {
                           Number(results.interaction_engagement?.student_question_cognitive_score || 0)) / 2),
                     };
                     const ev = engagementValueMap[row.key];
+                    const engLabel = `3.${ei + 1}`;
+                    const ic = results.interaction_engagement?.icap_counts || {};
                     return (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
                       <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
-                        {row.label} {ev != null && !Number.isNaN(Number(ev)) && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({Number(ev).toFixed(1)}/10)</span>}
+                        {engLabel} {row.label} {ev != null && !Number.isNaN(Number(ev)) && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({Number(ev).toFixed(1)}/10)</span>}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
+
+                      {row.key === 'question_density' && (results.interaction_engagement?.all_questions || []).length > 0 && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.86rem', color: 'var(--gray-800)', lineHeight: 1.45 }}>
+                          <strong>Questions asked (evidence):</strong>
+                          <ol style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
+                            {(results.interaction_engagement.all_questions || []).slice(0, 40).map((q, qi) => (
+                              <li key={qi} style={{ marginBottom: '0.25rem' }}>
+                                <span style={{ color: 'var(--gray-600)' }}>[{q.precise_timestamp || secToClock(q.start_time)}] ({q.icap || '—'})</span> {q.question}
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
+                      {row.key === 'cli_block' && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.86rem' }}>
+                          <strong>Questions per ICAP category:</strong>{' '}
+                          Passive {ic.passive ?? 0}, Active {ic.active ?? 0}, Constructive {ic.constructive ?? 0}, Interactive {ic.interactive ?? 0}
+                        </div>
+                      )}
+
+                      {row.key === 'sui' && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.86rem', color: 'var(--gray-800)' }}>
+                          <strong>
+                            Student / audience questions (model-estimated):{' '}
+                            {(results.interaction_engagement?.audience_question_count != null
+                              ? results.interaction_engagement.audience_question_count
+                              : (results.interaction_engagement?.audience_questions || []).length)}
+                          </strong>{' '}
+                          {(results.interaction_engagement?.audience_questions || []).length > 0 ? (
+                            <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
+                              {(results.interaction_engagement.audience_questions || []).slice(0, 20).map((a, ai) => (
+                                <li key={ai}>{typeof a === 'object' ? (a.question || a.text || JSON.stringify(a)) : String(a)}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span style={{ fontStyle: 'italic', color: 'var(--gray-600)' }}>None listed ({results.interaction_engagement?.student_feedback_remarks || 'typical for single-speaker webcast'}).</span>
+                          )}
+                        </div>
+                      )}
+
                       <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
                       <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>How it is computed:</strong> {row.how}</p>
                       {ev != null && !Number.isNaN(Number(ev)) && (
                         <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
-                          <strong>Why this score:</strong> {getQuantitativeReason(Number(ev))}
+                          <strong>Why this score:</strong> {buildEngagementWhy(row.key, Number(ev), results)}
                         </p>
                       )}
                     </div>
@@ -4601,7 +3689,15 @@ function App() {
                           color: '#374151',
                           textAlign: 'justify'
                         }}>
-                          {summaryData.personalized_feedback}
+                          {[
+                            summaryData.personalized_feedback,
+                            (results.strengths || []).filter(Boolean).length
+                              ? `Further strengths noted: ${results.strengths.slice(0, 6).join(' ')}`
+                              : '',
+                            (results.improvement_suggestions || []).filter(Boolean).length
+                              ? `Growth opportunities to consider: ${results.improvement_suggestions.slice(0, 6).join(' ')}`
+                              : '',
+                          ].filter(Boolean).join(' ')}
                         </p>
                       </div>
 
@@ -4649,7 +3745,7 @@ function App() {
                         </div>
                       )}
 
-                      {/* Areas for Improvement */}
+                      {/* Growth Opportunities */}
                       {summaryData.improvements && summaryData.improvements.length > 0 && (
                         <div style={{ 
                           marginBottom: '0'
@@ -4660,7 +3756,7 @@ function App() {
                             fontSize: '1.1rem',
                             fontWeight: '700'
                           }}>
-                            📈 Areas for Improvement
+                            📈 Growth Opportunities
                           </h4>
                           {summaryData.improvements.map((improvement, idx) => (
                             <div key={idx} style={{ 
@@ -4701,28 +3797,6 @@ function App() {
                               )}
                             </div>
                           ))}
-                        </div>
-                      )}
-
-                      {/* Merge legacy strengths/growth into summary */}
-                      {(results.strengths?.length > 0 || results.improvement_suggestions?.length > 0) && (
-                        <div style={{ marginTop: '1.25rem' }}>
-                          {results.strengths?.length > 0 && (
-                            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #86efac' }}>
-                              <h5 style={{ margin: '0 0 0.5rem', color: '#166534' }}>Additional strengths</h5>
-                              <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#14532d' }}>
-                                {results.strengths.slice(0, 5).map((s, i) => <li key={i}>{s}</li>)}
-                              </ul>
-                            </div>
-                          )}
-                          {results.improvement_suggestions?.length > 0 && (
-                            <div style={{ padding: '1rem', background: '#fff7ed', borderRadius: '10px', border: '1px solid #fdba74' }}>
-                              <h5 style={{ margin: '0 0 0.5rem', color: '#9a3412' }}>Additional growth opportunities</h5>
-                              <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#7c2d12' }}>
-                                {results.improvement_suggestions.slice(0, 5).map((s, i) => <li key={i}>{s}</li>)}
-                              </ul>
-                            </div>
-                          )}
                         </div>
                       )}
                     </>
@@ -4913,6 +3987,15 @@ function App() {
             {/* Bottom actions */}
             <div style={{ textAlign: 'center', marginTop: '2rem', display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
+                type="button"
+                onClick={exportTranscriptAndQuestions}
+                className="export-button"
+                style={{ minWidth: '220px' }}
+              >
+                <FileText size={16} />
+                Export transcript &amp; questions (CLI)
+              </button>
+              <button
                 onClick={exportFullAnalysisView}
                 className="export-button"
                 style={{ minWidth: '220px' }}
@@ -4933,7 +4016,6 @@ function App() {
                   setResults(null);
                   setLogMessages([]);
                   setShowParameters(false);
-                  setIsGeneratingPDF(false);
                 }}
                 className="reset-button"
               >

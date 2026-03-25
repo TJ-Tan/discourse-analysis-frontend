@@ -7,8 +7,35 @@ export const MARS_INTRO = {
   title: 'MARS rubric (how your score is built)',
   summary:
     'Your overall score uses three main blocks: Content (20%), Delivery (40%), and Engagement (40%). ' +
-    'Below, each criterion shows your 1–10 rating, a plain-language meaning, and how the system computes it.',
+    'Below, each criterion shows your 1–10 rating, what it means, how it is computed, and why this score (with evidence when available).',
 };
+
+/** Structured hierarchy for the Content block */
+export const MARS_CONTENT_MAIN = {
+  code: '1',
+  title: 'Content (20% of overall)',
+};
+
+export const MARS_CONTENT_SECTIONS = [
+  {
+    code: '1.1',
+    title: 'Content Organisation (30% of Content)',
+    criteriaKeys: ['structural_sequencing', 'logical_consistency', 'closure_framing'],
+  },
+  {
+    code: '1.2',
+    title: 'Explanation Quality (40% of Content)',
+    criteriaKeys: ['conceptual_accuracy', 'causal_reasoning_depth', 'multi_perspective_explanation'],
+  },
+  {
+    code: '1.3',
+    title: 'Use of Examples / Representation (30% of Content)',
+    criteriaKeys: ['example_quality_frequency', 'analogy_concept_bridging', 'representation_diversity'],
+  },
+];
+
+export const MARS_DELIVERY_MAIN = { code: '2', title: 'Delivery (40% of overall)' };
+export const MARS_ENGAGEMENT_MAIN = { code: '3', title: 'Engagement (40% of overall)' };
 
 /** Content — nine criteria */
 export const MARS_CONTENT_CRITERIA = [
