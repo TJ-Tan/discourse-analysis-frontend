@@ -84,6 +84,7 @@ function App() {
           total_questions: results.interaction_engagement?.total_questions || 0,
           questions_per_minute: results.interaction_engagement?.questions_per_minute ?? 0,
           eqd_per_minute: results.interaction_engagement?.eqd_per_minute ?? 0,
+          lecture_context: results.lecture_context || '',
           transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
           sample_frames_count: results.sample_frames?.length || 0,
           filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
@@ -2536,7 +2537,7 @@ function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(results.interaction_engagement.all_questions || []).map((q, idx) => (
+                          {[...(results.interaction_engagement.all_questions || [])].sort((a, b) => Number(a.start_time || 0) - Number(b.start_time || 0)).map((q, idx) => (
                             <tr key={idx} style={{ borderBottom: '1px solid var(--gray-100)' }}>
                               <td style={{ padding: '0.35rem 0.5rem', verticalAlign: 'top' }}>{idx + 1}</td>
                               <td style={{ padding: '0.35rem 0.5rem', verticalAlign: 'top', whiteSpace: 'nowrap' }}>{q.precise_timestamp || secToClock(q.start_time)}</td>
@@ -2840,11 +2841,11 @@ function App() {
                         <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
                           <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative speech metrics (50% of Delivery)</div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
-                            <div><strong>Speaking rate:</strong> {results.speech_analysis?.raw_metrics?.words_per_minute ?? 0} WPM</div>
-                            <div><strong>Filler ratio:</strong> {results.speech_analysis?.raw_metrics?.filler_ratio_percentage ?? 0}%</div>
-                            <div><strong>Voice variety:</strong> {results.speech_analysis?.raw_metrics?.voice_variety_index ?? 0}</div>
-                            <div><strong>Pause effectiveness:</strong> {results.speech_analysis?.raw_metrics?.pause_effectiveness_index ?? 0}</div>
-                            <div><strong>Transcription confidence:</strong> {results.speech_analysis?.raw_metrics?.transcription_confidence ?? 0}%</div>
+                            <div><strong>Speaking rate:</strong> {results.speech_analysis?.raw_metrics?.words_per_minute ?? 0} WPM — {results.speech_analysis?.metric_scores?.speaking_rate ?? '—'}/10</div>
+                            <div><strong>Filler ratio:</strong> {results.speech_analysis?.raw_metrics?.filler_ratio_percentage ?? 0}% — {results.speech_analysis?.metric_scores?.filler_ratio ?? '—'}/10</div>
+                            <div><strong>Voice variety:</strong> {results.speech_analysis?.raw_metrics?.voice_variety_index ?? 0} — {results.speech_analysis?.metric_scores?.voice_variety ?? '—'}/10</div>
+                            <div><strong>Pause effectiveness:</strong> {results.speech_analysis?.raw_metrics?.pause_effectiveness_index ?? 0} — {results.speech_analysis?.metric_scores?.pause_effectiveness ?? '—'}/10</div>
+                            <div><strong>Transcription confidence:</strong> {results.speech_analysis?.raw_metrics?.transcription_confidence ?? 0}% — {results.speech_analysis?.metric_scores?.transcription_confidence ?? '—'}/10</div>
                           </div>
                           {results.detailed_insights?.filler_word_analysis?.length > 0 && (
                             <div style={{ marginTop: '0.75rem', fontSize: '0.88rem' }}>
@@ -2859,11 +2860,11 @@ function App() {
                         <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
                           <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative body language metrics (50% of Delivery)</div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
-                            <div><strong>Eye contact:</strong> {results.body_language?.raw_metrics?.eye_contact_raw ?? 0}/10</div>
-                            <div><strong>Gestures:</strong> {results.body_language?.raw_metrics?.gestures_raw ?? 0}/10</div>
-                            <div><strong>Posture:</strong> {results.body_language?.raw_metrics?.posture_raw ?? 0}/10</div>
-                            <div><strong>Facial engagement:</strong> {results.body_language?.raw_metrics?.engagement_raw ?? 0}/10</div>
-                            <div><strong>Professionalism:</strong> {results.body_language?.raw_metrics?.professionalism_raw ?? 0}/10</div>
+                            <div><strong>Eye contact:</strong> {results.body_language?.raw_metrics?.eye_contact_raw ?? 0}/10 — {results.body_language?.metric_scores?.eye_contact ?? '—'}/10</div>
+                            <div><strong>Gestures:</strong> {results.body_language?.raw_metrics?.gestures_raw ?? 0}/10 — {results.body_language?.metric_scores?.gestures ?? '—'}/10</div>
+                            <div><strong>Posture:</strong> {results.body_language?.raw_metrics?.posture_raw ?? 0}/10 — {results.body_language?.metric_scores?.posture ?? '—'}/10</div>
+                            <div><strong>Facial engagement:</strong> {results.body_language?.raw_metrics?.engagement_raw ?? 0}/10 — {results.body_language?.metric_scores?.facial_engagement ?? '—'}/10</div>
+                            <div><strong>Professionalism:</strong> {results.body_language?.raw_metrics?.professionalism_raw ?? 0}/10 — {results.body_language?.metric_scores?.professionalism ?? '—'}/10</div>
                           </div>
                           {results.body_language?.remarks && (
                             <p style={{ margin: '0.75rem 0 0', color: '#92400e', fontStyle: 'italic', fontSize: '0.88rem' }}>
@@ -2899,12 +2900,11 @@ function App() {
                       cli_block: results.interaction_engagement?.question_quality,
                       sui: results.interaction_engagement?.student_uptake_index,
                       qds: results.interaction_engagement?.question_distribution_stability,
-                      learner_feedback:
-                        ((Number(results.interaction_engagement?.student_question_frequency_score || 0) +
-                          Number(results.interaction_engagement?.student_question_cognitive_score || 0)) / 2),
+                      learner_question_frequency: results.interaction_engagement?.student_question_frequency_score,
+                      learner_question_cognitive: results.interaction_engagement?.student_question_cognitive_score,
                     };
                     const ev = engagementValueMap[row.key];
-                    const engLabel = `3.${ei + 1}`;
+                    const engLabel = row.code || `3.${ei + 1}`;
                     const ic = results.interaction_engagement?.icap_counts || {};
                     return (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
@@ -2917,7 +2917,7 @@ function App() {
                         <div style={{ marginTop: '0.5rem', fontSize: '0.86rem', color: 'var(--gray-800)', lineHeight: 1.45 }}>
                           <strong>Questions asked (evidence):</strong>
                           <ol style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
-                            {(results.interaction_engagement.all_questions || []).slice(0, 40).map((q, qi) => (
+                            {[...(results.interaction_engagement.all_questions || [])].sort((a, b) => Number(a.start_time || 0) - Number(b.start_time || 0)).slice(0, 40).map((q, qi) => (
                               <li key={qi} style={{ marginBottom: '0.25rem' }}>
                                 <span style={{ color: 'var(--gray-600)' }}>[{q.precise_timestamp || secToClock(q.start_time)}] ({q.icap || '—'})</span> {q.question}
                               </li>
@@ -2935,6 +2935,9 @@ function App() {
 
                       {row.key === 'sui' && (
                         <div style={{ marginTop: '0.5rem', fontSize: '0.86rem', color: 'var(--gray-800)' }}>
+                          <div style={{ marginBottom: '0.35rem', color: 'var(--gray-700)' }}>
+                            <strong>Disclaimer:</strong> Student voice might not be recorded in webcast lectures. When uptake cannot be determined reliably, SUI is scored conservatively.
+                          </div>
                           <strong>
                             Student / audience questions (model-estimated):{' '}
                             {(results.interaction_engagement?.audience_question_count != null
@@ -3689,15 +3692,7 @@ function App() {
                           color: '#374151',
                           textAlign: 'justify'
                         }}>
-                          {[
-                            summaryData.personalized_feedback,
-                            (results.strengths || []).filter(Boolean).length
-                              ? `Further strengths noted: ${results.strengths.slice(0, 6).join(' ')}`
-                              : '',
-                            (results.improvement_suggestions || []).filter(Boolean).length
-                              ? `Growth opportunities to consider: ${results.improvement_suggestions.slice(0, 6).join(' ')}`
-                              : '',
-                          ].filter(Boolean).join(' ')}
+                          {summaryData.personalized_feedback}
                         </p>
                       </div>
 
