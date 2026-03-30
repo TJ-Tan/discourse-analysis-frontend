@@ -1380,7 +1380,7 @@ function App() {
     if (rowKey === 'question_density') {
       const n = ie.total_questions ?? 0;
       const qpm = ie.questions_per_minute != null ? ie.questions_per_minute : (n / dm);
-      return `Evidence: ${n} instructor question(s) detected (~${Number(qpm).toFixed(2)} per minute over ~${dm.toFixed(1)} min). ${band}`;
+      return `Evidence: ${n} instructor question(s) detected (~${Number(qpm).toFixed(1)} per minute over ~${dm.toFixed(1)} min). ${band}`;
     }
     if (rowKey === 'cli_block') {
       const ic = ie.icap_counts || {};
@@ -1822,7 +1822,7 @@ function App() {
                   <div>
                     <p className="file-name">{file.name}</p>
                     <p className="file-size">
-                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      {(file.size / (1024 * 1024)).toFixed(1)} MB
                     </p>
                   </div>
                   <button
@@ -1953,7 +1953,7 @@ function App() {
                         <div>IP: {job.client_ip || 'Unknown'}</div>
                         <div>Status: {isProcessing ? `Processing (${job.progress}%)` : `Queued (Position ${job.queue_position || index + 1})`}</div>
                         {job.file_size && (
-                          <div>Size: {(job.file_size / (1024 * 1024)).toFixed(2)} MB</div>
+                          <div>Size: {(job.file_size / (1024 * 1024)).toFixed(1)} MB</div>
                         )}
                       </div>
                     </div>
@@ -2778,9 +2778,9 @@ function App() {
                   {MARS_INTRO.summary}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '12px', fontSize: '0.9rem' }}>
-                  <div><strong>Content</strong> (20%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.content_score != null ? `${results.mars_rubric.content_score}/10` : '—'}</span></div>
-                  <div><strong>Delivery</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.delivery_score != null ? `${results.mars_rubric.delivery_score}/10` : '—'}</span></div>
-                  <div><strong>Engagement</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.engagement_score != null ? `${results.mars_rubric.engagement_score}/10` : '—'}</span></div>
+                  <div><strong>Content</strong> (20%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.content_score != null ? `${Number(results.mars_rubric.content_score).toFixed(1)}/10` : '—'}</span></div>
+                  <div><strong>Delivery</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.delivery_score != null ? `${Number(results.mars_rubric.delivery_score).toFixed(1)}/10` : '—'}</span></div>
+                  <div><strong>Engagement</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.engagement_score != null ? `${Number(results.mars_rubric.engagement_score).toFixed(1)}/10` : '—'}</span></div>
                   <div style={{ gridColumn: '1 / -1', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
                     <strong>Overall formula:</strong> {results.mars_rubric.formula || '0.20×Content + 0.40×Delivery + 0.40×Engagement'}
                   </div>
@@ -3845,7 +3845,7 @@ function App() {
                         </div>
                       </div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
-                        {data.contribution.toFixed(2)}
+                        {data.contribution.toFixed(1)}
                       </div>
                     </div>
                   ))}
