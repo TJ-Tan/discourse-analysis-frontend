@@ -1366,6 +1366,17 @@ function App() {
   const getWhyDelivery = (key, score, r) => {
     const ev = r?.mars_rubric?.delivery_criteria_evidence?.[key];
     const line = whyLineForDelivery(key, score);
+    if (key === 'body') {
+      // Keep this user-friendly: avoid repeating the metric grid numbers in the \"Why\" line.
+      // If backend evidence contains numeric sub-metrics, strip them.
+      const raw = ev && String(ev).trim() ? String(ev).trim() : '';
+      const stripped = raw
+        .replace(/\b\d+(\.\d+)?\/10\b/g, '')
+        .replace(/\b(Eye contact|Gestures|Posture|Facial engagement|Professionalism)\b\s*:?/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      return stripped ? `${line} ${stripped}` : line;
+    }
     if (ev && String(ev).trim()) return `${line} ${String(ev).trim()}`;
     return line;
   };
@@ -1378,17 +1389,16 @@ function App() {
     if (rowKey === 'question_density') {
       const n = ie.total_questions ?? 0;
       const qpm = ie.questions_per_minute != null ? ie.questions_per_minute : (n / dm);
-      return `${bandLine} Evidence: ${n} instructor question(s) (~${Number(qpm).toFixed(1)} per minute over ~${dm.toFixed(1)} min).`;
+      return `${bandLine} Evidence: ${n} instructor question(s) (~${Number(qpm).toFixed(1)} per minute over ~${dm.toFixed(1)} min). Scoring rule: qpm≤0.1→0; 0.1–0.5→1–3; 0.5–1.5→4–7; ≥1.5→8–10.`;
     }
     if (rowKey === 'cli_block') {
       const ic = ie.icap_counts || {};
-      return `${bandLine} Evidence: ICAP — Passive ${ic.passive ?? 0}, Active ${ic.active ?? 0}, Constructive ${ic.constructive ?? 0}, Interactive ${ic.interactive ?? 0}.`;
+      return `${bandLine} Evidence: ICAP — Passive ${ic.passive ?? 0}, Active ${ic.active ?? 0}, Constructive ${ic.constructive ?? 0}, Interactive ${ic.interactive ?? 0}. ${ie.cli_formula ? `Formula: ${ie.cli_formula}.` : ''}`.trim();
     }
     if (rowKey === 'sui') {
-      const eqd = ie.eqd_per_minute ?? 0;
       const aq = ie.audience_questions || [];
       const nAud = ie.audience_question_count ?? aq.length;
-      let t = `${bandLine} Evidence: Constructive+Interactive rate ≈ ${Number(eqd).toFixed(3)} per minute. `;
+      let t = `${bandLine} Evidence: uptake cues after questions — ${ie.sui_uptake_hits ?? 0} hit(s), rate ${ie.sui_uptake_rate ?? 0}. ${ie.sui_evidence ? `${ie.sui_evidence} ` : ''}${ie.sui_formula ? `Formula: ${ie.sui_formula}. ` : ''}`;
       if (nAud > 0 && aq.length) {
         t += `Student/audience questions flagged (${nAud}): ${aq.slice(0, 4).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 140)}"`).join('; ')}${aq.length > 4 ? '…' : ''}. `;
       } else {
@@ -1398,7 +1408,9 @@ function App() {
     }
     if (rowKey === 'qds') {
       const n = ie.total_questions ?? 0;
-      return `${bandLine} Evidence: ${n} instructor questions; QDS uses spread across time bins (needs ≥2 questions).`;
+      const cv = ie.qds_cv != null ? ie.qds_cv : '—';
+      const mg = ie.qds_mean_gap_seconds != null ? `${ie.qds_mean_gap_seconds}s` : '—';
+      return `${bandLine} Evidence: ${n} instructor questions; mean gap ≈ ${mg}; CV(gaps) ≈ ${cv}. ${ie.qds_formula ? `Formula: ${ie.qds_formula}` : ''}`.trim();
     }
     if (rowKey === 'learner_question_frequency') {
       const sf = Number(ie.student_question_frequency_score ?? 0).toFixed(1);
@@ -1415,6 +1427,9 @@ function App() {
       const conf = ie.student_feedback_confidence || 'none';
       const aq = ie.audience_questions || [];
       let t = `${bandLine} Evidence: learner cognitive depth ${sc}/10; detector confidence ${conf}. ${ie.student_feedback_remarks || ''} `;
+      if (String(conf).toLowerCase() === 'none') {
+        t += 'Disclaimer: In webcasts, student voices may not be recorded or distinguishable; when unclear, this criterion is set conservatively at 2/10. ';
+      }
       if (aq.length) {
         t += `Sample audience questions: ${aq.slice(0, 5).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 120)}"`).join('; ')}.`;
       }
@@ -2838,7 +2853,7 @@ function App() {
                           <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({results.speech_analysis.score}/10)</span>
                         )}
                         {row.key === 'body' && results.body_language?.score != null && (
-                          <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({results.body_language.score}/10)</span>
+                        <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({Number(results.body_language.score).toFixed(1)}/10)</span>
                         )}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
@@ -2888,9 +2903,9 @@ function App() {
                         </p>
                       )}
                       {row.key === 'body' && results.body_language?.score != null && (
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
-                          <strong>Why this score:</strong> {getWhyDelivery('body', results.body_language.score, results)}
-                        </p>
+                      <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
+                        <strong>Why this score:</strong> {getWhyDelivery('body', Number(results.body_language.score).toFixed(1), results)}
+                      </p>
                       )}
                     </div>
                   ))}
@@ -2941,9 +2956,6 @@ function App() {
 
                       {row.key === 'sui' && (
                         <div style={{ marginTop: '0.5rem', fontSize: '0.86rem', color: 'var(--gray-800)' }}>
-                          <div style={{ marginBottom: '0.35rem', color: 'var(--gray-700)' }}>
-                            <strong>Disclaimer:</strong> Student voice might not be recorded in webcast lectures. When uptake cannot be determined reliably, SUI is scored conservatively.
-                          </div>
                           <strong>
                             Student / audience questions (model-estimated):{' '}
                             {(results.interaction_engagement?.audience_question_count != null
@@ -2959,6 +2971,9 @@ function App() {
                           ) : (
                             <span style={{ fontStyle: 'italic', color: 'var(--gray-600)' }}>None listed ({results.interaction_engagement?.student_feedback_remarks || 'typical for single-speaker webcast'}).</span>
                           )}
+                          <div style={{ marginTop: '0.5rem', color: '#92400e' }}>
+                            <strong>Disclaimer:</strong> Student voice might not be recorded in webcast lectures. When uptake cannot be determined reliably, SUI is scored conservatively.
+                          </div>
                         </div>
                       )}
 
@@ -3675,132 +3690,39 @@ function App() {
                       <div style={{ fontSize: '0.9rem' }}>Please wait</div>
                     </div>
                   ) : summaryData ? (
-                    <>
-                      {/* Personalized Feedback */}
-                      <div style={{ 
-                        marginBottom: '2rem',
-                        padding: '1.5rem',
-                        background: 'white',
-                        borderRadius: '12px',
-                        border: '1px solid var(--gray-200)'
+                    <div style={{ 
+                      padding: '1.5rem',
+                      background: 'white',
+                      borderRadius: '12px',
+                      border: '1px solid var(--gray-200)'
+                    }}>
+                      <h4 style={{ 
+                        color: 'var(--nus-blue)', 
+                        marginBottom: '1rem',
+                        fontSize: '1.1rem',
+                        fontWeight: '600'
                       }}>
-                        <h4 style={{ 
-                          color: 'var(--nus-blue)', 
-                          marginBottom: '1rem',
-                          fontSize: '1.1rem',
-                          fontWeight: '600'
-                        }}>
-                          Personalised Feedback
-                        </h4>
-                        <p style={{ 
-                          fontSize: '1rem', 
-                          lineHeight: '1.8', 
-                          color: '#374151',
-                          textAlign: 'justify'
-                        }}>
-                          {summaryData.personalized_feedback}
-                        </p>
-                      </div>
-
-                      {/* Strongest Strength */}
+                        Summary
+                      </h4>
+                      <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', margin: 0 }}>
+                        {summaryData.personalized_feedback}
+                      </p>
                       {summaryData.strongest_strength && (
-                        <div style={{ 
-                          marginBottom: '2rem',
-                          padding: '1.5rem',
-                          background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-                          borderRadius: '12px',
-                          border: '2px solid #22c55e'
-                        }}>
-                          <h4 style={{ 
-                            color: '#166534', 
-                            marginBottom: '1rem',
-                            fontSize: '1.1rem',
-                            fontWeight: '700',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                          }}>
-                            ✅ Strongest Strength: {summaryData.strongest_strength.title}
-                          </h4>
-                          <p style={{ 
-                            fontSize: '1rem', 
-                            lineHeight: '1.8', 
-                            color: '#374151',
-                            marginBottom: '1rem'
-                          }}>
-                            {summaryData.strongest_strength.description}
-                          </p>
-                          {summaryData.strongest_strength.evidence && (
-                            <div style={{ 
-                              fontSize: '0.9rem', 
-                              color: '#166534', 
-                              fontStyle: 'italic',
-                              padding: '1rem',
-                              background: 'white',
-                              borderRadius: '8px',
-                              border: '1px solid #22c55e'
-                            }}>
-                              <strong>Evidence:</strong> {summaryData.strongest_strength.evidence}
-                            </div>
-                          )}
-                        </div>
+                        <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
+                          <strong>Strongest strength:</strong> {summaryData.strongest_strength.title}. {summaryData.strongest_strength.description}{summaryData.strongest_strength.evidence ? ` Evidence: ${summaryData.strongest_strength.evidence}` : ''}
+                        </p>
                       )}
-
-                      {/* Growth Opportunities */}
                       {summaryData.improvements && summaryData.improvements.length > 0 && (
-                        <div style={{ 
-                          marginBottom: '0'
-                        }}>
-                          <h4 style={{ 
-                            color: 'var(--nus-blue)', 
-                            marginBottom: '1rem',
-                            fontSize: '1.1rem',
-                            fontWeight: '700'
-                          }}>
-                            📈 Growth Opportunities
-                          </h4>
-                          {summaryData.improvements.map((improvement, idx) => (
-                            <div key={idx} style={{ 
-                              marginBottom: '1rem',
-                              padding: '1.5rem',
-                              background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-                              borderRadius: '12px',
-                              border: '2px solid #f59e0b'
-                            }}>
-                              <h5 style={{ 
-                                color: '#92400e', 
-                                marginBottom: '0.75rem',
-                                fontSize: '1rem',
-                                fontWeight: '600'
-                              }}>
-                                {idx + 1}. {improvement.area}
-                              </h5>
-                              <p style={{ 
-                                fontSize: '1rem', 
-                                lineHeight: '1.8', 
-                                color: '#374151',
-                                marginBottom: '1rem'
-                              }}>
-                                {improvement.description}
-                              </p>
-                              {improvement.evidence && (
-                                <div style={{ 
-                                  fontSize: '0.9rem', 
-                                  color: '#92400e', 
-                                  fontStyle: 'italic',
-                                  padding: '1rem',
-                                  background: 'white',
-                                  borderRadius: '8px',
-                                  border: '1px solid #f59e0b'
-                                }}>
-                                  <strong>Based on:</strong> {improvement.evidence}
-                                </div>
-                              )}
-                            </div>
+                        <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
+                          <strong>Growth opportunities:</strong>{' '}
+                          {summaryData.improvements.slice(0, 2).map((im, i) => (
+                            <span key={i}>
+                              {i ? ' ' : ''}{im.area}: {im.description}{im.evidence ? ` (Evidence: ${im.evidence})` : ''}.
+                            </span>
                           ))}
-                        </div>
+                        </p>
                       )}
-                    </>
+                    </div>
                   ) : null}
                 </div>
               )}
