@@ -69,6 +69,7 @@ function App() {
   useEffect(() => {
     const generateSummary = async () => {
       if (!results || summaryData) return; // Don't regenerate if already exists
+      if (!isPasskeyValid) return; // Do not generate summary unless passcode verified
       
       setIsGeneratingSummary(true);
       try {
@@ -165,7 +166,7 @@ function App() {
 
     generateSummary();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- summaryData intentionally excluded to avoid re-run on summary change
-  }, [results]);
+  }, [results, isPasskeyValid]);
 
   // Fetch deployment time on mount
   useEffect(() => {
@@ -761,10 +762,28 @@ function App() {
   // Check if passkey is already validated in this session
   useEffect(() => {
     const storedPasskey = sessionStorage.getItem('mars_passkey');
-    if (storedPasskey) {
-      setPasskey(storedPasskey);
-      setIsPasskeyValid(true);
-    }
+    if (!storedPasskey) return;
+    setPasskey(storedPasskey);
+
+    // Re-validate against backend (avoid bypass if sessionStorage contains stale/invalid value)
+    (async () => {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/validate-passkey`, { passkey: storedPasskey }, { timeout: 5000 });
+        if (response.data && response.data.valid) {
+          setIsPasskeyValid(true);
+          setPasskeyError('');
+        } else {
+          sessionStorage.removeItem('mars_passkey');
+          setIsPasskeyValid(false);
+          setPasskeyError('Please enter the passcode');
+        }
+      } catch (e) {
+        // If backend is unreachable, fail closed (require passcode entry again)
+        sessionStorage.removeItem('mars_passkey');
+        setIsPasskeyValid(false);
+        setPasskeyError('Please enter the passcode');
+      }
+    })();
   }, []);
 
   // Cleanup on page unload/refresh - cancel ongoing uploads
