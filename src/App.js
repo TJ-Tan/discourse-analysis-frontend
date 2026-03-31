@@ -23,6 +23,11 @@ import {
   MARS_ENGAGEMENT_MAIN,
   MARS_ENGAGEMENT_CRITERIA,
 } from './marsRubricHelp';
+import {
+  whyLineForContent,
+  whyLineForDelivery,
+  whyLineForEngagement,
+} from './marsWhyBanding';
 import './App.css';
 
 // Use environment variable for API URL, fallback to production
@@ -122,8 +127,8 @@ function App() {
           Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
           Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
         };
-        const strongest = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
-        const weakest = Object.entries(scores).reduce((a, b) => scores[a[0]] < scores[b[0]] ? a : b);
+        const strongest = Object.entries(scores).reduce((best, cur) => (cur[1] > best[1] ? cur : best));
+        const weakest = Object.entries(scores).reduce((best, cur) => (cur[1] < best[1] ? cur : best));
         
         const strengthsExtra = (results.strengths || []).slice(0, 5).filter(Boolean);
         const growthExtra = (results.improvement_suggestions || []).slice(0, 5).filter(Boolean);
@@ -1343,16 +1348,6 @@ function App() {
     );
   };
 
-  const getQuantitativeReason = (score) => {
-    const s = Number(score);
-    if (Number.isNaN(s)) return 'Score unavailable.';
-    if (s >= 8.5) return `Strong performance (${s.toFixed(1)}/10): consistently meets high-quality indicators.`;
-    if (s >= 7.0) return `Good performance (${s.toFixed(1)}/10): mostly effective with minor gaps.`;
-    if (s >= 5.5) return `Moderate performance (${s.toFixed(1)}/10): mixed evidence; improvement needed for consistency.`;
-    if (s >= 4.0) return `Below target (${s.toFixed(1)}/10): multiple weaknesses reduced this score.`;
-    return `Low performance (${s.toFixed(1)}/10): substantial gaps in this criterion.`;
-  };
-
   const secToClock = (s) => {
     const n = Number(s);
     if (Number.isNaN(n) || n < 0) return '—';
@@ -1363,58 +1358,69 @@ function App() {
 
   const getWhyContent = (key, score, r) => {
     const ev = r?.mars_rubric?.content_criteria_evidence?.[key];
-    if (ev && String(ev).trim()) return ev;
-    return getQuantitativeReason(score);
+    const line = whyLineForContent(key, score);
+    if (ev && String(ev).trim()) return `${line} ${String(ev).trim()}`;
+    return line;
   };
 
   const getWhyDelivery = (key, score, r) => {
     const ev = r?.mars_rubric?.delivery_criteria_evidence?.[key];
-    if (ev && String(ev).trim()) return ev;
-    return getQuantitativeReason(score);
+    const line = whyLineForDelivery(key, score);
+    if (ev && String(ev).trim()) return `${line} ${String(ev).trim()}`;
+    return line;
   };
 
   const buildEngagementWhy = (rowKey, score, r) => {
     const ie = r?.interaction_engagement || {};
     const dm = Number(ie.duration_minutes ?? r.speech_analysis?.raw_metrics?.duration_minutes ?? r.speech_analysis?.duration_minutes ?? 1) || 1;
     const s = Number(score);
-    const band = Number.isNaN(s) ? '' : getQuantitativeReason(s);
+    const bandLine = Number.isNaN(s) ? '' : whyLineForEngagement(rowKey, s);
     if (rowKey === 'question_density') {
       const n = ie.total_questions ?? 0;
       const qpm = ie.questions_per_minute != null ? ie.questions_per_minute : (n / dm);
-      return `Evidence: ${n} instructor question(s) detected (~${Number(qpm).toFixed(1)} per minute over ~${dm.toFixed(1)} min). ${band}`;
+      return `${bandLine} Evidence: ${n} instructor question(s) (~${Number(qpm).toFixed(1)} per minute over ~${dm.toFixed(1)} min).`;
     }
     if (rowKey === 'cli_block') {
       const ic = ie.icap_counts || {};
-      return `Evidence: ICAP counts — Passive ${ic.passive ?? 0}, Active ${ic.active ?? 0}, Constructive ${ic.constructive ?? 0}, Interactive ${ic.interactive ?? 0}. CLI score reflects the mix of deeper question types. ${band}`;
+      return `${bandLine} Evidence: ICAP — Passive ${ic.passive ?? 0}, Active ${ic.active ?? 0}, Constructive ${ic.constructive ?? 0}, Interactive ${ic.interactive ?? 0}.`;
     }
     if (rowKey === 'sui') {
       const eqd = ie.eqd_per_minute ?? 0;
       const aq = ie.audience_questions || [];
       const nAud = ie.audience_question_count ?? aq.length;
-      let t = `Evidence: Instructor Constructive+Interactive rate ≈ ${Number(eqd).toFixed(3)} per minute (feeds the SUI formula). `;
+      let t = `${bandLine} Evidence: Constructive+Interactive rate ≈ ${Number(eqd).toFixed(3)} per minute. `;
       if (nAud > 0 && aq.length) {
         t += `Student/audience questions flagged (${nAud}): ${aq.slice(0, 4).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 140)}"`).join('; ')}${aq.length > 4 ? '…' : ''}. `;
       } else {
         t += `${ie.student_feedback_remarks || 'Often no separate audience audio on webcasts; student questions may be absent or unclear.'} `;
       }
-      return `${t}${band}`;
+      return t.trim();
     }
     if (rowKey === 'qds') {
       const n = ie.total_questions ?? 0;
-      return `Evidence: QDS measures how evenly questions fall across the timeline (entropy across bins; needs ≥2 questions). Total instructor questions: ${n}. ${band}`;
+      return `${bandLine} Evidence: ${n} instructor questions; QDS uses spread across time bins (needs ≥2 questions).`;
     }
-    if (rowKey === 'learner_feedback') {
+    if (rowKey === 'learner_question_frequency') {
       const sf = Number(ie.student_question_frequency_score ?? 0).toFixed(1);
-      const sc = Number(ie.student_question_cognitive_score ?? 0).toFixed(1);
       const conf = ie.student_feedback_confidence || 'none';
       const aq = ie.audience_questions || [];
-      let t = `Evidence: Learner question frequency ${sf}/10; cognitive depth ${sc}/10; detector confidence ${conf}. ${ie.student_feedback_remarks || ''} `;
+      let t = `${bandLine} Evidence: learner frequency score ${sf}/10; detector confidence ${conf}. ${ie.student_feedback_remarks || ''} `;
       if (aq.length) {
-        t += `Listed audience/student questions: ${aq.slice(0, 5).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 120)}"`).join('; ')}.`;
+        t += `Sample audience questions: ${aq.slice(0, 5).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 120)}"`).join('; ')}.`;
       }
       return t.trim();
     }
-    return band;
+    if (rowKey === 'learner_question_cognitive') {
+      const sc = Number(ie.student_question_cognitive_score ?? 0).toFixed(1);
+      const conf = ie.student_feedback_confidence || 'none';
+      const aq = ie.audience_questions || [];
+      let t = `${bandLine} Evidence: learner cognitive depth ${sc}/10; detector confidence ${conf}. ${ie.student_feedback_remarks || ''} `;
+      if (aq.length) {
+        t += `Sample audience questions: ${aq.slice(0, 5).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 120)}"`).join('; ')}.`;
+      }
+      return t.trim();
+    }
+    return bandLine;
   };
 
   return (
