@@ -140,24 +140,17 @@ function App() {
         const qPart = totalQuestions === 0
           ? `No instructor questions ending with "?" were detected; engagement scores should be read in that light.`
           : `${totalQuestions} instructor question(s) were detected${firstQuestion ? ` (e.g. "${firstQuestion.substring(0, 140)}${firstQuestion.length > 140 ? '…' : ''}")` : ''}.`;
+        const ctx = (results.lecture_context || '').trim();
+        const ctxLine = ctx
+          ? ` Relative to the lecture context you provided, interpretation should consider stated course goals and topic alignment.`
+          : '';
+        const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. This suggests comparatively stronger performance in ${strongest[0]} and more limited instructional impact in ${weakest[0]} within this recording.${ctxLine} ${qPart} ${mergedTail}`.trim();
+        const p2 = `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
+        const p3 = `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
         setSummaryData({
-          personalized_feedback: [
-            `MARS Evaluated Final Score ${overallScore}/10 (Content ${scores.Content}/10, Delivery ${scores.Delivery}/10, Engagement ${scores.Engagement}/10).`,
-            qPart,
-            mergedTail,
-          ].filter(Boolean).join(' '),
-          strongest_strength: {
-            title: strongest[0],
-            description: `Stronger MARS block: ${strongest[0]} (${strongest[1]}/10).`,
-            evidence: `MARS ${strongest[0]} score ${strongest[1]}/10${results.sample_frames?.length ? `; ${results.sample_frames.length} video frames analysed` : ''}${totalQuestions ? `; ${totalQuestions} instructor question(s) in transcript` : ''}.`
-          },
-          improvements: [
-            {
-              area: weakest[0],
-              description: `Growth opportunity: strengthen ${weakest[0].toLowerCase()} (currently ${weakest[1]}/10).`,
-              evidence: `MARS block score ${weakest[1]}/10 vs overall ${overallScore}/10.`
-            }
-          ]
+          personalized_feedback: `${p1}\n\n${p2}\n\n${p3}`,
+          strongest_strength: null,
+          improvements: [],
         });
       } finally {
         setIsGeneratingSummary(false);
@@ -3723,10 +3716,32 @@ function App() {
                       }}>
                         Summary
                       </h4>
-                      <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', margin: 0 }}>
-                        {summaryData.personalized_feedback}
-                      </p>
-                      {summaryData.strongest_strength && (
+                      {(() => {
+                        const raw = summaryData.personalized_feedback || '';
+                        const parts = raw.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
+                        if (parts.length >= 3) {
+                          return parts.map((para, idx) => (
+                            <p
+                              key={idx}
+                              style={{
+                                fontSize: '1rem',
+                                lineHeight: '1.8',
+                                color: '#374151',
+                                textAlign: 'justify',
+                                margin: idx === 0 ? 0 : '1rem 0 0',
+                              }}
+                            >
+                              {para}
+                            </p>
+                          ));
+                        }
+                        return (
+                          <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', margin: 0 }}>
+                            {raw}
+                          </p>
+                        );
+                      })()}
+                      {summaryData.strongest_strength && summaryData.strongest_strength.title && (
                         <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
                           <strong>Strongest strength:</strong> {summaryData.strongest_strength.title}. {summaryData.strongest_strength.description}{summaryData.strongest_strength.evidence ? ` Evidence: ${summaryData.strongest_strength.evidence}` : ''}
                         </p>
