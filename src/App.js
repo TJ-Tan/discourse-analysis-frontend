@@ -53,6 +53,9 @@ function App() {
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
   const [deploymentTime, setDeploymentTime] = useState(null);
+  /** Matches GitHub commit depth on deployed API `main` when git is available; else BACKEND_COMMIT_COUNT on host. */
+  const [backendBuildIndex, setBackendBuildIndex] = useState(null);
+  const [backendCommitSha, setBackendCommitSha] = useState(null);
   const [queueList, setQueueList] = useState([]);
   const [isQueued, setIsQueued] = useState(false);
   const [userAnalysisId, setUserAnalysisId] = useState(null);
@@ -120,9 +123,7 @@ function App() {
         // Fallback summary
         const overallScore = Math.round(results.overall_score * 10) / 10;
         const totalQuestions = results.interaction_engagement?.total_questions || 0;
-        const highLevelQuestions = results.interaction_engagement?.high_level_questions || [];
-        const firstQuestion = highLevelQuestions.length > 0 ? highLevelQuestions[0].question || highLevelQuestions[0].text : '';
-        
+
         const scores = {
           Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
           Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
@@ -133,18 +134,18 @@ function App() {
         
         const strengthsExtra = (results.strengths || []).slice(0, 5).filter(Boolean);
         const growthExtra = (results.improvement_suggestions || []).slice(0, 5).filter(Boolean);
-        const mergedTail = [
-          strengthsExtra.length ? `Further strengths noted in the rubric: ${strengthsExtra.join(' ')}` : '',
-          growthExtra.length ? `Growth opportunities to consider: ${growthExtra.join(' ')}` : '',
+        const rubricWeave = [
+          strengthsExtra.length ? `Rubric signals include ${strengthsExtra.join('; ')}.` : '',
+          growthExtra.length ? `Development themes include ${growthExtra.join('; ')}.` : '',
         ].filter(Boolean).join(' ');
         const qPart = totalQuestions === 0
-          ? `No instructor questions ending with "?" were detected; engagement scores should be read in that light.`
-          : `${totalQuestions} instructor question(s) were detected${firstQuestion ? ` (e.g. "${firstQuestion.substring(0, 140)}${firstQuestion.length > 140 ? '…' : ''}")` : ''}.`;
+          ? `Few or no instructor questions were detected; engagement scores should be read cautiously.`
+          : `The session includes many instructor prompts; the profile appears weighted toward lower-demand questions rather than sustained dialogue, which aligns with the Engagement score.`;
         const ctx = (results.lecture_context || '').trim();
         const ctxLine = ctx
-          ? ` Relative to the lecture context you provided, interpretation should consider stated course goals and topic alignment.`
+          ? ` Your stated lecture context supports checking topical alignment with course aims.`
           : '';
-        const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. This suggests comparatively stronger performance in ${strongest[0]} and more limited instructional impact in ${weakest[0]} within this recording.${ctxLine} ${qPart} ${mergedTail}`.trim();
+        const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
         const p2 = `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
         const p3 = `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
         setSummaryData({
@@ -169,6 +170,15 @@ function App() {
           timeout: 10000,
           validateStatus: (status) => status < 500
         });
+        if (response && response.data) {
+          if (response.data.backend_build_index != null && response.data.backend_build_index !== '') {
+            const n = Number(response.data.backend_build_index);
+            setBackendBuildIndex(Number.isFinite(n) ? n : null);
+          } else {
+            setBackendBuildIndex(null);
+          }
+          setBackendCommitSha(response.data.backend_commit_sha_short || null);
+        }
         if (response && response.data && response.data.deployment_time_formatted) {
           setDeploymentTime(response.data.deployment_time_formatted);
         } else if (response && response.data && response.data.deployment_time) {
@@ -756,14 +766,14 @@ function App() {
   useEffect(() => {
     const storedPasskey = sessionStorage.getItem('mars_passkey');
     if (!storedPasskey) return;
-    setPasskey(storedPasskey);
+      setPasskey(storedPasskey);
 
     // Re-validate against backend (avoid bypass if sessionStorage contains stale/invalid value)
     (async () => {
       try {
         const response = await axios.post(`${API_BASE_URL}/validate-passkey`, { passkey: storedPasskey }, { timeout: 5000 });
         if (response.data && response.data.valid) {
-          setIsPasskeyValid(true);
+      setIsPasskeyValid(true);
           setPasskeyError('');
         } else {
           sessionStorage.removeItem('mars_passkey');
@@ -1324,14 +1334,14 @@ function App() {
         margin: 8,
         filename: `MARS-full-analysis-${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
+        html2canvas: { 
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
         },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
           orientation: 'portrait',
         },
         pagebreak: { mode: ['css', 'legacy'] },
@@ -2243,20 +2253,20 @@ function App() {
 
             {/* MARS-only top scores */}
             {false && results.mars_rubric && (
-              <div className="scores-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-                <ScoreDisplay
+            <div className="scores-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+              <ScoreDisplay 
                   score={results.mars_rubric.content_score || 0}
                   label="Content"
-                />
-                <ScoreDisplay
+              />
+              <ScoreDisplay 
                   score={results.mars_rubric.delivery_score || 0}
                   label="Delivery"
-                />
-                <ScoreDisplay
+              />
+              <ScoreDisplay 
                   score={results.mars_rubric.engagement_score || 0}
                   label="Engagement"
-                />
-              </div>
+              />
+            </div>
             )}
 
             {/* Hidden (moved below transcript/frames): MARS rubric breakdown */}
@@ -3589,7 +3599,7 @@ function App() {
                     }}>
                       ⚠️ {results.body_language.remarks}
                     </p>
-                  </div>
+              </div>
                 )}
                 
                 {/* Metric Explanations */}
@@ -3702,20 +3712,20 @@ function App() {
                       <div style={{ fontSize: '0.9rem' }}>Please wait</div>
                     </div>
                   ) : summaryData ? (
-                    <div style={{ 
-                      padding: '1.5rem',
-                      background: 'white',
-                      borderRadius: '12px',
-                      border: '1px solid var(--gray-200)'
-                    }}>
-                      <h4 style={{ 
-                        color: 'var(--nus-blue)', 
-                        marginBottom: '1rem',
-                        fontSize: '1.1rem',
-                        fontWeight: '600'
+                      <div style={{ 
+                        padding: '1.5rem',
+                        background: 'white',
+                        borderRadius: '12px',
+                        border: '1px solid var(--gray-200)'
                       }}>
+                        <h4 style={{ 
+                          color: 'var(--nus-blue)', 
+                          marginBottom: '1rem',
+                          fontSize: '1.1rem',
+                          fontWeight: '600'
+                        }}>
                         Summary
-                      </h4>
+                        </h4>
                       {(() => {
                         const raw = summaryData.personalized_feedback || '';
                         const parts = raw.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
@@ -3724,9 +3734,9 @@ function App() {
                             <p
                               key={idx}
                               style={{
-                                fontSize: '1rem',
-                                lineHeight: '1.8',
-                                color: '#374151',
+                          fontSize: '1rem', 
+                          lineHeight: '1.8', 
+                          color: '#374151',
                                 textAlign: 'justify',
                                 margin: idx === 0 ? 0 : '1rem 0 0',
                               }}
@@ -3755,8 +3765,8 @@ function App() {
                             </span>
                           ))}
                         </p>
-                      )}
-                    </div>
+                              )}
+                            </div>
                   ) : null}
                 </div>
               )}
@@ -3880,36 +3890,36 @@ function App() {
 
             {/* Feedback Grid */}
             {false && (
-              <div className="feedback-grid">
-                <div className="feedback-section strengths">
-                  <h3 className="feedback-title">
-                    <CheckCircle size={20} />
-                    Key Strengths
-                  </h3>
-                  <ul className="feedback-list">
-                    {results.strengths.map((strength, index) => (
-                      <li key={index} className="feedback-item">
-                        <span className="feedback-bullet"></span>
-                        {strength}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="feedback-section improvements">
-                  <h3 className="feedback-title">
-                    <AlertCircle size={20} />
-                    Areas for Growth
-                  </h3>
-                  <ul className="feedback-list">
-                    {results.improvement_suggestions.map((suggestion, index) => (
-                      <li key={index} className="feedback-item">
-                        <span className="feedback-bullet"></span>
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            <div className="feedback-grid">
+              <div className="feedback-section strengths">
+                <h3 className="feedback-title">
+                  <CheckCircle size={20} />
+                  Key Strengths
+                </h3>
+                <ul className="feedback-list">
+                  {results.strengths.map((strength, index) => (
+                    <li key={index} className="feedback-item">
+                      <span className="feedback-bullet"></span>
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
               </div>
+              <div className="feedback-section improvements">
+                <h3 className="feedback-title">
+                  <AlertCircle size={20} />
+                  Areas for Growth
+                </h3>
+                <ul className="feedback-list">
+                  {results.improvement_suggestions.map((suggestion, index) => (
+                    <li key={index} className="feedback-item">
+                      <span className="feedback-bullet"></span>
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
             )}
 
             {/* Disclaimer */}
@@ -4088,6 +4098,13 @@ function App() {
             second: '2-digit',
             hour12: false
           })}
+        </div>
+        <div style={{ marginTop: '0.35rem', fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.55)' }}>
+          Release build (API){backendBuildIndex != null ? `: #${backendBuildIndex}` : ': —'}
+          {backendCommitSha ? ` · ${backendCommitSha}` : ''}
+        </div>
+        <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.4)', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto' }}>
+          Matches commit count on deployed <code style={{ fontSize: 'inherit' }}>main</code> when the API image includes git history; otherwise set <code style={{ fontSize: 'inherit' }}>BACKEND_COMMIT_COUNT</code> on the server to match GitHub.
         </div>
       </div>
     </div>
