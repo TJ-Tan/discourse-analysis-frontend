@@ -4103,9 +4103,6 @@ function App() {
           Release build (API){backendBuildIndex != null ? `: #${backendBuildIndex}` : ': —'}
           {backendCommitSha ? ` · ${backendCommitSha}` : ''}
         </div>
-        <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.4)', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto' }}>
-          Matches commit count on deployed <code style={{ fontSize: 'inherit' }}>main</code> when the API image includes git history; otherwise set <code style={{ fontSize: 'inherit' }}>BACKEND_COMMIT_COUNT</code> on the server to match GitHub.
-        </div>
       </div>
     </div>
   );
