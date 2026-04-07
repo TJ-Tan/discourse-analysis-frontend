@@ -33,6 +33,45 @@ import './App.css';
 // Use environment variable for API URL, fallback to production
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://discourse-analysis-backend.up.railway.app';
 
+/** When /generate-pdf-summary fails: substantive alignment note or explicit no-context (matches backend heuristic). */
+function summaryFallbackContextLine(lectureContext, transcriptExcerpt) {
+  const lc = (lectureContext || '').trim();
+  if (!lc) {
+    return (
+      ' No instructor context was provided for this lecture (for example module, topic, or intended learning outcomes), ' +
+      'so stated-versus-delivered alignment cannot be assessed from the submission.'
+    );
+  }
+  const tex = (transcriptExcerpt || '').toLowerCase();
+  const junk = new Set([
+    'this', 'that', 'with', 'from', 'have', 'been', 'will', 'your', 'lecture', 'session', 'course',
+    'students', 'student', 'learning', 'module', 'topic', 'about', 'into', 'their', 'what', 'when',
+    'where', 'which', 'there', 'these', 'those',
+  ]);
+  const matches = (lc.toLowerCase().match(/[a-z0-9]{4,}/g) || []).filter((w) => !junk.has(w));
+  const words = [...new Set(matches)].slice(0, 50);
+  let hits = 0;
+  for (const w of words) {
+    if (tex.includes(w)) hits += 1;
+  }
+  if (hits >= 2) {
+    return (
+      ' Against the instructor-supplied context, the transcript excerpt shows overlapping themes and terminology, ' +
+      'suggesting broadly aligned delivery within the sample reviewed (you should still confirm against the full session and official ILOs).'
+    );
+  }
+  if (hits === 1) {
+    return (
+      ' Against the instructor-supplied context, overlap with the transcript excerpt is limited; ' +
+      'it is worth checking whether the full recording matches your stated module focus and outcomes.'
+    );
+  }
+  return (
+    ' Against the instructor-supplied context, keyword overlap with the transcript excerpt is weak; ' +
+    'verify whether spoken content matches your intended module, topic, and learning outcomes.'
+  );
+}
+
 function App() {
   const [file, setFile] = useState(null);
   const [analysisId, setAnalysisId] = useState(null);
@@ -72,8 +111,7 @@ function App() {
   useEffect(() => {
     const generateSummary = async () => {
       if (!results || summaryData) return; // Don't regenerate if already exists
-      if (!isPasskeyValid) return; // Do not generate summary unless passcode verified
-      
+
       setIsGeneratingSummary(true);
       try {
         const summaryDataForAPI = {
@@ -142,9 +180,8 @@ function App() {
           ? `Few or no instructor questions were detected; engagement scores should be read cautiously.`
           : `The session includes many instructor prompts; the profile appears weighted toward lower-demand questions rather than sustained dialogue, which aligns with the Engagement score.`;
         const ctx = (results.lecture_context || '').trim();
-        const ctxLine = ctx
-          ? ` Your stated lecture context supports checking topical alignment with course aims.`
-          : '';
+        const excerptForCtx = (results.full_transcript?.text || '').substring(0, 2000);
+        const ctxLine = summaryFallbackContextLine(ctx, excerptForCtx);
         const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
         const p2 = `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
         const p3 = `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
@@ -160,7 +197,7 @@ function App() {
 
     generateSummary();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- summaryData intentionally excluded to avoid re-run on summary change
-  }, [results, isPasskeyValid]);
+  }, [results]);
 
   // Fetch deployment time on mount
   useEffect(() => {
@@ -1430,9 +1467,15 @@ function App() {
     }
     if (rowKey === 'qds') {
       const n = ie.total_questions ?? 0;
-      const cv = ie.qds_cv != null ? ie.qds_cv : '—';
-      const mg = ie.qds_mean_gap_seconds != null ? `${ie.qds_mean_gap_seconds}s` : '—';
-      return `${bandLine} Evidence: ${n} instructor questions; mean gap ≈ ${mg}; CV(gaps) ≈ ${cv}. ${ie.qds_formula ? `Formula: ${ie.qds_formula}` : ''}`.trim();
+      const k = ie.qds_quintiles_filled;
+      const hits = ie.qds_quintile_hits;
+      let bins = '';
+      if (Array.isArray(hits) && hits.length === 5) {
+        const labels = ['0–20%', '20–40%', '40–60%', '60–80%', '80–100%'];
+        bins = ` Quintiles with ≥1 question: ${labels.map((lb, i) => `${lb}${hits[i] ? ' ✓' : ' —'}`).join('; ')}.`;
+      }
+      const pts = k != null ? ` Score = 2×${k} filled quintiles = ${Number(ie.question_distribution_stability ?? 0).toFixed(1)}/10.` : '';
+      return `${bandLine} Evidence: ${n} instructor questions.${bins}${pts} ${ie.qds_formula || ''}`.trim();
     }
     if (rowKey === 'learner_question_frequency') {
       const sf = Number(ie.student_question_frequency_score ?? 0).toFixed(1);
@@ -1450,7 +1493,7 @@ function App() {
       const aq = ie.audience_questions || [];
       let t = `${bandLine} Evidence: learner cognitive depth ${sc}/10; detector confidence ${conf}. ${ie.student_feedback_remarks || ''} `;
       if (String(conf).toLowerCase() === 'none') {
-        t += 'Disclaimer: In webcasts, student voices may not be recorded or distinguishable; when unclear, this criterion is set conservatively at 2/10. ';
+        t += 'Note: When audience audio is not evidenced, this subscore defaults to neutral 5/10 so engagement is not double-penalised. ';
       }
       if (aq.length) {
         t += `Sample audience questions: ${aq.slice(0, 5).map((a) => `"${(typeof a === 'object' ? (a.question || a.text || '') : String(a)).slice(0, 120)}"`).join('; ')}.`;
@@ -2251,6 +2294,92 @@ function App() {
               )}
             </div>
 
+            {/* Summary Section (placed early so it is not buried below the full transcript) */}
+            {(summaryData || isGeneratingSummary) && (
+              <div style={{
+                background: 'linear-gradient(135deg, var(--primary-50), var(--accent-50))',
+                padding: '2rem',
+                borderRadius: '16px',
+                marginTop: '1rem',
+                marginBottom: '1rem',
+                border: '2px solid var(--nus-blue)',
+              }}>
+                <h3 style={{
+                  color: 'var(--nus-blue)',
+                  marginBottom: '1.5rem',
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}>
+                  📋 Summary
+                </h3>
+                {isGeneratingSummary ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                    <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Generating personalised summary...</div>
+                    <div style={{ fontSize: '0.9rem' }}>Please wait</div>
+                  </div>
+                ) : summaryData ? (
+                  <div style={{
+                    padding: '1.5rem',
+                    background: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid var(--gray-200)',
+                  }}>
+                    <h4 style={{
+                      color: 'var(--nus-blue)',
+                      marginBottom: '1rem',
+                      fontSize: '1.1rem',
+                      fontWeight: '600',
+                    }}>
+                      Summary
+                    </h4>
+                    {(() => {
+                      const raw = summaryData.personalized_feedback || '';
+                      const parts = raw.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
+                      if (parts.length >= 3) {
+                        return parts.map((para, idx) => (
+                          <p
+                            key={idx}
+                            style={{
+                              fontSize: '1rem',
+                              lineHeight: '1.8',
+                              color: '#374151',
+                              textAlign: 'justify',
+                              margin: idx === 0 ? 0 : '1rem 0 0',
+                            }}
+                          >
+                            {para}
+                          </p>
+                        ));
+                      }
+                      return (
+                        <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', margin: 0 }}>
+                          {raw}
+                        </p>
+                      );
+                    })()}
+                    {summaryData.strongest_strength && summaryData.strongest_strength.title && (
+                      <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
+                        <strong>Strongest strength:</strong> {summaryData.strongest_strength.title}. {summaryData.strongest_strength.description}{summaryData.strongest_strength.evidence ? ` Evidence: ${summaryData.strongest_strength.evidence}` : ''}
+                      </p>
+                    )}
+                    {summaryData.improvements && summaryData.improvements.length > 0 && (
+                      <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
+                        <strong>Growth opportunities:</strong>{' '}
+                        {summaryData.improvements.slice(0, 2).map((im, i) => (
+                          <span key={i}>
+                            {i ? ' ' : ''}{im.area}: {im.description}{im.evidence ? ` (Evidence: ${im.evidence})` : ''}.
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {/* MARS-only top scores */}
             {false && results.mars_rubric && (
             <div className="scores-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
@@ -2567,7 +2696,40 @@ function App() {
                   <h4 style={{ margin: '0 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1rem' }}>Instructor questions &amp; CLI</h4>
                   <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--gray-700)' }}>
                     Total questions detected: <strong>{results.interaction_engagement.total_questions ?? 0}</strong>
+                    {results.interaction_engagement.duration_minutes != null && results.interaction_engagement.duration_minutes > 0 && (
+                      <>
+                        {' '}(≈{' '}
+                        <strong>
+                          {(Number(results.interaction_engagement.total_questions) / Number(results.interaction_engagement.duration_minutes)).toFixed(2)}
+                        </strong>{' '}
+                        per minute)
+                      </>
+                    )}
                   </p>
+                  {(() => {
+                    const ic = results.interaction_engagement.icap_counts || {};
+                    const dm = Number(results.interaction_engagement.duration_minutes) || 0;
+                    const na = Number(ic.active) || 0;
+                    const ni = Number(ic.interactive) || 0;
+                    const nc = Number(ic.constructive) || 0;
+                    const hl = results.interaction_engagement.high_level_questions_count != null
+                      ? Number(results.interaction_engagement.high_level_questions_count)
+                      : nc + ni;
+                    if (dm <= 0) return null;
+                    return (
+                      <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--gray-800)', lineHeight: 1.5 }}>
+                        <strong>Active &amp; Interactive load:</strong>{' '}
+                        <strong>{na}</strong> Active (≈{(na / dm).toFixed(2)}/min) and{' '}
+                        <strong>{ni}</strong> Interactive (≈{(ni / dm).toFixed(2)}/min).{' '}
+                        <strong>{hl}</strong> prompts are Constructive or Interactive (higher-order); these are weighted heavily in engagement quality.
+                        {results.interaction_engagement.question_engagement_narrative ? (
+                          <span style={{ display: 'block', marginTop: '0.35rem', color: 'var(--gray-700)' }}>
+                            {results.interaction_engagement.question_engagement_narrative}
+                          </span>
+                        ) : null}
+                      </p>
+                    );
+                  })()}
                   {(results.interaction_engagement.all_questions || []).length > 0 ? (
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -2973,6 +3135,27 @@ function App() {
                         <div style={{ marginTop: '0.5rem', fontSize: '0.86rem' }}>
                           <strong>Questions per ICAP category:</strong>{' '}
                           Passive {ic.passive ?? 0}, Active {ic.active ?? 0}, Constructive {ic.constructive ?? 0}, Interactive {ic.interactive ?? 0}
+                          {(results.interaction_engagement?.total_questions ?? 0) > 0 && ic.interactive != null && (
+                            <span style={{ display: 'block', marginTop: '0.35rem' }}>
+                              <strong>Interactive share:</strong>{' '}
+                              {((Number(ic.interactive) / Number(results.interaction_engagement.total_questions)) * 100).toFixed(1)}% of all questions (primary input for CLI bands).
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {row.key === 'qds' && Array.isArray(results.interaction_engagement?.qds_quintile_hits) && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.86rem', lineHeight: 1.5 }}>
+                          <strong>Quintiles of lecture time (each worth 2 points if ≥1 question):</strong>{' '}
+                          {['0–20%', '20–40%', '40–60%', '60–80%', '80–100%'].map((lb, i) => (
+                            <span key={lb} style={{ display: 'inline-block', marginRight: '0.65rem', marginTop: '0.2rem' }}>
+                              {lb}: {results.interaction_engagement.qds_quintile_hits[i] ? <strong style={{ color: 'var(--success-700)' }}>yes (+2)</strong> : <span style={{ color: 'var(--gray-500)' }}>no</span>}
+                            </span>
+                          ))}
+                          <span style={{ display: 'block', marginTop: '0.35rem', color: 'var(--gray-700)' }}>
+                            Sections with questions: <strong>{results.interaction_engagement.qds_quintiles_filled ?? '—'}</strong>/5 → QDS{' '}
+                            <strong>{results.interaction_engagement.question_distribution_stability ?? '—'}</strong>/10
+                          </span>
                         </div>
                       )}
 
@@ -2994,7 +3177,14 @@ function App() {
                             <span style={{ fontStyle: 'italic', color: 'var(--gray-600)' }}>None listed ({results.interaction_engagement?.student_feedback_remarks || 'typical for single-speaker webcast'}).</span>
                           )}
                           <div style={{ marginTop: '0.5rem', color: '#92400e' }}>
-                            <strong>Disclaimer:</strong> Student voice might not be recorded in webcast lectures. When uptake cannot be determined reliably, SUI is scored conservatively.
+                            <strong>Note:</strong> Student voice is often missing in webcasts. SUI now combines transcript uptake cues (when visible) with a{' '}
+                            <strong>prompting-density proxy</strong> from Active / Constructive / Interactive questions per minute, so heavy questioning is not forced to ~2/10.
+                            {results.interaction_engagement.sui_prompting_proxy != null && results.interaction_engagement.sui_uptake_raw != null && (
+                              <span style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.82rem' }}>
+                                Raw uptake component ≈ {Number(results.interaction_engagement.sui_uptake_raw).toFixed(1)}/10; prompting proxy ≈{' '}
+                                {Number(results.interaction_engagement.sui_prompting_proxy).toFixed(1)}/10 (MARS uses the blended value shown above).
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}
@@ -3682,92 +3872,6 @@ function App() {
                       )}
                     </div>
                   ))}
-                </div>
-              )}
-
-              {/* Summary Section */}
-              {(summaryData || isGeneratingSummary) && (
-                <div style={{ 
-                  background: 'linear-gradient(135deg, var(--primary-50), var(--accent-50))', 
-                  padding: '2rem', 
-                  borderRadius: '16px',
-                  marginBottom: '2rem',
-                  border: '2px solid var(--nus-blue)'
-                }}>
-                  <h3 style={{ 
-                    color: 'var(--nus-blue)', 
-                    marginBottom: '1.5rem',
-                    fontSize: '1.5rem',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    📋 Summary
-                  </h3>
-
-                  {isGeneratingSummary ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
-                      <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Generating personalised summary...</div>
-                      <div style={{ fontSize: '0.9rem' }}>Please wait</div>
-                    </div>
-                  ) : summaryData ? (
-                      <div style={{ 
-                        padding: '1.5rem',
-                        background: 'white',
-                        borderRadius: '12px',
-                        border: '1px solid var(--gray-200)'
-                      }}>
-                        <h4 style={{ 
-                          color: 'var(--nus-blue)', 
-                          marginBottom: '1rem',
-                          fontSize: '1.1rem',
-                          fontWeight: '600'
-                        }}>
-                        Summary
-                        </h4>
-                      {(() => {
-                        const raw = summaryData.personalized_feedback || '';
-                        const parts = raw.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
-                        if (parts.length >= 3) {
-                          return parts.map((para, idx) => (
-                            <p
-                              key={idx}
-                              style={{
-                          fontSize: '1rem', 
-                          lineHeight: '1.8', 
-                          color: '#374151',
-                                textAlign: 'justify',
-                                margin: idx === 0 ? 0 : '1rem 0 0',
-                              }}
-                            >
-                              {para}
-                            </p>
-                          ));
-                        }
-                        return (
-                          <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', margin: 0 }}>
-                            {raw}
-                          </p>
-                        );
-                      })()}
-                      {summaryData.strongest_strength && summaryData.strongest_strength.title && (
-                        <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
-                          <strong>Strongest strength:</strong> {summaryData.strongest_strength.title}. {summaryData.strongest_strength.description}{summaryData.strongest_strength.evidence ? ` Evidence: ${summaryData.strongest_strength.evidence}` : ''}
-                        </p>
-                      )}
-                      {summaryData.improvements && summaryData.improvements.length > 0 && (
-                        <p style={{ fontSize: '1rem', lineHeight: '1.8', color: '#374151', textAlign: 'justify', marginTop: '1rem' }}>
-                          <strong>Growth opportunities:</strong>{' '}
-                          {summaryData.improvements.slice(0, 2).map((im, i) => (
-                            <span key={i}>
-                              {i ? ' ' : ''}{im.area}: {im.description}{im.evidence ? ` (Evidence: ${im.evidence})` : ''}.
-                            </span>
-                          ))}
-                        </p>
-                              )}
-                            </div>
-                  ) : null}
                 </div>
               )}
 

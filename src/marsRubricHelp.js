@@ -146,8 +146,8 @@ export const MARS_ENGAGEMENT_CRITERIA = [
     subgroup: 'Engagement — Question quality (40% of Engagement)',
     code: '3.2.1',
     label: 'Cognitive Level Index (CLI) (50% of Question Quality)',
-    meaning: 'Depth of instructor questions (ICAP: more Constructive/Interactive → higher).',
-    how: 'From ICAP classification: (2×%Constructive + 3×%Interactive)/3 → scaled to 0–10.',
+    meaning: 'Depth of instructor questions (ICAP: Interactive share drives the score).',
+    how: 'Share of questions labelled Interactive: >20%→9/10; 10–20%→7/10; 5–<10%→5/10; <5%→3/10; small bump if many Constructive prompts.',
   },
   {
     key: 'sui',
@@ -155,15 +155,15 @@ export const MARS_ENGAGEMENT_CRITERIA = [
     code: '3.2.2',
     label: 'Student Uptake Index (SUI) (25% of Question Quality)',
     meaning: 'Extent to which the instructor builds upon or incorporates learner responses into the instructional dialogue.',
-    how: 'Heuristic from transcript cues (e.g., “good question”, “building on …”, “to respond to …”). If learner voice is not detectable (common in webcasts), SUI is set conservatively with a disclaimer.',
+    how: 'Transcript uptake cues after each question when visible. On webcasts (no reliable audience audio), the score also uses a prompting-density proxy from Active / Constructive / Interactive questions per minute so heavy questioning is not forced to ~2/10.',
   },
   {
     key: 'qds',
     subgroup: 'Engagement — Question quality',
     code: '3.2.3',
     label: 'Question Distribution Stability (QDS) (25% of Question Quality)',
-    meaning: 'Questions spread across the session vs clustered.',
-    how: 'Ten time bins; entropy normalized → 0–10 (needs ≥2 questions).',
+    meaning: 'Whether questions appear across the whole lecture timeline, not only in one segment.',
+    how: 'Lecture duration is split into 5 equal fifths (0–20%, 20–40%, …). Each fifth that contains at least one question earns 2 points (maximum 10).',
   },
   {
     key: 'learner_question_frequency',
@@ -171,7 +171,7 @@ export const MARS_ENGAGEMENT_CRITERIA = [
     code: '3.3.1',
     label: 'Question Frequency (10%)',
     meaning: "The frequency with which learners ask follow-up questions during instructional discourse.",
-    how: "LLM detects learner/audience questions in the transcript when present. If learner voice is not detectable (common in webcasts), this is set conservatively with a disclaimer (2/10).",
+    how: "LLM detects learner/audience questions in the transcript when present. If learner voice is not evidenced (typical webcasts), this subscore defaults to neutral 5/10 so engagement is not double-penalised against instructor prompting.",
   },
   {
     key: 'learner_question_cognitive',
@@ -179,6 +179,6 @@ export const MARS_ENGAGEMENT_CRITERIA = [
     code: '3.3.2',
     label: 'Question Cognitive Level (10%)',
     meaning: "A measure of the cognitive complexity of learners’ questions.",
-    how: "LLM estimates Bloom-style depth of detected learner/audience questions. If none are identifiable due to recording limitations, this is set conservatively with a disclaimer (2/10).",
+    how: "LLM estimates Bloom-style depth of detected learner/audience questions. If none are identifiable due to recording limitations, this subscore defaults to neutral 5/10 (same rationale as learner frequency).",
   },
 ];
