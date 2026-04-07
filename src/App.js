@@ -777,16 +777,26 @@ function App() {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/validate-passkey`, {
-        passkey: passkey.trim()
-      }, {
-        timeout: 5000
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/validate-passkey`,
+        { passkey: passkey.trim() },
+        {
+          timeout: 15000,
+          // Backend may return 401 (older deploy) or 200 + { valid: false }; never treat as axios "network" error.
+          validateStatus: () => true,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
-      if (response.data && response.data.valid) {
+      if (response.status >= 500 || response.data == null) {
+        setPasskeyError('Failed to validate passcode (server error). Please try again.');
+        setIsPasskeyValid(false);
+        return;
+      }
+
+      if (response.data.valid) {
         setIsPasskeyValid(true);
         setPasskeyError('');
-        // Store passkey in sessionStorage for this session
         sessionStorage.setItem('mars_passkey', passkey.trim());
       } else {
         setPasskeyError('Invalid passcode. Please try again.');
@@ -794,34 +804,48 @@ function App() {
       }
     } catch (error) {
       console.error('Passkey validation error:', error);
-      setPasskeyError('Failed to validate passcode. Please try again.');
+      setPasskeyError('Failed to validate passcode (network or CORS). Check that the app is using the correct API URL.');
       setIsPasskeyValid(false);
     }
   };
 
   // Check if passkey is already validated in this session
   useEffect(() => {
-    const storedPasskey = sessionStorage.getItem('mars_passkey');
+    const raw = sessionStorage.getItem('mars_passkey');
+    const storedPasskey = raw != null ? String(raw).trim() : '';
     if (!storedPasskey) return;
-      setPasskey(storedPasskey);
+    setPasskey(storedPasskey);
 
     // Re-validate against backend (avoid bypass if sessionStorage contains stale/invalid value)
     (async () => {
       try {
-        const response = await axios.post(`${API_BASE_URL}/validate-passkey`, { passkey: storedPasskey }, { timeout: 5000 });
-        if (response.data && response.data.valid) {
-      setIsPasskeyValid(true);
+        const response = await axios.post(
+          `${API_BASE_URL}/validate-passkey`,
+          { passkey: storedPasskey },
+          {
+            timeout: 15000,
+            validateStatus: () => true,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        if (response.status >= 500 || response.data == null) {
+          sessionStorage.removeItem('mars_passkey');
+          setIsPasskeyValid(false);
+          setPasskeyError('Could not verify saved passcode (server). Please enter it again.');
+          return;
+        }
+        if (response.data.valid) {
+          setIsPasskeyValid(true);
           setPasskeyError('');
         } else {
           sessionStorage.removeItem('mars_passkey');
           setIsPasskeyValid(false);
-          setPasskeyError('Please enter the passcode');
+          setPasskeyError('Saved passcode is no longer valid. Please enter the current passcode.');
         }
       } catch (e) {
-        // If backend is unreachable, fail closed (require passcode entry again)
         sessionStorage.removeItem('mars_passkey');
         setIsPasskeyValid(false);
-        setPasskeyError('Please enter the passcode');
+        setPasskeyError('Could not reach the server to verify passcode. Check API URL / network.');
       }
     })();
   }, []);
