@@ -72,6 +72,69 @@ function summaryFallbackContextLine(lectureContext, transcriptExcerpt) {
   );
 }
 
+/** Ensure we always have displayable text from API shape (personalized_feedback or paragraph_*). */
+function normalizeSummaryFromServer(summary) {
+  if (!summary || typeof summary !== 'object') return null;
+  const direct = String(summary.personalized_feedback || '').trim();
+  if (direct) {
+    return { ...summary, personalized_feedback: direct };
+  }
+  const p1 = String(summary.paragraph_overall || summary.paragraph1 || '').trim();
+  const p2 = String(summary.paragraph_strengths || summary.paragraph2 || '').trim();
+  const p3 = String(summary.paragraph_growth || summary.paragraph3 || '').trim();
+  if (p1 && p2 && p3) {
+    return { ...summary, personalized_feedback: `${p1}\n\n${p2}\n\n${p3}` };
+  }
+  const joined = [p1, p2, p3].filter(Boolean).join('\n\n').trim();
+  if (joined) {
+    return { ...summary, personalized_feedback: joined };
+  }
+  return null;
+}
+
+/** Client-only three-paragraph summary when the API omits text, times out, or returns a non-JSON body. */
+function buildLocalFallbackSummary(results) {
+  if (!results) {
+    return {
+      personalized_feedback: 'Summary could not be generated because analysis results are missing.',
+      strongest_strength: null,
+      improvements: [],
+    };
+  }
+  const overallScore = Math.round(results.overall_score * 10) / 10;
+  const totalQuestions = results.interaction_engagement?.total_questions || 0;
+  const scores = {
+    Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
+    Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
+    Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
+  };
+  const strongest = Object.entries(scores).reduce((best, cur) => (cur[1] > best[1] ? cur : best));
+  const weakest = Object.entries(scores).reduce((best, cur) => (cur[1] < best[1] ? cur : best));
+  const strengthsExtra = (results.strengths || []).slice(0, 5).filter(Boolean);
+  const growthExtra = (results.improvement_suggestions || []).slice(0, 5).filter(Boolean);
+  const rubricWeave = [
+    strengthsExtra.length ? `Rubric signals include ${strengthsExtra.join('; ')}.` : '',
+    growthExtra.length ? `Development themes include ${growthExtra.join('; ')}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const qPart =
+    totalQuestions === 0
+      ? 'Few or no instructor questions were detected; engagement scores should be read cautiously.'
+      : 'The session includes many instructor prompts; the profile appears weighted toward lower-demand questions rather than sustained dialogue, which aligns with the Engagement score.';
+  const ctx = (results.lecture_context || '').trim();
+  const excerptForCtx = (results.full_transcript?.text || '').substring(0, 2000);
+  const ctxLine = summaryFallbackContextLine(ctx, excerptForCtx);
+  const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
+  const p2 = `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
+  const p3 = `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
+  return {
+    personalized_feedback: `${p1}\n\n${p2}\n\n${p3}`,
+    strongest_strength: null,
+    improvements: [],
+  };
+}
+
 function App() {
   const [file, setFile] = useState(null);
   const [analysisId, setAnalysisId] = useState(null);
@@ -113,6 +176,7 @@ function App() {
       if (!results || summaryData) return; // Don't regenerate if already exists
 
       setIsGeneratingSummary(true);
+      let nextSummary = null;
       try {
         const summaryDataForAPI = {
           overall_score: Math.round(results.overall_score * 10) / 10,
@@ -147,52 +211,30 @@ function App() {
         };
 
         const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, summaryDataForAPI, {
-          timeout: 30000,
+          timeout: 120000,
+          validateStatus: () => true,
           headers: {
             'Content-Type': 'application/json'
           }
         });
 
-        if (response.data && response.data.summary) {
-          setSummaryData(response.data.summary);
+        if (response.status === 200 && response.data && response.data.summary) {
+          nextSummary = normalizeSummaryFromServer(response.data.summary);
+        } else {
+          console.warn('Summary API non-200 or missing summary:', response.status, response.data);
         }
       } catch (error) {
         console.error('Error generating summary:', error);
-        // Fallback summary
-        const overallScore = Math.round(results.overall_score * 10) / 10;
-        const totalQuestions = results.interaction_engagement?.total_questions || 0;
-
-        const scores = {
-          Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
-          Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
-          Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
-        };
-        const strongest = Object.entries(scores).reduce((best, cur) => (cur[1] > best[1] ? cur : best));
-        const weakest = Object.entries(scores).reduce((best, cur) => (cur[1] < best[1] ? cur : best));
-        
-        const strengthsExtra = (results.strengths || []).slice(0, 5).filter(Boolean);
-        const growthExtra = (results.improvement_suggestions || []).slice(0, 5).filter(Boolean);
-        const rubricWeave = [
-          strengthsExtra.length ? `Rubric signals include ${strengthsExtra.join('; ')}.` : '',
-          growthExtra.length ? `Development themes include ${growthExtra.join('; ')}.` : '',
-        ].filter(Boolean).join(' ');
-        const qPart = totalQuestions === 0
-          ? `Few or no instructor questions were detected; engagement scores should be read cautiously.`
-          : `The session includes many instructor prompts; the profile appears weighted toward lower-demand questions rather than sustained dialogue, which aligns with the Engagement score.`;
-        const ctx = (results.lecture_context || '').trim();
-        const excerptForCtx = (results.full_transcript?.text || '').substring(0, 2000);
-        const ctxLine = summaryFallbackContextLine(ctx, excerptForCtx);
-        const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
-        const p2 = `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
-        const p3 = `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
-        setSummaryData({
-          personalized_feedback: `${p1}\n\n${p2}\n\n${p3}`,
-          strongest_strength: null,
-          improvements: [],
-        });
-      } finally {
-        setIsGeneratingSummary(false);
       }
+
+      if (!nextSummary) {
+        nextSummary = {
+          ...buildLocalFallbackSummary(results),
+          summary_provenance: 'client_fallback',
+        };
+      }
+      setSummaryData(nextSummary);
+      setIsGeneratingSummary(false);
     };
 
     generateSummary();
@@ -2359,6 +2401,11 @@ function App() {
                     }}>
                       Summary
                     </h4>
+                    {summaryData.summary_provenance === 'client_fallback' && (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--gray-600)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                        The server did not return a full AI summary (timeout, error, or empty reply). Below is an automated summary from your MARS scores and rubric signals.
+                      </p>
+                    )}
                     {(() => {
                       const raw = summaryData.personalized_feedback || '';
                       const parts = raw.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
