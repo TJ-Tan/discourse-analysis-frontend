@@ -147,6 +147,7 @@ function App() {
   const [results, setResults] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [analysisTiming, setAnalysisTiming] = useState(null);
   const [, setShowParameters] = useState(false);
   const [configChanged, setConfigChanged] = useState(false);
   const [logMessages, setLogMessages] = useState([]);
@@ -1045,6 +1046,7 @@ function App() {
       }
       
       const newAnalysisId = response.data.analysis_id;
+      setAnalysisTiming(response.data.analysis_timing || null);
     setUserAnalysisId(newAnalysisId);
     
     // Check if video was queued
@@ -1426,6 +1428,25 @@ function App() {
       exportNode.style.borderRadius = '0';
       exportNode.style.maxWidth = '100%';
       exportNode.style.color = '#111827';
+      // Encourage cleaner pagination in html2pdf by avoiding breaks inside common "card" containers.
+      try {
+        exportNode.querySelectorAll('div, section, article, table, pre, ul, ol').forEach((el) => {
+          const cls = String(el.className || '');
+          if (
+            cls.includes('card') ||
+            cls.includes('panel') ||
+            cls.includes('section') ||
+            cls.includes('score') ||
+            cls.includes('rubric') ||
+            cls.includes('metrics') ||
+            cls.includes('summary')
+          ) {
+            el.classList.add('pdf-avoid-break');
+          }
+        });
+      } catch (e) {
+        // Best-effort only; export should still proceed.
+      }
 
       const wrapper = document.createElement('div');
       wrapper.style.background = '#ffffff';
@@ -1447,7 +1468,7 @@ function App() {
           format: 'a4', 
           orientation: 'portrait',
         },
-        pagebreak: { mode: ['css', 'legacy'] },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdf-avoid-break', 'p', 'li', 'pre'] },
       };
 
       await html2pdf().set(opt).from(wrapper).save();
@@ -1905,7 +1926,7 @@ function App() {
                   <div>
                     <p className="upload-text">Upload your lecture video</p>
                     <p className="upload-subtext">
-                      Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB
+                      Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB • Typical analysis time after upload: 10–15 min
                     </p>
                   </div>
                 )}
@@ -2029,6 +2050,16 @@ function App() {
                       </button>
                     </div>
                     <p className="progress-text">Uploading: {uploadProgress}%</p>
+                    <p className="progress-text" style={{ fontSize: '13px', opacity: 0.85 }}>
+                      Typical processing time (after upload):{' '}
+                      <strong>
+                        {(analysisTiming?.typical_processing_minutes_range?.[0] ?? 10)}–{(analysisTiming?.typical_processing_minutes_range?.[1] ?? 15)} minutes
+                      </strong>
+                      {analysisTiming?.processing_timeout_minutes ? (
+                        <> (timeout cap: {analysisTiming.processing_timeout_minutes} minutes)</>
+                      ) : null}
+                      . Upload time depends on file size and network.
+                    </p>
                   </div>
                 )}
               </div>
@@ -2323,6 +2354,24 @@ function App() {
               <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
                 🧮 Score Calculation Breakdown
               </h4>
+              {analysisStatus?.upload_completed_at && analysisStatus?.completed_at && (
+                <div style={{ marginBottom: '0.9rem', color: 'var(--gray-700)', fontSize: '0.95rem' }}>
+                  <strong>Total Time Spent for AI Analysis:</strong>{' '}
+                  {(() => {
+                    try {
+                      const t0 = new Date(analysisStatus.upload_completed_at).getTime();
+                      const t1 = new Date(analysisStatus.completed_at).getTime();
+                      const s = Math.max(0, Math.round((t1 - t0) / 1000));
+                      const m = Math.floor(s / 60);
+                      const sec = s % 60;
+                      return `${m}m ${sec}s`;
+                    } catch {
+                      return '—';
+                    }
+                  })()}
+                  {' '}<span style={{ color: 'var(--gray-600)' }}>(from upload completion to results ready)</span>
+                </div>
+              )}
               <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
                 <strong>Formula:</strong>
                 <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>

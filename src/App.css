@@ -73,6 +73,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* PDF export pagination helpers (html2pdf honors these with pagebreak: { mode: ['css', ...] }). */
+.pdf-avoid-break {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 /* Hero Background with Enhanced Bokeh Effect */
 .app-background {
   position: relative;
