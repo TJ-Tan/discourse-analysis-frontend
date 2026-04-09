@@ -1467,7 +1467,44 @@ function App() {
       const wrapper = document.createElement('div');
       wrapper.style.background = '#ffffff';
       wrapper.style.padding = '12px';
+      const genAt = new Date().toLocaleString('en-SG', {
+        timeZone: 'Asia/Singapore',
+        dateStyle: 'long',
+        timeStyle: 'short',
+      });
+      const escHtml = (s) =>
+        String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/"/g, '&quot;');
+      const scoringModel = escHtml(results?.scoring_model || '—');
+      const buildNo = escHtml(backendBuildIndex != null ? String(backendBuildIndex) : '—');
+      const sha = escHtml(backendCommitSha ? String(backendCommitSha) : '');
+      const header = document.createElement('div');
+      header.className = 'pdf-avoid-break';
+      header.style.cssText =
+        'border-bottom:3px solid #003D7C;padding-bottom:14px;margin-bottom:18px;font-family:Inter,system-ui,sans-serif;';
+      header.innerHTML = `
+        <div style="font-size:20px;font-weight:800;color:#003D7C;letter-spacing:-0.02em;">Multimodal AI Reflection System (MARS)</div>
+        <div style="font-size:14px;font-weight:600;color:#1f2937;margin-top:6px;">Full lecture analysis report</div>
+        <div style="font-size:11px;color:#4b5563;margin-top:10px;line-height:1.5;">
+          <strong>Generated (SGT):</strong> ${genAt}<br/>
+          <strong>Scoring model:</strong> ${scoringModel}<br/>
+          <strong>API release build:</strong> #${buildNo}${sha ? ` · commit ${sha}` : ''}
+        </div>
+      `;
+      const footer = document.createElement('div');
+      footer.className = 'pdf-avoid-break';
+      footer.style.cssText =
+        'margin-top:22px;padding-top:14px;border-top:1px solid #d1d5db;font-size:10px;color:#6b7280;line-height:1.55;font-family:Inter,system-ui,sans-serif;';
+      footer.innerHTML = `
+        <div style="font-weight:600;color:#374151;">End of report</div>
+        <p style="margin:8px 0 0;">This document was produced automatically by MARS from the submitted recording and transcript. Scores and narrative are algorithmic and may not fully reflect classroom impact. Interpret alongside local policies and professional judgment.</p>
+        <p style="margin:6px 0 0;">© NUS MARS — Confidential to the intended recipient. Do not redistribute without authorisation.</p>
+      `;
+      wrapper.appendChild(header);
       wrapper.appendChild(exportNode);
+      wrapper.appendChild(footer);
       document.body.appendChild(wrapper);
 
       const opt = {
@@ -1967,7 +2004,7 @@ function App() {
                   <div>
                     <p className="upload-text">Upload your lecture video</p>
                     <p className="upload-subtext">
-                      Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB • Typical analysis time after upload: 10–15 min
+                      Drag & drop or click to select • Supports MP4, AVI, MOV, MKV, WMV • Max 2 hours, 2GB • After upload, a ~1 hour recording often needs about 15–20 minutes to analyse (varies with lecture length & server traffic)
                     </p>
                   </div>
                 )}
@@ -2091,15 +2128,20 @@ function App() {
                       </button>
                     </div>
                     <p className="progress-text">Uploading: {uploadProgress}%</p>
-                    <p className="progress-text" style={{ fontSize: '13px', opacity: 0.85 }}>
-                      Typical processing time (after upload):{' '}
-                      <strong>
-                        {(analysisTiming?.typical_processing_minutes_range?.[0] ?? 10)}–{(analysisTiming?.typical_processing_minutes_range?.[1] ?? 15)} minutes
-                      </strong>
+                    <p className="progress-text" style={{ fontSize: '13px', opacity: 0.85, lineHeight: 1.45 }}>
+                      {analysisTiming?.upload_timing_explanation || (
+                        <>
+                          After upload, analysis time depends on lecture length and server load. A <strong>~1 hour</strong> video often needs about{' '}
+                          <strong>
+                            {(analysisTiming?.one_hour_video_processing_minutes_range?.[0] ?? 15)}–{(analysisTiming?.one_hour_video_processing_minutes_range?.[1] ?? 20)} minutes
+                          </strong>
+                          ; shorter recordings are usually faster. Busy servers or queueing can add delay.
+                        </>
+                      )}
                       {analysisTiming?.processing_timeout_minutes ? (
-                        <> (timeout cap: {analysisTiming.processing_timeout_minutes} minutes)</>
-                      ) : null}
-                      . Upload time depends on file size and network.
+                        <> Hard timeout: {analysisTiming.processing_timeout_minutes} minutes.</>
+                      ) : null}{' '}
+                      Upload time still depends on file size and network.
                     </p>
                   </div>
                 )}
