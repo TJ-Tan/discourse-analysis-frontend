@@ -1256,30 +1256,40 @@ function App() {
           }
           
           // Force immediate state update
-          const newStatus = {
-            status: message.data.status || 'processing',
-            progress: message.data.progress || 0,
-            message: message.data.message || '',
-            timestamp: Date.now(),
-            updateId: Date.now() // Force React to see this as a new update
-          };
-          
-          setAnalysisStatus(newStatus);
+          const newStatus = mergeAnalysisTiming(
+            {
+              status: message.data.status || 'processing',
+              progress: message.data.progress || 0,
+              message: message.data.message || '',
+              timestamp: Date.now(),
+              updateId: Date.now(), // Force React to see this as a new update
+            },
+            message.data
+          );
+
+          setAnalysisStatus((prev) => ({ ...prev, ...newStatus }));
           
           // Also force a re-render by updating animated progress immediately
           if (message.data.progress !== undefined) {
             setAnimatedProgress(message.data.progress);
           }
         } else if (message.type === 'complete') {
-          // Analysis complete
+          // Analysis complete (message.data is full analysis_results incl. timing + results)
           console.log('🏁 Analysis completed');
-          setResults(message.data?.results);
-          setAnalysisStatus({
-            status: 'completed',
-            progress: 100,
-            message: 'Analysis complete!',
-            timestamp: Date.now()
-          });
+          const payload = message.data || {};
+          setResults(payload.results);
+          setAnalysisStatus((prev) =>
+            mergeAnalysisTiming(
+              {
+                ...prev,
+                status: 'completed',
+                progress: 100,
+                message: payload.message || 'Analysis complete!',
+                timestamp: Date.now(),
+              },
+              payload
+            )
+          );
           eventSource.close();
         } else if (message.type === 'error') {
           console.error('❌ Analysis error:', message.data);
@@ -1341,13 +1351,19 @@ function App() {
           lastProgress = currentProgress;
         }
         
-        // Update status
-        setAnalysisStatus({
-          status: response.data.status,
-          progress: currentProgress,
-          message: response.data.message || '',
-          timestamp: Date.now()
-        });
+        // Update status (keep server timing fields — required for "Total analysis time" after completion)
+        setAnalysisStatus((prev) =>
+          mergeAnalysisTiming(
+            {
+              ...prev,
+              status: response.data.status,
+              progress: currentProgress,
+              message: response.data.message || '',
+              timestamp: Date.now(),
+            },
+            response.data
+          )
+        );
         
         // Update log messages
         if (response.data.log_messages && Array.isArray(response.data.log_messages)) {
@@ -1500,6 +1516,40 @@ function App() {
     const m = Math.floor(n / 60);
     const sec = Math.floor(n % 60);
     return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  /** Preserve server timing fields; polling/SSE previously dropped them so "Total analysis time" never showed. */
+  const mergeAnalysisTiming = (base, src) => {
+    if (!src || typeof src !== 'object') return { ...base };
+    const next = { ...base };
+    if (src.upload_completed_at != null) next.upload_completed_at = src.upload_completed_at;
+    if (src.completed_at != null) next.completed_at = src.completed_at;
+    if (src.analysis_duration_seconds != null) next.analysis_duration_seconds = src.analysis_duration_seconds;
+    return next;
+  };
+
+  const formatAnalysisDuration = (statusLike, resultsObj) => {
+    const t = resultsObj?.analysis_timing || {};
+    const dur = statusLike?.analysis_duration_seconds ?? t.analysis_duration_seconds;
+    if (dur != null && !Number.isNaN(Number(dur)) && Number(dur) >= 0) {
+      const s = Math.round(Number(dur));
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}m ${sec}s`;
+    }
+    const t0s = statusLike?.upload_completed_at || t.upload_completed_at;
+    const t1s = statusLike?.completed_at || t.completed_at;
+    if (!t0s || !t1s) return null;
+    try {
+      const t0 = new Date(t0s).getTime();
+      const t1 = new Date(t1s).getTime();
+      const s = Math.max(0, Math.round((t1 - t0) / 1000));
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}m ${sec}s`;
+    } catch {
+      return null;
+    }
   };
 
   const getWhyContent = (key, score, r) => {
@@ -2345,22 +2395,12 @@ function App() {
               <h4 style={{ color: 'var(--nus-blue)', marginBottom: '1rem' }}>
                 🧮 Score Calculation Breakdown
               </h4>
-              {analysisStatus?.upload_completed_at && analysisStatus?.completed_at && (
+              {formatAnalysisDuration(analysisStatus, results) && (
                 <div style={{ marginBottom: '0.9rem', color: 'var(--gray-700)', fontSize: '0.95rem' }}>
                   <strong>Total Time Spent for AI Analysis:</strong>{' '}
-                  {(() => {
-                    try {
-                      const t0 = new Date(analysisStatus.upload_completed_at).getTime();
-                      const t1 = new Date(analysisStatus.completed_at).getTime();
-                      const s = Math.max(0, Math.round((t1 - t0) / 1000));
-                      const m = Math.floor(s / 60);
-                      const sec = s % 60;
-                      return `${m}m ${sec}s`;
-                    } catch {
-                      return '—';
-                    }
-                  })()}
-                  {' '}<span style={{ color: 'var(--gray-600)' }}>(from upload completion to results ready)</span>
+                  {formatAnalysisDuration(analysisStatus, results)}
+                  {' '}
+                  <span style={{ color: 'var(--gray-600)' }}>(from upload completion to results ready)</span>
                 </div>
               )}
               <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
