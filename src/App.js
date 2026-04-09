@@ -249,7 +249,6 @@ function App() {
       if (!results) return;
       setIsGeneratingSummary(true);
       setSummaryProgressPct(5);
-      const t0 = Date.now();
       const timer = setInterval(() => {
         // Smooth fake progress up to 90% while backend LLM runs.
         setSummaryProgressPct((p) => {
