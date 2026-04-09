@@ -172,80 +172,6 @@ function App() {
   /** Optional: subject, topic, ILOs — sent to backend for LLM context (future rubric scoring). */
   const [lectureContext, setLectureContext] = useState('');
 
-  const isSummaryFallback = (s) => {
-    const p = (s?.summary_provenance || '').toLowerCase();
-    return p.includes('fallback') || p === 'client_fallback';
-  };
-
-  const regenerateFullSummary = async () => {
-    if (!results) return;
-    // Force re-run even if a previous summary exists
-    setSummaryData(null);
-    setIsGeneratingSummary(true);
-    setSummaryProgressPct(5);
-    // Reuse the same endpoint with force_full flag (longer, more actionable)
-    let nextSummary = null;
-    const timer = setInterval(() => {
-      setSummaryProgressPct((p) => Math.min(90, p + (p < 60 ? 6 : 2)));
-    }, 900);
-    try {
-      const payload = {
-        overall_score: Math.round(results.overall_score * 10) / 10,
-        content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
-        delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
-        engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
-        speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
-        body_language_score: Math.round(results.body_language?.score * 10) / 10,
-        teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
-        interaction_score: Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
-        presentation_score: Math.round(results.presentation_skills?.score * 10) / 10,
-        high_level_questions: results.interaction_engagement?.high_level_questions || [],
-        all_questions: results.interaction_engagement?.all_questions || [],
-        audience_questions: results.interaction_engagement?.audience_questions || [],
-        icap_counts: results.interaction_engagement?.icap_counts || {},
-        total_questions: results.interaction_engagement?.total_questions || 0,
-        questions_per_minute: results.interaction_engagement?.questions_per_minute ?? 0,
-        eqd_per_minute: results.interaction_engagement?.eqd_per_minute ?? 0,
-        lecture_context: results.lecture_context || '',
-        transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
-        sample_frames_count: results.sample_frames?.length || 0,
-        filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
-        extra_strengths: results.strengths || [],
-        extra_growth: results.improvement_suggestions || [],
-        context_alignment_score: results.mars_rubric?.content_subscores?.context_alignment_score ?? null,
-        context_alignment_verdict: results.mars_rubric?.content_subscores?.context_alignment_verdict ?? null,
-        content_penalty_points: results.mars_rubric?.content_subscores?.content_context_misalignment_penalty_points ?? 0,
-        explanations: {
-          speech: results.speech_analysis?.explanations || {},
-          body_language: results.body_language?.explanations || {},
-          teaching: results.teaching_effectiveness?.explanations || {},
-          interaction: results.interaction_engagement?.explanations || {},
-          presentation: results.presentation_skills?.explanations || {},
-        },
-        force_full: true,
-      };
-      const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, payload, {
-        timeout: 240000,
-        validateStatus: () => true,
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.status === 200 && response.data?.summary) {
-        nextSummary = normalizeSummaryFromServer(response.data.summary);
-      }
-    } catch (e) {
-      console.error('Full summary regeneration failed:', e);
-    } finally {
-      clearInterval(timer);
-      setSummaryProgressPct(100);
-      setTimeout(() => setSummaryProgressPct(0), 600);
-      setIsGeneratingSummary(false);
-    }
-    if (!nextSummary) {
-      nextSummary = { ...buildLocalFallbackSummary(results), summary_provenance: 'client_fallback' };
-    }
-    setSummaryData(nextSummary);
-  };
-
   // Generate summary when results are available
   useEffect(() => {
     const requestSummary = async ({ forceFull = false } = {}) => {
@@ -2633,18 +2559,6 @@ function App() {
                       <p style={{ fontSize: '0.85rem', color: 'var(--gray-600)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
                         The server did not return a full AI summary (timeout, error, or empty reply). Below is an automated summary from your MARS scores and rubric signals.
                       </p>
-                    )}
-                    {isSummaryFallback(summaryData) && (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '0 0 0.75rem' }}>
-                        <button
-                          onClick={regenerateFullSummary}
-                          className="start-button"
-                          style={{ padding: '10px 14px', fontSize: '0.9rem' }}
-                          disabled={isGeneratingSummary}
-                        >
-                          Regenerate full summary
-                        </button>
-                      </div>
                     )}
                     {(() => {
                       const raw = summaryData.personalized_feedback || '';
