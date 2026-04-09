@@ -1512,17 +1512,8 @@ function App() {
   const getWhyDelivery = (key, score, r) => {
     const ev = r?.mars_rubric?.delivery_criteria_evidence?.[key];
     const line = whyLineForDelivery(key, score);
-    if (key === 'body') {
-      // Keep this user-friendly: avoid repeating the metric grid numbers in the \"Why\" line.
-      // If backend evidence contains numeric sub-metrics, strip them.
-      const raw = ev && String(ev).trim() ? String(ev).trim() : '';
-      const stripped = raw
-        .replace(/\b\d+(\.\d+)?\/10\b/g, '')
-        .replace(/\b(Eye contact|Gestures|Posture|Facial engagement|Professionalism)\b\s*:?/gi, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-      return stripped ? `${line} ${stripped}` : line;
-    }
+    // Same pattern as speech: band line + backend evidence string (do not strip body text —
+    // stripping /10 and metric labels was leaving broken fragments like "Frame-averaged signals: ; ; ; ;").
     if (ev && String(ev).trim()) return `${line} ${String(ev).trim()}`;
     return line;
   };
@@ -3184,12 +3175,16 @@ function App() {
                       {row.key === 'body' && (
                         <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
                           <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative body language metrics (50% of Delivery)</div>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--gray-600)', marginBottom: '0.5rem', lineHeight: 1.45 }}>
+                            Vision model scores each sampled frame (1–10); values below are <strong>frame-weighted means</strong> (middle of the clip weighted slightly higher), from{' '}
+                            <strong>{results.body_language?.frames_analyzed ?? results.body_language?.raw_metrics?.total_frames_extracted ?? '—'}</strong> frame(s). Rubric labels match the same numeric input as Speech (below-average / average / good / excellent bands).
+                          </div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
-                            <div><strong>Eye contact:</strong> {results.body_language?.raw_metrics?.eye_contact_raw ?? 0}/10 — {results.body_language?.metric_scores?.eye_contact ?? '—'}/10</div>
-                            <div><strong>Gestures:</strong> {results.body_language?.raw_metrics?.gestures_raw ?? 0}/10 — {results.body_language?.metric_scores?.gestures ?? '—'}/10</div>
-                            <div><strong>Posture:</strong> {results.body_language?.raw_metrics?.posture_raw ?? 0}/10 — {results.body_language?.metric_scores?.posture ?? '—'}/10</div>
-                            <div><strong>Facial engagement:</strong> {results.body_language?.raw_metrics?.engagement_raw ?? 0}/10 — {results.body_language?.metric_scores?.facial_engagement ?? '—'}/10</div>
-                            <div><strong>Professionalism:</strong> {results.body_language?.raw_metrics?.professionalism_raw ?? 0}/10 — {results.body_language?.metric_scores?.professionalism ?? '—'}/10</div>
+                            <div><strong>Eye contact:</strong> {Number(results.body_language?.eye_contact ?? results.body_language?.raw_metrics?.eye_contact_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.eye_contact?.rating ?? '—'}</div>
+                            <div><strong>Gestures:</strong> {Number(results.body_language?.gestures ?? results.body_language?.raw_metrics?.gestures_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.gestures?.rating ?? '—'}</div>
+                            <div><strong>Posture:</strong> {Number(results.body_language?.posture ?? results.body_language?.raw_metrics?.posture_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.posture?.rating ?? '—'}</div>
+                            <div><strong>Facial engagement:</strong> {Number(results.body_language?.engagement ?? results.body_language?.raw_metrics?.engagement_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.facial_engagement?.rating ?? '—'}</div>
+                            <div><strong>Professionalism:</strong> {Number(results.body_language?.professionalism ?? results.body_language?.raw_metrics?.professionalism_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.professionalism?.rating ?? '—'}</div>
                           </div>
                           {results.body_language?.remarks && (
                             <p style={{ margin: '0.75rem 0 0', color: '#92400e', fontStyle: 'italic', fontSize: '0.88rem' }}>
@@ -3208,7 +3203,7 @@ function App() {
                       )}
                       {row.key === 'body' && results.body_language?.score != null && (
                       <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--nus-blue)', lineHeight: 1.5 }}>
-                        <strong>Why this score:</strong> {getWhyDelivery('body', Number(results.body_language.score).toFixed(1), results)}
+                        <strong>Why this score:</strong> {getWhyDelivery('body', results.body_language.score, results)}
                       </p>
                       )}
                     </div>
