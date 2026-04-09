@@ -165,18 +165,98 @@ function App() {
   const uploadCancelToken = useRef(null);
   const [summaryData, setSummaryData] = useState(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryProgressPct, setSummaryProgressPct] = useState(0);
   const [passkey, setPasskey] = useState('');
   const [isPasskeyValid, setIsPasskeyValid] = useState(false);
   const [passkeyError, setPasskeyError] = useState('');
   /** Optional: subject, topic, ILOs — sent to backend for LLM context (future rubric scoring). */
   const [lectureContext, setLectureContext] = useState('');
 
+  const isSummaryFallback = (s) => {
+    const p = (s?.summary_provenance || '').toLowerCase();
+    return p.includes('fallback') || p === 'client_fallback';
+  };
+
+  const regenerateFullSummary = async () => {
+    if (!results) return;
+    // Force re-run even if a previous summary exists
+    setSummaryData(null);
+    setIsGeneratingSummary(true);
+    setSummaryProgressPct(5);
+    // Reuse the same endpoint with force_full flag (longer, more actionable)
+    let nextSummary = null;
+    const timer = setInterval(() => {
+      setSummaryProgressPct((p) => Math.min(90, p + (p < 60 ? 6 : 2)));
+    }, 900);
+    try {
+      const payload = {
+        overall_score: Math.round(results.overall_score * 10) / 10,
+        content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
+        delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
+        engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
+        speech_score: Math.round(results.speech_analysis?.score * 10) / 10,
+        body_language_score: Math.round(results.body_language?.score * 10) / 10,
+        teaching_effectiveness_score: Math.round(results.teaching_effectiveness?.score * 10) / 10,
+        interaction_score: Math.round((results.interaction_engagement?.score || 0) * 10) / 10,
+        presentation_score: Math.round(results.presentation_skills?.score * 10) / 10,
+        high_level_questions: results.interaction_engagement?.high_level_questions || [],
+        all_questions: results.interaction_engagement?.all_questions || [],
+        audience_questions: results.interaction_engagement?.audience_questions || [],
+        icap_counts: results.interaction_engagement?.icap_counts || {},
+        total_questions: results.interaction_engagement?.total_questions || 0,
+        questions_per_minute: results.interaction_engagement?.questions_per_minute ?? 0,
+        eqd_per_minute: results.interaction_engagement?.eqd_per_minute ?? 0,
+        lecture_context: results.lecture_context || '',
+        transcript_excerpt: results.full_transcript?.text?.substring(0, 2000) || '',
+        sample_frames_count: results.sample_frames?.length || 0,
+        filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
+        extra_strengths: results.strengths || [],
+        extra_growth: results.improvement_suggestions || [],
+        explanations: {
+          speech: results.speech_analysis?.explanations || {},
+          body_language: results.body_language?.explanations || {},
+          teaching: results.teaching_effectiveness?.explanations || {},
+          interaction: results.interaction_engagement?.explanations || {},
+          presentation: results.presentation_skills?.explanations || {},
+        },
+        force_full: true,
+      };
+      const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, payload, {
+        timeout: 240000,
+        validateStatus: () => true,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.status === 200 && response.data?.summary) {
+        nextSummary = normalizeSummaryFromServer(response.data.summary);
+      }
+    } catch (e) {
+      console.error('Full summary regeneration failed:', e);
+    } finally {
+      clearInterval(timer);
+      setSummaryProgressPct(100);
+      setTimeout(() => setSummaryProgressPct(0), 600);
+      setIsGeneratingSummary(false);
+    }
+    if (!nextSummary) {
+      nextSummary = { ...buildLocalFallbackSummary(results), summary_provenance: 'client_fallback' };
+    }
+    setSummaryData(nextSummary);
+  };
+
   // Generate summary when results are available
   useEffect(() => {
-    const generateSummary = async () => {
-      if (!results || summaryData) return; // Don't regenerate if already exists
-
+    const requestSummary = async ({ forceFull = false } = {}) => {
+      if (!results) return;
       setIsGeneratingSummary(true);
+      setSummaryProgressPct(5);
+      const t0 = Date.now();
+      const timer = setInterval(() => {
+        // Smooth fake progress up to 90% while backend LLM runs.
+        setSummaryProgressPct((p) => {
+          const next = Math.min(90, p + (p < 60 ? 6 : 2));
+          return next;
+        });
+      }, 900);
       let nextSummary = null;
       try {
         const summaryDataForAPI = {
@@ -208,11 +288,12 @@ function App() {
             teaching: results.teaching_effectiveness?.explanations || {},
             interaction: results.interaction_engagement?.explanations || {},
             presentation: results.presentation_skills?.explanations || {}
-          }
+          },
+          force_full: !!forceFull,
         };
 
         const response = await axios.post(`${API_BASE_URL}/generate-pdf-summary`, summaryDataForAPI, {
-          timeout: 120000,
+          timeout: forceFull ? 240000 : 120000,
           validateStatus: () => true,
           headers: {
             'Content-Type': 'application/json'
@@ -236,9 +317,14 @@ function App() {
       }
       setSummaryData(nextSummary);
       setIsGeneratingSummary(false);
+      clearInterval(timer);
+      setSummaryProgressPct(100);
+      // Reset after a short moment so reruns animate
+      setTimeout(() => setSummaryProgressPct(0), 600);
     };
 
-    generateSummary();
+    // Auto-generate once per results
+    if (results && !summaryData) requestSummary({ forceFull: false });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- summaryData intentionally excluded to avoid re-run on summary change
   }, [results]);
 
@@ -2506,7 +2592,22 @@ function App() {
                 {isGeneratingSummary ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
                     <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Generating personalised summary...</div>
-                    <div style={{ fontSize: '0.9rem' }}>Please wait</div>
+                    <div style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Please wait — the AI is running on the server</div>
+                    <div style={{ maxWidth: '520px', margin: '0 auto' }}>
+                      <div style={{ height: '10px', background: 'rgba(0,0,0,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            height: '10px',
+                            width: `${Math.max(5, summaryProgressPct || 0)}%`,
+                            background: 'linear-gradient(90deg, var(--nus-blue), var(--nus-orange))',
+                            transition: 'width 0.8s ease',
+                          }}
+                        />
+                      </div>
+                      <div style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: 'var(--gray-600)' }}>
+                        {summaryProgressPct ? `${summaryProgressPct}%` : ''}
+                      </div>
+                    </div>
                   </div>
                 ) : summaryData ? (
                   <div style={{
@@ -2527,6 +2628,18 @@ function App() {
                       <p style={{ fontSize: '0.85rem', color: 'var(--gray-600)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
                         The server did not return a full AI summary (timeout, error, or empty reply). Below is an automated summary from your MARS scores and rubric signals.
                       </p>
+                    )}
+                    {isSummaryFallback(summaryData) && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '0 0 0.75rem' }}>
+                        <button
+                          onClick={regenerateFullSummary}
+                          className="start-button"
+                          style={{ padding: '10px 14px', fontSize: '0.9rem' }}
+                          disabled={isGeneratingSummary}
+                        >
+                          Regenerate full summary
+                        </button>
+                      </div>
                     )}
                     {(() => {
                       const raw = summaryData.personalized_feedback || '';
