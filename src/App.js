@@ -212,6 +212,9 @@ function App() {
         filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
         extra_strengths: results.strengths || [],
         extra_growth: results.improvement_suggestions || [],
+        context_alignment_score: results.mars_rubric?.content_subscores?.context_alignment_score ?? null,
+        context_alignment_verdict: results.mars_rubric?.content_subscores?.context_alignment_verdict ?? null,
+        content_penalty_points: results.mars_rubric?.content_subscores?.content_context_misalignment_penalty_points ?? 0,
         explanations: {
           speech: results.speech_analysis?.explanations || {},
           body_language: results.body_language?.explanations || {},
@@ -281,6 +284,9 @@ function App() {
           filler_words: results.speech_analysis?.filler_details?.slice(0, 5) || [],
           extra_strengths: results.strengths || [],
           extra_growth: results.improvement_suggestions || [],
+          context_alignment_score: results.mars_rubric?.content_subscores?.context_alignment_score ?? null,
+          context_alignment_verdict: results.mars_rubric?.content_subscores?.context_alignment_verdict ?? null,
+          content_penalty_points: results.mars_rubric?.content_subscores?.content_context_misalignment_penalty_points ?? 0,
           explanations: {
             speech: results.speech_analysis?.explanations || {},
             body_language: results.body_language?.explanations || {},
@@ -2070,7 +2076,7 @@ function App() {
               </div>
             )}
             
-            {isPasskeyValid && (
+            {isPasskeyValid && !isUploading && (
               <div
                 {...getRootProps()}
                 className={`upload-area ${isDragActive ? 'active' : ''}`}
@@ -2096,7 +2102,7 @@ function App() {
               </div>
             )}
 
-            {isPasskeyValid && (
+            {isPasskeyValid && !isUploading && (
               <div
                 style={{
                   marginTop: '1.25rem',
@@ -3300,6 +3306,47 @@ function App() {
                 <h4 style={{ margin: '1rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
                   {MARS_CONTENT_MAIN.code} — {MARS_CONTENT_MAIN.title}
                 </h4>
+                {(() => {
+                  const sub = results?.mars_rubric?.content_subscores || {};
+                  const pen = Number(sub.content_context_misalignment_penalty_points || 0);
+                  const verdict = String(sub.context_alignment_verdict || '').toLowerCase();
+                  const score = sub.context_alignment_score != null ? Number(sub.context_alignment_score) : null;
+                  const isMismatch = pen >= 4.9 || verdict === 'mismatch' || (score != null && score <= 0.25);
+                  if (!isMismatch) return null;
+                  return (
+                    <div style={{
+                      margin: '0 0 1rem',
+                      padding: '0.9rem 1rem',
+                      background: 'rgba(239, 124, 0, 0.10)',
+                      border: '1px solid rgba(239, 124, 0, 0.35)',
+                      borderRadius: '12px',
+                      color: '#7c2d12',
+                      lineHeight: 1.5,
+                      fontSize: '0.92rem',
+                    }}>
+                      <div style={{ fontWeight: 800, color: '#9a3412', marginBottom: '0.35rem' }}>
+                        Context-Aware Analysis: lecture context appears mismatched
+                      </div>
+                      <div>
+                        The submitted <strong>Lecture Context &amp; Supplementary Information</strong> does not align well with the transcript cues.
+                        {sub.context_alignment_score != null ? (
+                          <> Alignment score: <strong>{Number(sub.context_alignment_score).toFixed(2)}</strong> ({sub.context_alignment_verdict || 'mismatch'}).</>
+                        ) : (
+                          <> Alignment verdict: <strong>{sub.context_alignment_verdict || 'mismatch'}</strong>.</>
+                        )}
+                      </div>
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <strong>Penalty applied:</strong> Content score is reduced by <strong>−{pen ? pen.toFixed(0) : 5}</strong> point(s)
+                        (Content before penalty: {sub.content_before_penalty != null ? Number(sub.content_before_penalty).toFixed(2) : '—'}/10 → after penalty: {results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}/10).
+                      </div>
+                      {sub.context_alignment_rationale ? (
+                        <div style={{ marginTop: '0.35rem', color: '#7c2d12' }}>
+                          <strong>Why:</strong> {String(sub.context_alignment_rationale)}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
                 {MARS_CONTENT_SECTIONS.map((sec) => (
                   <div key={sec.code} style={{ marginBottom: '1.15rem' }}>
                     <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', fontSize: '0.98rem' }}>
