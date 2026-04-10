@@ -2463,10 +2463,34 @@ function App() {
                 </div>
               )}
               <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                {(() => {
+                  const adj = results.calculation_breakdown?.final_calculation?.content_adjustment;
+                  if (!adj || Number(adj.penalty_points || 0) < 0.01) return null;
+                  return (
+                    <div style={{ marginBottom: '0.85rem', padding: '0.75rem 0.85rem', background: 'white', borderRadius: '8px', border: '1px solid rgba(239, 124, 0, 0.35)', fontSize: '0.88rem', lineHeight: 1.5, color: '#7c2d12' }}>
+                      <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#9a3412' }}>1 — Content (Context-Aware adjustment)</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: '#0f172a' }}>
+                        Rubric Content (before penalty): <strong>{Number(adj.before_penalty).toFixed(2)}</strong>/10
+                        <br />
+                        Context misalignment penalty: <strong>−{Number(adj.penalty_points).toFixed(0)}</strong>
+                        <br />
+                        Content used in overall MARS: <strong>{Number(adj.after_penalty).toFixed(2)}</strong>/10
+                      </div>
+                      {adj.detail && (
+                        <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#444' }}>{adj.detail}</div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <strong>Formula:</strong>
                 <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
                   {results.calculation_breakdown?.final_calculation?.formula}
                 </div>
+                {results.calculation_breakdown?.final_calculation?.calculation_note && (
+                  <div style={{ marginTop: '0.45rem', fontSize: '0.82rem', color: 'var(--gray-700)', lineHeight: 1.45 }}>
+                    {results.calculation_breakdown.final_calculation.calculation_note}
+                  </div>
+                )}
                 <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--nus-blue)' }}>
                   = {results.calculation_breakdown?.final_calculation?.calculation}
                 </div>
@@ -3212,6 +3236,18 @@ function App() {
                   <div><strong>Content</strong> (20%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.content_score != null ? `${Number(results.mars_rubric.content_score).toFixed(1)}/10` : '—'}</span></div>
                   <div><strong>Delivery</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.delivery_score != null ? `${Number(results.mars_rubric.delivery_score).toFixed(1)}/10` : '—'}</span></div>
                   <div><strong>Engagement</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.engagement_score != null ? `${Number(results.mars_rubric.engagement_score).toFixed(1)}/10` : '—'}</span></div>
+                  {(() => {
+                    const sub = results?.mars_rubric?.content_subscores || {};
+                    const pen = Number(sub.content_context_misalignment_penalty_points || 0);
+                    if (pen < 0.01 || sub.content_before_penalty == null) return null;
+                    return (
+                      <div style={{ gridColumn: '1 / -1', fontSize: '0.84rem', color: '#7c2d12', lineHeight: 1.45, padding: '0.5rem 0.65rem', background: 'rgba(239, 124, 0, 0.08)', borderRadius: '8px', border: '1px solid rgba(239, 124, 0, 0.25)' }}>
+                        <strong>Content scoring note:</strong> rubric Content before Context-Aware penalty was{' '}
+                        <strong>{Number(sub.content_before_penalty).toFixed(1)}</strong>/10; after <strong>−{pen.toFixed(0)}</strong> misalignment penalty, the value entering the overall MARS formula is{' '}
+                        <strong>{results.mars_rubric.content_score != null ? Number(results.mars_rubric.content_score).toFixed(1) : '—'}</strong>/10.
+                      </div>
+                    );
+                  })()}
                   <div style={{ gridColumn: '1 / -1', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
                     <strong>Overall formula:</strong> {results.mars_rubric.formula || '0.20×Content + 0.40×Delivery + 0.40×Engagement'}
                   </div>
@@ -3239,23 +3275,24 @@ function App() {
                       fontSize: '0.92rem',
                     }}>
                       <div style={{ fontWeight: 800, color: '#9a3412', marginBottom: '0.35rem' }}>
-                        Context-Aware Analysis: lecture context appears mismatched
+                        Between section 1 and 1.1 — Context-Aware Analysis
                       </div>
-                      <div>
-                        The submitted <strong>Lecture Context &amp; Supplementary Information</strong> does not align well with the transcript cues.
-                        {sub.context_alignment_score != null ? (
-                          <> Alignment score: <strong>{Number(sub.context_alignment_score).toFixed(2)}</strong> ({sub.context_alignment_verdict || 'mismatch'}).</>
-                        ) : (
-                          <> Alignment verdict: <strong>{sub.context_alignment_verdict || 'mismatch'}</strong>.</>
-                        )}
-                      </div>
-                      <div style={{ marginTop: '0.35rem' }}>
-                        <strong>Penalty applied:</strong> Content score is reduced by <strong>−{pen ? pen.toFixed(0) : 5}</strong> point(s)
-                        (Content before penalty: {sub.content_before_penalty != null ? Number(sub.content_before_penalty).toFixed(2) : '—'}/10 → after penalty: {results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}/10).
-                      </div>
+                      {sub.context_mismatch_instructor_blurb ? (
+                        <div>{sub.context_mismatch_instructor_blurb}</div>
+                      ) : (
+                        <>
+                          <div>
+                            The submitted <strong>Lecture Context &amp; Supplementary Information</strong> does not line up well with what we hear in the transcript.
+                          </div>
+                          <div style={{ marginTop: '0.35rem' }}>
+                            <strong>Penalty applied:</strong> Content score is reduced by <strong>−{pen ? pen.toFixed(0) : 5}</strong> point(s)
+                            (before penalty: {sub.content_before_penalty != null ? Number(sub.content_before_penalty).toFixed(2) : '—'}/10 → after penalty: {results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}/10).
+                          </div>
+                        </>
+                      )}
                       {sub.context_alignment_rationale ? (
                         <div style={{ marginTop: '0.35rem', color: '#7c2d12' }}>
-                          <strong>Why:</strong> {String(sub.context_alignment_rationale)}
+                          <strong>Additional detail:</strong> {String(sub.context_alignment_rationale)}
                         </div>
                       ) : null}
                     </div>
