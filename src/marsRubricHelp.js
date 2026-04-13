@@ -10,6 +10,121 @@ export const MARS_INTRO = {
     'Below, each criterion shows your 1–10 rating, what it means, how it is computed, and why this score (with evidence when available).',
 };
 
+/** Short notes aligned with the three-pillar model (Content / Delivery / Engagement). */
+export const MARS_THREE_PILLARS_AT_A_GLANCE = [
+  'The report below follows three pillars — Content (blue), Delivery (orange), Engagement (green) — each with its own sub-sections and criteria.',
+  'Overall MARS = 0.20×Content + 0.40×Delivery + 0.40×Engagement (see server metrics_config.MARS_CONFIG).',
+  'Delivery is 50% speech + 50% body language from sampled video. Engagement combines instructor questioning with learner-voice signals when visible in the transcript.',
+];
+
+/** @deprecated Use MARS_THREE_PILLARS_AT_A_GLANCE */
+export const MARS_ARCHITECTURE_AT_A_GLANCE = MARS_THREE_PILLARS_AT_A_GLANCE;
+
+/** Colour key for pillar headers (matches rubric diagram). */
+export const MARS_PILLAR_LEGEND = [
+  { id: 'content', label: 'Content', weight: '20%', swatch: '#2563eb', border: '#1d4ed8' },
+  { id: 'delivery', label: 'Delivery', weight: '40%', swatch: '#ea580c', border: '#c2410c' },
+  { id: 'engagement', label: 'Engagement', weight: '40%', swatch: '#16a34a', border: '#15803d' },
+];
+
+/** Group Engagement criteria for clearer segmentation in the UI (weights are within the Engagement category). */
+export const MARS_ENGAGEMENT_GROUPS = [
+  {
+    code: '3.1',
+    title: 'Instructor question density',
+    subtitle: '40% of the Engagement category',
+    keys: ['question_density'],
+  },
+  {
+    code: '3.2',
+    title: 'Instructor question quality',
+    subtitle: '40% of Engagement — CLI, SUI, and QDS combine in the scoring engine',
+    keys: ['cli_block', 'sui', 'qds'],
+  },
+  {
+    code: '3.3',
+    title: 'Learner / audience voice',
+    subtitle: '20% of Engagement',
+    keys: ['learner_question_frequency', 'learner_question_cognitive'],
+  },
+];
+
+/** Shared layout for the segmented results page (three colour-coded pillars). */
+export const MARS_RESULT_SEGMENT_STYLES = {
+  /** @deprecated use pillarContent | pillarDelivery | pillarEngagement */
+  pillar: {
+    border: '1px solid var(--gray-200)',
+    borderRadius: '14px',
+    padding: '1.15rem 1.2rem',
+    marginBottom: '1.35rem',
+    background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 55%)',
+  },
+  pillarContent: {
+    border: '1px solid #bfdbfe',
+    borderLeft: '6px solid #2563eb',
+    borderRadius: '14px',
+    padding: '1.15rem 1.2rem',
+    marginBottom: '1.35rem',
+    background: 'linear-gradient(180deg, #eff6ff 0%, #ffffff 65%)',
+  },
+  pillarDelivery: {
+    border: '1px solid #fed7aa',
+    borderLeft: '6px solid #ea580c',
+    borderRadius: '14px',
+    padding: '1.15rem 1.2rem',
+    marginBottom: '1.35rem',
+    background: 'linear-gradient(180deg, #fff7ed 0%, #ffffff 65%)',
+  },
+  pillarEngagement: {
+    border: '1px solid #bbf7d0',
+    borderLeft: '6px solid #16a34a',
+    borderRadius: '14px',
+    padding: '1.15rem 1.2rem',
+    marginBottom: '1.35rem',
+    background: 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 65%)',
+  },
+  contentSubgroup: {
+    border: '1px solid #e5e7eb',
+    borderRadius: '12px',
+    padding: '0.85rem 1rem 1rem',
+    marginBottom: '1rem',
+    background: '#ffffff',
+  },
+  contentSubgroupBlue: {
+    border: '1px solid #bfdbfe',
+    borderLeft: '4px solid #60a5fa',
+    borderRadius: '12px',
+    padding: '0.85rem 1rem 1rem',
+    marginBottom: '1rem',
+    background: '#ffffff',
+  },
+  contentSubgroupGreen: {
+    border: '1px solid #bbf7d0',
+    borderLeft: '4px solid #4ade80',
+    borderRadius: '12px',
+    padding: '0.85rem 1rem 1rem',
+    marginBottom: '1rem',
+    background: '#ffffff',
+  },
+  glance: {
+    marginBottom: '1.25rem',
+    padding: '0.9rem 1rem',
+    background: 'linear-gradient(135deg, #eff6ff 0%, #fff7ed 50%, #f0fdf4 100%)',
+    borderRadius: '12px',
+    border: '1px solid var(--gray-200)',
+    fontSize: '0.88rem',
+    lineHeight: 1.55,
+    color: 'var(--gray-800)',
+  },
+};
+
+/** Heading colours for each pillar (use with matching pillar box). */
+export const MARS_PILLAR_HEADING = {
+  content: { color: '#1e40af' },
+  delivery: { color: '#c2410c' },
+  engagement: { color: '#15803d' },
+};
+
 /** Structured hierarchy for the Content block */
 export const MARS_CONTENT_MAIN = {
   code: '1',

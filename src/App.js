@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import {
   MARS_INTRO,
+  MARS_THREE_PILLARS_AT_A_GLANCE,
+  MARS_PILLAR_LEGEND,
+  MARS_PILLAR_HEADING,
   MARS_CONTENT_CRITERIA,
   MARS_CONTENT_MAIN,
   MARS_CONTENT_SECTIONS,
@@ -22,6 +25,8 @@ import {
   MARS_DELIVERY_CRITERIA,
   MARS_ENGAGEMENT_MAIN,
   MARS_ENGAGEMENT_CRITERIA,
+  MARS_ENGAGEMENT_GROUPS,
+  MARS_RESULT_SEGMENT_STYLES,
 } from './marsRubricHelp';
 import {
   whyLineForContent,
@@ -3232,10 +3237,57 @@ function App() {
                 <p style={{ margin: '0 0 1rem', color: 'var(--gray-700)', fontSize: '0.95rem', lineHeight: 1.55 }}>
                   {MARS_INTRO.summary}
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '12px', fontSize: '0.9rem' }}>
-                  <div><strong>Content</strong> (20%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.content_score != null ? `${Number(results.mars_rubric.content_score).toFixed(1)}/10` : '—'}</span></div>
-                  <div><strong>Delivery</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.delivery_score != null ? `${Number(results.mars_rubric.delivery_score).toFixed(1)}/10` : '—'}</span></div>
-                  <div><strong>Engagement</strong> (40%): <span style={{ color: 'var(--nus-blue)' }}>{results.mars_rubric.engagement_score != null ? `${Number(results.mars_rubric.engagement_score).toFixed(1)}/10` : '—'}</span></div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: '0.65rem',
+                    marginBottom: '1rem',
+                    fontSize: '0.84rem',
+                    color: 'var(--gray-800)',
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: 'var(--nus-blue)', marginRight: '0.25rem' }}>Three pillars:</span>
+                  {MARS_PILLAR_LEGEND.map((p) => (
+                    <span
+                      key={p.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.25rem 0.55rem',
+                        borderRadius: '8px',
+                        border: `1px solid ${p.border}`,
+                        background: `${p.swatch}14`,
+                      }}
+                    >
+                      <span style={{ width: 11, height: 11, borderRadius: 3, background: p.swatch }} aria-hidden />
+                      <strong>{p.label}</strong> {p.weight}
+                    </span>
+                  ))}
+                </div>
+                <div style={MARS_RESULT_SEGMENT_STYLES.glance}>
+                  <div style={{ fontWeight: 700, color: 'var(--nus-blue)', marginBottom: '0.45rem', fontSize: '0.92rem' }}>How the three pillars combine</div>
+                  <ul style={{ margin: 0, paddingLeft: '1.15rem' }}>
+                    {MARS_THREE_PILLARS_AT_A_GLANCE.map((line) => (
+                      <li key={line} style={{ marginBottom: '0.35rem' }}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
+                  <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', borderLeft: '5px solid #2563eb', background: '#eff6ff' }}>
+                    <strong style={{ color: '#1e40af' }}>Content</strong> (20%):{' '}
+                    <span style={{ color: '#1e3a8a', fontWeight: 600 }}>{results.mars_rubric.content_score != null ? `${Number(results.mars_rubric.content_score).toFixed(1)}/10` : '—'}</span>
+                  </div>
+                  <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #fed7aa', borderLeft: '5px solid #ea580c', background: '#fff7ed' }}>
+                    <strong style={{ color: '#c2410c' }}>Delivery</strong> (40%):{' '}
+                    <span style={{ color: '#9a3412', fontWeight: 600 }}>{results.mars_rubric.delivery_score != null ? `${Number(results.mars_rubric.delivery_score).toFixed(1)}/10` : '—'}</span>
+                  </div>
+                  <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #bbf7d0', borderLeft: '5px solid #16a34a', background: '#f0fdf4' }}>
+                    <strong style={{ color: '#15803d' }}>Engagement</strong> (40%):{' '}
+                    <span style={{ color: '#166534', fontWeight: 600 }}>{results.mars_rubric.engagement_score != null ? `${Number(results.mars_rubric.engagement_score).toFixed(1)}/10` : '—'}</span>
+                  </div>
                   {(() => {
                     const sub = results?.mars_rubric?.content_subscores || {};
                     const pen = Number(sub.content_context_misalignment_penalty_points || 0);
@@ -3253,9 +3305,21 @@ function App() {
                   </div>
                 </div>
 
-                <h4 style={{ margin: '1rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
+                <div style={MARS_RESULT_SEGMENT_STYLES.pillarContent}>
+                <h4 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, ...MARS_PILLAR_HEADING.content }}>
                   {MARS_CONTENT_MAIN.code} — {MARS_CONTENT_MAIN.title}
                 </h4>
+                {results.mars_rubric.content_subscores && (
+                  <div style={{ fontSize: '0.86rem', color: 'var(--gray-700)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
+                    <strong>Content sub-scores (before Context-Aware penalty):</strong>{' '}
+                    Organisation {results.mars_rubric.content_subscores.content_organisation != null ? Number(results.mars_rubric.content_subscores.content_organisation).toFixed(2) : '—'}
+                    {' · '}
+                    Explanation {results.mars_rubric.content_subscores.explanation_quality != null ? Number(results.mars_rubric.content_subscores.explanation_quality).toFixed(2) : '—'}
+                    {' · '}
+                    Examples / representation {results.mars_rubric.content_subscores.use_of_examples_representation != null ? Number(results.mars_rubric.content_subscores.use_of_examples_representation).toFixed(2) : '—'}
+                    <span style={{ color: 'var(--gray-600)' }}> (weights 30% / 40% / 30% within Content)</span>
+                  </div>
+                )}
                 {(() => {
                   const sub = results?.mars_rubric?.content_subscores || {};
                   const pen = Number(sub.content_context_misalignment_penalty_points || 0);
@@ -3299,7 +3363,7 @@ function App() {
                   );
                 })()}
                 {MARS_CONTENT_SECTIONS.map((sec) => (
-                  <div key={sec.code} style={{ marginBottom: '1.15rem' }}>
+                  <div key={sec.code} style={{ ...MARS_RESULT_SEGMENT_STYLES.contentSubgroupBlue, marginBottom: '1rem' }}>
                     <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', fontSize: '0.98rem' }}>
                       {sec.code} {sec.title}
                     </div>
@@ -3327,10 +3391,15 @@ function App() {
                     </div>
                   </div>
                 ))}
+                </div>
 
-                <h4 style={{ margin: '1.35rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
+                <div style={MARS_RESULT_SEGMENT_STYLES.pillarDelivery}>
+                <h4 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, ...MARS_PILLAR_HEADING.delivery }}>
                   {MARS_DELIVERY_MAIN.code} — {MARS_DELIVERY_MAIN.title}
                 </h4>
+                <p style={{ margin: '0 0 0.85rem', fontSize: '0.86rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                  Delivery = 50% speech category score + 50% body-language category score (vision on sampled frames). Slide layout is not scored as its own pillar.
+                </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {MARS_DELIVERY_CRITERIA.map((row) => (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
@@ -3401,12 +3470,33 @@ function App() {
                     </div>
                   ))}
                 </div>
+                </div>
 
-                <h4 style={{ margin: '1.25rem 0 0.5rem', color: 'var(--nus-blue)', fontSize: '1.15rem', fontWeight: 700 }}>
+                <div style={MARS_RESULT_SEGMENT_STYLES.pillarEngagement}>
+                <h4 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, ...MARS_PILLAR_HEADING.engagement }}>
                   {MARS_ENGAGEMENT_MAIN.code} — {MARS_ENGAGEMENT_MAIN.title}
                 </h4>
+                <p style={{ margin: '0 0 0.85rem', fontSize: '0.86rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
+                  Engagement = 40% question density + 40% quality block (CLI/SUI/QDS) + 20% learner-voice pair. Grouping below matches those weights.
+                </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {MARS_ENGAGEMENT_CRITERIA.map((row, ei) => {
+                  {MARS_ENGAGEMENT_GROUPS.map((group) => (
+                    <div
+                      key={group.code}
+                      style={{
+                        ...MARS_RESULT_SEGMENT_STYLES.contentSubgroupGreen,
+                        marginBottom: '0.75rem',
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                        {group.code} — {group.title}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-600)', marginBottom: '0.65rem', lineHeight: 1.45 }}>{group.subtitle}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {group.keys.map((gk) => {
+                    const row = MARS_ENGAGEMENT_CRITERIA.find((r) => r.key === gk);
+                    if (!row) return null;
+                    const ei = MARS_ENGAGEMENT_CRITERIA.indexOf(row);
                     const engagementValueMap = {
                       question_density: results.interaction_engagement?.interaction_frequency,
                       cli_block: results.interaction_engagement?.question_quality,
@@ -3506,6 +3596,10 @@ function App() {
                     </div>
                   );
                   })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 </div>
               </div>
             )}
