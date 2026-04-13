@@ -181,7 +181,7 @@ export const MARS_CONTENT_CRITERIA = [
   {
     key: 'conceptual_accuracy',
     subgroup: 'Explanation Quality (40% of Content)',
-    weightInSubgroup: '20% of Content (20/20 for full marks in this criterion)',
+    weightInSubgroup: 'Shown as /20 marks in §1.2 (maps from the same 0–10 model ×2)',
     label: 'Conceptual Accuracy',
     meaning: 'Disciplinary concepts, terms, and relationships are represented correctly.',
     how: 'LLM scores accuracy vs the subject; weighted 0.2 within the Explanation Quality sub-score (0.4×CA + 0.1×CR + 0.1×MP) / 0.4.',
@@ -297,3 +297,56 @@ export const MARS_ENGAGEMENT_CRITERIA = [
     how: "LLM estimates Bloom-style depth of detected learner/audience questions. If none are identifiable due to recording limitations, this subscore defaults to neutral 5/10 (same rationale as learner frequency).",
   },
 ];
+
+/** Keys aligned with `speech_analysis.metric_scores` in API results. */
+const SPEECH_METRIC_SCORE_KEYS = [
+  'speaking_rate',
+  'filler_ratio',
+  'voice_variety',
+  'pause_effectiveness',
+  'transcription_confidence',
+];
+
+/** Sum of five speech sub-metrics (each 0–10) → out of 50 for display. */
+export function sumSpeechMetricsOutOf50(speechAnalysis) {
+  const m = speechAnalysis?.metric_scores || {};
+  let sum = 0;
+  for (const k of SPEECH_METRIC_SCORE_KEYS) {
+    const x = Number(m[k]);
+    if (!Number.isNaN(x)) sum += x;
+  }
+  return Math.round(sum * 10) / 10;
+}
+
+/** Sum of five vision sub-means (each 0–10) → out of 50 for display. */
+export function sumBodyVisionOutOf50(bodyLanguage) {
+  const bl = bodyLanguage || {};
+  const vals = [
+    Number(bl.eye_contact ?? bl.raw_metrics?.eye_contact_raw ?? NaN),
+    Number(bl.gestures ?? bl.raw_metrics?.gestures_raw ?? NaN),
+    Number(bl.posture ?? bl.raw_metrics?.posture_raw ?? NaN),
+    Number(bl.engagement ?? bl.raw_metrics?.engagement_raw ?? NaN),
+    Number(bl.professionalism ?? bl.raw_metrics?.professionalism_raw ?? NaN),
+  ];
+  let sum = 0;
+  for (const x of vals) {
+    if (!Number.isNaN(x)) sum += x;
+  }
+  return Math.round(sum * 10) / 10;
+}
+
+export function formatContentCriterionScoreLabel(criterionKey, scoreOutOf10) {
+  if (scoreOutOf10 == null || Number.isNaN(Number(scoreOutOf10))) return null;
+  const v = Number(scoreOutOf10);
+  if (criterionKey === 'conceptual_accuracy') return `${(v * 2).toFixed(1)}/20`;
+  return `${v.toFixed(1)}/10`;
+}
+
+/** Engagement row labels on alternate “mark” scales (API still stores 0–10 for these inputs). */
+export function formatEngagementRowScoreLabel(rowKey, scoreOutOf10) {
+  if (scoreOutOf10 == null || Number.isNaN(Number(scoreOutOf10))) return null;
+  const v = Number(scoreOutOf10);
+  if (rowKey === 'question_density') return `${(v * 4).toFixed(1)}/40`;
+  if (rowKey === 'cli_block') return `${(v * 2).toFixed(1)}/20`;
+  return `${v.toFixed(1)}/10`;
+}

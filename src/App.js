@@ -27,6 +27,10 @@ import {
   MARS_ENGAGEMENT_CRITERIA,
   MARS_ENGAGEMENT_GROUPS,
   MARS_RESULT_SEGMENT_STYLES,
+  sumSpeechMetricsOutOf50,
+  sumBodyVisionOutOf50,
+  formatContentCriterionScoreLabel,
+  formatEngagementRowScoreLabel,
 } from './marsRubricHelp';
 import {
   whyLineForContent,
@@ -3367,15 +3371,23 @@ function App() {
                     <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', fontSize: '0.98rem' }}>
                       {sec.code} {sec.title}
                     </div>
+                    {sec.code === '1.2' && (
+                      <div style={{ fontSize: '0.82rem', color: 'var(--gray-700)', marginBottom: '0.65rem', lineHeight: 1.45 }}>
+                        Section <strong>1.2</strong> is <strong>40%</strong> of Content. For display, <strong>1.2.1</strong> is out of <strong>20 marks</strong>;{' '}
+                        <strong>1.2.2</strong> and <strong>1.2.3</strong> are out of <strong>10 marks</strong> each (20 + 10 + 10 = 40 marks in this block).
+                      </div>
+                    )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {sec.criteriaKeys.map((ck) => {
                         const row = MARS_CONTENT_CRITERIA.find((r) => r.key === ck);
                         if (!row) return null;
                         const v = results.mars_rubric.content_criteria?.[row.key] ?? results.teaching_effectiveness?.mars_content_criteria?.[row.key];
+                        const scoreLbl = formatContentCriterionScoreLabel(row.key, v);
                         return (
                           <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
                             <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
-                              {sec.code}.{sec.criteriaKeys.indexOf(ck) + 1} {row.label} {v != null && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({v}/10)</span>}
+                              {sec.code}.{sec.criteriaKeys.indexOf(ck) + 1} {row.label}{' '}
+                              {scoreLbl != null && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({scoreLbl})</span>}
                             </div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.weightInSubgroup}</div>
                             <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem', color: 'var(--gray-700)', lineHeight: 1.5 }}><strong>What it means:</strong> {row.meaning}</p>
@@ -3400,23 +3412,68 @@ function App() {
                 <p style={{ margin: '0 0 0.85rem', fontSize: '0.86rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
                   Delivery = 50% speech category score + 50% body-language category score (vision on sampled frames). Slide layout is not scored as its own pillar.
                 </p>
+                {(() => {
+                  const sub = results?.mars_rubric?.content_subscores || {};
+                  const pen = Number(sub.content_context_misalignment_penalty_points || 0);
+                  if (pen < 0.01) return null;
+                  return (
+                    <div
+                      style={{
+                        margin: '0 0 0.9rem',
+                        padding: '0.75rem 0.9rem',
+                        background: 'rgba(234, 88, 12, 0.08)',
+                        border: '1px solid rgba(234, 88, 12, 0.35)',
+                        borderRadius: '10px',
+                        fontSize: '0.84rem',
+                        lineHeight: 1.5,
+                        color: '#7c2d12',
+                      }}
+                    >
+                      <strong style={{ color: '#9a3412' }}>Link to overall MARS:</strong> Content received a Context-Aware penalty of{' '}
+                      <strong>−{pen.toFixed(0)}</strong> mark(s) (lecture context vs transcript). The score breakdown at the top uses{' '}
+                      <strong>0.20×(Content_rubric − Penalty)</strong> — i.e. Content entering the formula is{' '}
+                      <strong>{results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}</strong>/10, not the pre-penalty rubric Content alone.
+                    </div>
+                  );
+                })()}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {MARS_DELIVERY_CRITERIA.map((row) => (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
                       <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
                         {row.key === 'speech' ? '2.1' : '2.2'} {row.label}
+                        {row.key === 'speech' && results.speech_analysis?.metric_scores && (
+                          <span style={{ color: '#c2410c', fontWeight: 700 }}>
+                            {' '}
+                            ({sumSpeechMetricsOutOf50(results.speech_analysis)}/50)
+                          </span>
+                        )}
                         {row.key === 'speech' && results.speech_analysis?.score != null && (
-                          <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({results.speech_analysis.score}/10)</span>
+                          <span style={{ color: 'var(--gray-600)', fontWeight: 600, fontSize: '0.88rem' }}>
+                            {' '}
+                            · weighted category {results.speech_analysis.score}/10
+                          </span>
+                        )}
+                        {row.key === 'body' && results.body_language && (
+                          <span style={{ color: '#c2410c', fontWeight: 700 }}>
+                            {' '}
+                            ({sumBodyVisionOutOf50(results.body_language)}/50)
+                          </span>
                         )}
                         {row.key === 'body' && results.body_language?.score != null && (
-                        <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}> ({Number(results.body_language.score).toFixed(1)}/10)</span>
+                          <span style={{ color: 'var(--gray-600)', fontWeight: 600, fontSize: '0.88rem' }}>
+                            {' '}
+                            · weighted category {Number(results.body_language.score).toFixed(1)}/10
+                          </span>
                         )}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
 
                       {row.key === 'speech' && (
                         <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative speech metrics (50% of Delivery)</div>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--nus-blue)' }}>Quantitative speech metrics (50% of Delivery)</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--gray-600)', marginBottom: '0.5rem', lineHeight: 1.45 }}>
+                            Each metric below is scored <strong>0–10</strong> (10 marks each → <strong>50 marks</strong> total for this block).
+                          </div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
                             <div><strong>Speaking rate:</strong> {results.speech_analysis?.raw_metrics?.words_per_minute ?? 0} WPM — {results.speech_analysis?.metric_scores?.speaking_rate ?? '—'}/10</div>
                             <div><strong>Filler ratio:</strong> {results.speech_analysis?.raw_metrics?.filler_ratio_percentage ?? 0}% — {results.speech_analysis?.metric_scores?.filler_ratio ?? '—'}/10</div>
@@ -3424,6 +3481,11 @@ function App() {
                             <div><strong>Pause effectiveness:</strong> {results.speech_analysis?.raw_metrics?.pause_effectiveness_index ?? 0} — {results.speech_analysis?.metric_scores?.pause_effectiveness ?? '—'}/10</div>
                             <div><strong>Transcription confidence:</strong> {results.speech_analysis?.raw_metrics?.transcription_confidence ?? 0}% — {results.speech_analysis?.metric_scores?.transcription_confidence ?? '—'}/10</div>
                           </div>
+                          {results.speech_analysis?.metric_scores && (
+                            <div style={{ marginTop: '0.55rem', fontSize: '0.82rem', color: 'var(--gray-700)', lineHeight: 1.45 }}>
+                              <strong>Sum of five metrics:</strong> {sumSpeechMetricsOutOf50(results.speech_analysis)}/50. The headline weighted speech score (for Delivery) combines these with configured weights and may differ slightly from the simple average.
+                            </div>
+                          )}
                           {results.detailed_insights?.filler_word_analysis?.length > 0 && (
                             <div style={{ marginTop: '0.75rem', fontSize: '0.88rem' }}>
                               <strong>Filler words detected:</strong>{' '}
@@ -3435,10 +3497,10 @@ function App() {
 
                       {row.key === 'body' && (
                         <div style={{ marginTop: '0.65rem', padding: '0.85rem', background: 'var(--gray-50)', borderRadius: '8px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--nus-blue)' }}>Quantitative body language metrics (50% of Delivery)</div>
-                          <div style={{ fontSize: '0.82rem', color: 'var(--gray-600)', marginBottom: '0.5rem', lineHeight: 1.45 }}>
-                            Vision model scores each sampled frame (1–10); values below are <strong>frame-weighted means</strong> (middle of the clip weighted slightly higher), from{' '}
-                            <strong>{results.body_language?.frames_analyzed ?? results.body_language?.raw_metrics?.total_frames_extracted ?? '—'}</strong> frame(s). Rubric labels match the same numeric input as Speech (below-average / average / good / excellent bands).
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.35rem', color: 'var(--nus-blue)' }}>Quantitative body language metrics (50% of Delivery)</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--gray-600)', marginBottom: '0.35rem', lineHeight: 1.45 }}>
+                            Each dimension below is <strong>0–10</strong> (10 marks each → <strong>50 marks</strong> total). Values are <strong>frame-weighted means</strong> from{' '}
+                            <strong>{results.body_language?.frames_analyzed ?? results.body_language?.raw_metrics?.total_frames_extracted ?? '—'}</strong> sampled frame(s).
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', fontSize: '0.88rem' }}>
                             <div><strong>Eye contact:</strong> {Number(results.body_language?.eye_contact ?? results.body_language?.raw_metrics?.eye_contact_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.eye_contact?.rating ?? '—'}</div>
@@ -3446,6 +3508,9 @@ function App() {
                             <div><strong>Posture:</strong> {Number(results.body_language?.posture ?? results.body_language?.raw_metrics?.posture_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.posture?.rating ?? '—'}</div>
                             <div><strong>Facial engagement:</strong> {Number(results.body_language?.engagement ?? results.body_language?.raw_metrics?.engagement_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.facial_engagement?.rating ?? '—'}</div>
                             <div><strong>Professionalism:</strong> {Number(results.body_language?.professionalism ?? results.body_language?.raw_metrics?.professionalism_raw ?? 0).toFixed(1)}/10 (vision) — {results.body_language?.explanations?.professionalism?.rating ?? '—'}</div>
+                          </div>
+                          <div style={{ marginTop: '0.55rem', fontSize: '0.82rem', color: 'var(--gray-700)', lineHeight: 1.45 }}>
+                            <strong>Sum of five vision dimensions:</strong> {sumBodyVisionOutOf50(results.body_language)}/50. The headline weighted body score (for Delivery) uses configured weights across these five means.
                           </div>
                           {results.body_language?.remarks && (
                             <p style={{ margin: '0.75rem 0 0', color: '#92400e', fontStyle: 'italic', fontSize: '0.88rem' }}>
@@ -3508,10 +3573,18 @@ function App() {
                     const ev = engagementValueMap[row.key];
                     const engLabel = row.code || `3.${ei + 1}`;
                     const ic = results.interaction_engagement?.icap_counts || {};
+                    const evDisp = ev != null && !Number.isNaN(Number(ev)) ? formatEngagementRowScoreLabel(row.key, Number(ev)) : null;
                     return (
                     <div key={row.key} style={{ padding: '0.85rem 1rem', border: '1px solid var(--gray-200)', borderRadius: '10px', background: '#fafafa' }}>
                       <div style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem' }}>
-                        {engLabel} {row.label} {ev != null && !Number.isNaN(Number(ev)) && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({Number(ev).toFixed(1)}/10)</span>}
+                        {engLabel} {row.label}{' '}
+                        {evDisp != null && <span style={{ color: 'var(--nus-blue)', fontWeight: 600 }}>({evDisp})</span>}
+                        {row.key === 'question_density' && evDisp != null && (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--gray-600)', fontWeight: 500 }}> (40 marks toward Engagement; scaled from 0–10)</span>
+                        )}
+                        {row.key === 'cli_block' && evDisp != null && (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--gray-600)', fontWeight: 500 }}> (20 marks within the question-quality block; scaled from 0–10)</span>
+                        )}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>{row.subgroup}</div>
 
