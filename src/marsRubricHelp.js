@@ -350,3 +350,106 @@ export function formatEngagementRowScoreLabel(rowKey, scoreOutOf10) {
   if (rowKey === 'cli_block') return `${(v * 2).toFixed(1)}/20`;
   return `${v.toFixed(1)}/10`;
 }
+
+function _normalizeContentAdjustment(raw) {
+  if (!raw) return null;
+  const pen = Number(raw.penalty_points || 0);
+  if (pen < 0.01) return null;
+  return {
+    before_penalty: Number(raw.before_penalty),
+    penalty_points: pen,
+    after_penalty: Number(raw.after_penalty),
+    detail: raw.detail || null,
+  };
+}
+
+/**
+ * Best-effort Content Context-Aware adjustment for UI.
+ * Prefer mars_rubric.content_subscores (authoritative for the rubric view), then fall back to calculation_breakdown.
+ * Also infers a −5 style penalty when verdict is mismatch but legacy payloads omitted penalty_points.
+ */
+export function inferContentAdjustmentFromResults(results) {
+  const direct = results?.calculation_breakdown?.final_calculation?.content_adjustment;
+  const sub = results?.mars_rubric?.content_subscores || {};
+  let pen = Number(sub.content_context_misalignment_penalty_points || 0);
+  const verdict = String(sub.context_alignment_verdict || '').toLowerCase().trim();
+  let before = sub.content_before_penalty != null ? Number(sub.content_before_penalty) : null;
+  const after = results?.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score) : null;
+
+  if (before == null && after != null && pen >= 0.01) {
+    before = after + pen;
+  }
+  if (pen < 0.01 && verdict === 'mismatch' && before != null && after != null) {
+    const inferred = Math.min(5, Math.max(0, before - after));
+    if (inferred >= 0.5) {
+      pen = inferred;
+    }
+  }
+
+  if (pen >= 0.01 && before != null && after != null) {
+    const bp = Math.round(before * 100) / 100;
+    const ap = Math.round(after * 100) / 100;
+    const pp = Math.round(pen * 100) / 100;
+    return {
+      before_penalty: bp,
+      penalty_points: pp,
+      after_penalty: ap,
+      detail: `Content (used in MARS) = max(0, ${bp} − ${Math.round(pp)}) = ${ap}`,
+    };
+  }
+
+  return _normalizeContentAdjustment(direct);
+}
+
+/** Canonical MARS overall from the three pillar scores (matches server weights). */
+export function computeMarsOverallFromRubric(results) {
+  const c = Number(results?.mars_rubric?.content_score);
+  const d = Number(results?.mars_rubric?.delivery_score);
+  const e = Number(results?.mars_rubric?.engagement_score);
+  if ([c, d, e].some((x) => Number.isNaN(x))) return null;
+  return Math.round((0.2 * c + 0.4 * d + 0.4 * e) * 10) / 10;
+}
+
+/**
+ * Penalty-aware formula + substitution lines for the Score Calculation Breakdown card.
+ * Uses mars_rubric pillar scores so the UI stays consistent even if calculation_breakdown is stale.
+ */
+export function getFinalCalculationView(results) {
+  const fromApi = results?.calculation_breakdown?.final_calculation;
+  const rubric = results?.mars_rubric;
+  if (!rubric) {
+    return {
+      formula: fromApi?.formula || 'MARS: 0.20×Content + 0.40×Delivery + 0.40×Engagement',
+      calculation: fromApi?.calculation || '',
+      calculation_note: fromApi?.calculation_note || null,
+      result: fromApi?.result != null ? Number(fromApi.result) : Number(results?.overall_score) || 0,
+    };
+  }
+
+  const c = Number(rubric.content_score);
+  const d = Number(rubric.delivery_score);
+  const e = Number(rubric.engagement_score);
+  const adj = inferContentAdjustmentFromResults(results);
+  const recomputed = computeMarsOverallFromRubric(results);
+  const result = recomputed != null ? recomputed : Number(results?.overall_score) || 0;
+
+  if (!adj) {
+    return {
+      formula: 'MARS: 0.20×Content + 0.40×Delivery + 0.40×Engagement',
+      calculation: `0.20×${c.toFixed(2)} + 0.40×${d.toFixed(2)} + 0.40×${e.toFixed(2)}`,
+      calculation_note: fromApi?.calculation_note || null,
+      result,
+    };
+  }
+
+  const penInt = Math.round(Number(adj.penalty_points));
+  const before = Number(adj.before_penalty);
+  const after = Number(adj.after_penalty);
+  return {
+    formula: 'MARS: 0.20×(Content_rubric − Penalty) + 0.40×Delivery + 0.40×Engagement',
+    calculation: `0.20×(${before.toFixed(2)} − ${penInt}) + 0.40×${d.toFixed(2)} + 0.40×${e.toFixed(2)} = 0.20×${after.toFixed(2)} + 0.40×${d.toFixed(2)} + 0.40×${e.toFixed(2)}`,
+    calculation_note:
+      `Penalty is applied inside Content before the 20% weight: Content_used = max(0, Content_rubric − Penalty) = max(0, ${before.toFixed(2)} − ${penInt}) = ${after.toFixed(2)}/10.`,
+    result,
+  };
+}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
@@ -31,6 +31,9 @@ import {
   sumBodyVisionOutOf50,
   formatContentCriterionScoreLabel,
   formatEngagementRowScoreLabel,
+  inferContentAdjustmentFromResults,
+  getFinalCalculationView,
+  computeMarsOverallFromRubric,
 } from './marsRubricHelp';
 import {
   whyLineForContent,
@@ -110,7 +113,7 @@ function buildLocalFallbackSummary(results) {
       improvements: [],
     };
   }
-  const overallScore = Math.round(results.overall_score * 10) / 10;
+  const overallScore = computeMarsOverallFromRubric(results) ?? Math.round(results.overall_score * 10) / 10;
   const totalQuestions = results.interaction_engagement?.total_questions || 0;
   const scores = {
     Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
@@ -181,6 +184,8 @@ function App() {
   /** Optional: subject, topic, ILOs — sent to backend for LLM context (future rubric scoring). */
   const [lectureContext, setLectureContext] = useState('');
 
+  const marsCalcView = useMemo(() => (results ? getFinalCalculationView(results) : null), [results]);
+
   // Generate summary when results are available
   useEffect(() => {
     const requestSummary = async ({ forceFull = false } = {}) => {
@@ -197,7 +202,7 @@ function App() {
       let nextSummary = null;
       try {
         const summaryDataForAPI = {
-          overall_score: Math.round(results.overall_score * 10) / 10,
+          overall_score: computeMarsOverallFromRubric(results) ?? Math.round(results.overall_score * 10) / 10,
           content_score: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
           delivery_score: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
           engagement_score: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
@@ -2444,7 +2449,9 @@ function App() {
             {/* Overall Score */}
             <div className="overall-score">
               <div className="score-display">
-                <div className="score-number">{Math.round(results.overall_score * 10) / 10}/10</div>
+                <div className="score-number">
+                  {(marsCalcView?.result != null ? marsCalcView.result : Math.round(results.overall_score * 10) / 10)}/10
+                </div>
                 <div className="score-label">MARS Evaluated Final Score</div>
                 <div style={{ marginTop: '0.65rem', fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.65)', maxWidth: '42rem', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.45 }}>
                   The scoring is interpreted based on the webcast lecture recording through a collective algorithm with LLM and may not fully reflect pedagogical impact in teaching and learning.
@@ -2473,7 +2480,7 @@ function App() {
               )}
               <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--primary-50)', borderRadius: '8px' }}>
                 {(() => {
-                  const adj = results.calculation_breakdown?.final_calculation?.content_adjustment;
+                  const adj = inferContentAdjustmentFromResults(results);
                   if (!adj || Number(adj.penalty_points || 0) < 0.01) return null;
                   return (
                     <div style={{ marginBottom: '0.85rem', padding: '0.75rem 0.85rem', background: 'white', borderRadius: '8px', border: '1px solid rgba(239, 124, 0, 0.35)', fontSize: '0.88rem', lineHeight: 1.5, color: '#7c2d12' }}>
@@ -2493,18 +2500,18 @@ function App() {
                 })()}
                 <strong>Formula:</strong>
                 <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                  {results.calculation_breakdown?.final_calculation?.formula}
+                  {marsCalcView?.formula}
                 </div>
-                {results.calculation_breakdown?.final_calculation?.calculation_note && (
+                {marsCalcView?.calculation_note && (
                   <div style={{ marginTop: '0.45rem', fontSize: '0.82rem', color: 'var(--gray-700)', lineHeight: 1.45 }}>
-                    {results.calculation_breakdown.final_calculation.calculation_note}
+                    {marsCalcView.calculation_note}
                   </div>
                 )}
                 <div style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--nus-blue)' }}>
-                  = {results.calculation_breakdown?.final_calculation?.calculation}
+                  = {marsCalcView?.calculation}
                 </div>
                 <div style={{ marginTop: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
-                  = {results.calculation_breakdown?.final_calculation?.result}/10
+                  = {marsCalcView?.result}/10
                 </div>
               </div>
             </div>
@@ -3293,13 +3300,12 @@ function App() {
                     <span style={{ color: '#166534', fontWeight: 600 }}>{results.mars_rubric.engagement_score != null ? `${Number(results.mars_rubric.engagement_score).toFixed(1)}/10` : '—'}</span>
                   </div>
                   {(() => {
-                    const sub = results?.mars_rubric?.content_subscores || {};
-                    const pen = Number(sub.content_context_misalignment_penalty_points || 0);
-                    if (pen < 0.01 || sub.content_before_penalty == null) return null;
+                    const adj = inferContentAdjustmentFromResults(results);
+                    if (!adj || Number(adj.penalty_points || 0) < 0.01) return null;
                     return (
                       <div style={{ gridColumn: '1 / -1', fontSize: '0.84rem', color: '#7c2d12', lineHeight: 1.45, padding: '0.5rem 0.65rem', background: 'rgba(239, 124, 0, 0.08)', borderRadius: '8px', border: '1px solid rgba(239, 124, 0, 0.25)' }}>
                         <strong>Content scoring note:</strong> rubric Content before Context-Aware penalty was{' '}
-                        <strong>{Number(sub.content_before_penalty).toFixed(1)}</strong>/10; after <strong>−{pen.toFixed(0)}</strong> misalignment penalty, the value entering the overall MARS formula is{' '}
+                        <strong>{Number(adj.before_penalty).toFixed(1)}</strong>/10; after <strong>−{Number(adj.penalty_points).toFixed(0)}</strong> misalignment penalty, the value entering the overall MARS formula is{' '}
                         <strong>{results.mars_rubric.content_score != null ? Number(results.mars_rubric.content_score).toFixed(1) : '—'}</strong>/10.
                       </div>
                     );
@@ -3322,14 +3328,26 @@ function App() {
                     {' · '}
                     Examples / representation {results.mars_rubric.content_subscores.use_of_examples_representation != null ? Number(results.mars_rubric.content_subscores.use_of_examples_representation).toFixed(2) : '—'}
                     <span style={{ color: 'var(--gray-600)' }}> (weights 30% / 40% / 30% within Content)</span>
+                    {(() => {
+                      const adj = inferContentAdjustmentFromResults(results);
+                      if (!adj || Number(adj.penalty_points || 0) < 0.01) return null;
+                      return (
+                        <div style={{ marginTop: '0.55rem', padding: '0.55rem 0.65rem', background: 'rgba(37, 99, 235, 0.06)', borderRadius: '8px', border: '1px solid rgba(37, 99, 235, 0.22)', color: '#1e3a8a' }}>
+                          <strong>Penalty:</strong> −{Number(adj.penalty_points).toFixed(0)} marks — the submitted lecture context does not align with what the transcript shows (Context-Aware adjustment).{' '}
+                          Rubric Content was <strong>{Number(adj.before_penalty).toFixed(2)}</strong>/10 → Content used in overall MARS is{' '}
+                          <strong>{Number(adj.after_penalty).toFixed(2)}</strong>/10.
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {(() => {
                   const sub = results?.mars_rubric?.content_subscores || {};
-                  const pen = Number(sub.content_context_misalignment_penalty_points || 0);
+                  const adj = inferContentAdjustmentFromResults(results);
+                  const pen = adj ? Number(adj.penalty_points) : Number(sub.content_context_misalignment_penalty_points || 0);
                   const verdict = String(sub.context_alignment_verdict || '').toLowerCase();
                   const score = sub.context_alignment_score != null ? Number(sub.context_alignment_score) : null;
-                  const isMismatch = pen >= 4.9 || verdict === 'mismatch' || (score != null && score <= 0.25);
+                  const isMismatch = (adj && pen >= 0.01) || verdict === 'mismatch' || (score != null && score <= 0.25);
                   if (!isMismatch) return null;
                   return (
                     <div style={{
@@ -3354,7 +3372,9 @@ function App() {
                           </div>
                           <div style={{ marginTop: '0.35rem' }}>
                             <strong>Penalty applied:</strong> Content score is reduced by <strong>−{pen ? pen.toFixed(0) : 5}</strong> point(s)
-                            (before penalty: {sub.content_before_penalty != null ? Number(sub.content_before_penalty).toFixed(2) : '—'}/10 → after penalty: {results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}/10).
+                            (before penalty:{' '}
+                            {adj?.before_penalty != null ? Number(adj.before_penalty).toFixed(2) : sub.content_before_penalty != null ? Number(sub.content_before_penalty).toFixed(2) : '—'}
+                            /10 → after penalty: {results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}/10).
                           </div>
                         </>
                       )}
@@ -3413,8 +3433,8 @@ function App() {
                   Delivery = 50% speech category score + 50% body-language category score (vision on sampled frames). Slide layout is not scored as its own pillar.
                 </p>
                 {(() => {
-                  const sub = results?.mars_rubric?.content_subscores || {};
-                  const pen = Number(sub.content_context_misalignment_penalty_points || 0);
+                  const adj = inferContentAdjustmentFromResults(results);
+                  const pen = adj ? Number(adj.penalty_points) : 0;
                   if (pen < 0.01) return null;
                   return (
                     <div
