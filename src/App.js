@@ -3443,7 +3443,8 @@ function App() {
                   {MARS_DELIVERY_MAIN.code} — {MARS_DELIVERY_MAIN.title}
                 </h4>
                 <p style={{ margin: '0 0 0.85rem', fontSize: '0.86rem', color: 'var(--gray-700)', lineHeight: 1.5 }}>
-                  Delivery = 50% speech category score + 50% body-language category score (vision on sampled frames). Slide layout is not scored as its own pillar.
+                  Delivery = 50% speech category score + 50% body-language category score (vision on sampled frames). Slide layout is not scored as its own pillar.{' '}
+                  <strong>Important:</strong> the “(…/50)” figures shown below are a transparent <em>sum of five sub-metrics</em> for that block (each 0–10) and are <strong>not</strong> what enters the MARS formula. The MARS formula uses the <strong>weighted category</strong> scores (out of 10), computed from underlying values before rounding.
                 </p>
                 {(() => {
                   const adj = inferContentAdjustmentFromResults(results);
