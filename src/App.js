@@ -34,6 +34,7 @@ import {
   inferContentAdjustmentFromResults,
   getFinalCalculationView,
   computeMarsOverallFromRubric,
+  computeMarsOverallFromRubricOutOf100,
 } from './marsRubricHelp';
 import {
   whyLineForContent,
@@ -113,12 +114,13 @@ function buildLocalFallbackSummary(results) {
       improvements: [],
     };
   }
-  const overallScore = computeMarsOverallFromRubric(results) ?? Math.round(results.overall_score * 10) / 10;
+  const overallScore =
+    computeMarsOverallFromRubricOutOf100(results) ?? Math.round((Number(results.overall_score || 0) * 100)) / 10;
   const totalQuestions = results.interaction_engagement?.total_questions || 0;
   const scores = {
-    Content: Math.round((results.mars_rubric?.content_score || 0) * 10) / 10,
-    Delivery: Math.round((results.mars_rubric?.delivery_score || 0) * 10) / 10,
-    Engagement: Math.round((results.mars_rubric?.engagement_score || 0) * 10) / 10,
+    Content: Math.round((Number(results.mars_rubric?.content_score || 0) * 100)) / 10,
+    Delivery: Math.round((Number(results.mars_rubric?.delivery_score || 0) * 100)) / 10,
+    Engagement: Math.round((Number(results.mars_rubric?.engagement_score || 0) * 100)) / 10,
   };
   const strongest = Object.entries(scores).reduce((best, cur) => (cur[1] > best[1] ? cur : best));
   const weakest = Object.entries(scores).reduce((best, cur) => (cur[1] < best[1] ? cur : best));
@@ -146,13 +148,13 @@ function buildLocalFallbackSummary(results) {
   const firstQShort = firstQ
     ? `${firstQ.replace(/"/g, "'").slice(0, 120)}${firstQ.length > 120 ? '…' : ''}`
     : '';
-  const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
+  const p1 = `The lecture’s overall MARS score is ${overallScore}/100, with Content at ${scores.Content}/100, Delivery at ${scores.Delivery}/100, and Engagement at ${scores.Engagement}/100. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
   const p2 = excerptHook
-    ? `From the opening stretch of the transcript (“${excerptHook}”), ${strongest[0].toLower()} (${strongest[1]}/10) is where the clearest signal to learners currently sits—use that anchor when you decide what to deepen next.`
-    : `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
+    ? `From the opening stretch of the transcript (“${excerptHook}”), ${strongest[0].toLower()} (${strongest[1]}/100) is where the clearest signal to learners currently sits—use that anchor when you decide what to deepen next.`
+    : `Strengths include ${strongest[0].toLower()} (${strongest[1]}/100), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
   const p3 = firstQShort
-    ? `For ${weakest[0].toLower()} (${weakest[1]}/10), try a tighter arc after prompts like ‘${firstQShort}’: name the reasoning step you want, pause for a short response, then build from what you hear—webcasts often under-represent audience talk.`
-    : `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
+    ? `For ${weakest[0].toLower()} (${weakest[1]}/100), try a tighter arc after prompts like ‘${firstQShort}’: name the reasoning step you want, pause for a short response, then build from what you hear—webcasts often under-represent audience talk.`
+    : `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/100), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
   return {
     personalized_feedback: `${p1}\n\n${p2}\n\n${p3}`,
     strongest_strength: null,
@@ -2463,7 +2465,7 @@ function App() {
             <div className="overall-score">
               <div className="score-display">
                 <div className="score-number">
-                  {(marsCalcView?.result != null ? marsCalcView.result : Math.round(results.overall_score * 10) / 10)}/10
+                  {(marsCalcView?.result != null ? marsCalcView.result : Math.round(Number(results.overall_score || 0) * 100) / 10)}/100
                 </div>
                 <div className="score-label">MARS Evaluated Final Score</div>
                 <div style={{ marginTop: '0.65rem', fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.65)', maxWidth: '42rem', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.45 }}>
@@ -2499,11 +2501,11 @@ function App() {
                     <div style={{ marginBottom: '0.85rem', padding: '0.75rem 0.85rem', background: 'white', borderRadius: '8px', border: '1px solid rgba(239, 124, 0, 0.35)', fontSize: '0.88rem', lineHeight: 1.5, color: '#7c2d12' }}>
                       <div style={{ fontWeight: 700, marginBottom: '0.35rem', color: '#9a3412' }}>1 — Content (Context-Aware adjustment)</div>
                       <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: '#0f172a' }}>
-                        Rubric Content (before penalty): <strong>{Number(adj.before_penalty).toFixed(2)}</strong>/10
+                        Rubric Content (before penalty): <strong>{(Number(adj.before_penalty) * 10).toFixed(1)}</strong>/100
                         <br />
-                        Context misalignment penalty: <strong>−{Number(adj.penalty_points).toFixed(0)}</strong>
+                        Context misalignment penalty: <strong>−{(Math.round(Number(adj.penalty_points)) * 10).toFixed(0)}</strong>
                         <br />
-                        Content used in overall MARS: <strong>{Number(adj.after_penalty).toFixed(2)}</strong>/10
+                        Content used in overall MARS: <strong>{(Number(adj.after_penalty) * 10).toFixed(1)}</strong>/100
                       </div>
                       {adj.detail && (
                         <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#444' }}>{adj.detail}</div>
@@ -2524,7 +2526,7 @@ function App() {
                   = {marsCalcView?.calculation}
                 </div>
                 <div style={{ marginTop: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--nus-orange)' }}>
-                  = {marsCalcView?.result}/10
+                  = {marsCalcView?.result}/100
                 </div>
               </div>
             </div>
@@ -2719,19 +2721,19 @@ function App() {
                   <div>
                     <strong>Content</strong> (20% of overall){' '}
                     <span style={{ color: 'var(--nus-blue)' }}>
-                      {results.mars_rubric.content_score != null ? `${results.mars_rubric.content_score}/10` : '—'}
+                      {results.mars_rubric.content_score != null ? `${(Number(results.mars_rubric.content_score) * 10).toFixed(1)}/100` : '—'}
                     </span>
                   </div>
                   <div>
                     <strong>Delivery</strong> (40%){' '}
                     <span style={{ color: 'var(--nus-blue)' }}>
-                      {results.mars_rubric.delivery_score != null ? `${results.mars_rubric.delivery_score}/10` : '—'}
+                      {results.mars_rubric.delivery_score != null ? `${(Number(results.mars_rubric.delivery_score) * 10).toFixed(1)}/100` : '—'}
                     </span>
                   </div>
                   <div>
                     <strong>Engagement</strong> (40%){' '}
                     <span style={{ color: 'var(--nus-blue)' }}>
-                      {results.mars_rubric.engagement_score != null ? `${results.mars_rubric.engagement_score}/10` : '—'}
+                      {results.mars_rubric.engagement_score != null ? `${(Number(results.mars_rubric.engagement_score) * 10).toFixed(1)}/100` : '—'}
                     </span>
                   </div>
                   <div style={{ gridColumn: '1 / -1', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
@@ -3302,15 +3304,15 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
                   <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', borderLeft: '5px solid #2563eb', background: '#eff6ff' }}>
                     <strong style={{ color: '#1e40af' }}>Content</strong> (20%):{' '}
-                    <span style={{ color: '#1e3a8a', fontWeight: 600 }}>{results.mars_rubric.content_score != null ? `${Number(results.mars_rubric.content_score).toFixed(1)}/10` : '—'}</span>
+                    <span style={{ color: '#1e3a8a', fontWeight: 600 }}>{results.mars_rubric.content_score != null ? `${(Number(results.mars_rubric.content_score) * 10).toFixed(1)}/100` : '—'}</span>
                   </div>
                   <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #fed7aa', borderLeft: '5px solid #ea580c', background: '#fff7ed' }}>
                     <strong style={{ color: '#c2410c' }}>Delivery</strong> (40%):{' '}
-                    <span style={{ color: '#9a3412', fontWeight: 600 }}>{results.mars_rubric.delivery_score != null ? `${Number(results.mars_rubric.delivery_score).toFixed(1)}/10` : '—'}</span>
+                    <span style={{ color: '#9a3412', fontWeight: 600 }}>{results.mars_rubric.delivery_score != null ? `${(Number(results.mars_rubric.delivery_score) * 10).toFixed(1)}/100` : '—'}</span>
                   </div>
                   <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #bbf7d0', borderLeft: '5px solid #16a34a', background: '#f0fdf4' }}>
                     <strong style={{ color: '#15803d' }}>Engagement</strong> (40%):{' '}
-                    <span style={{ color: '#166534', fontWeight: 600 }}>{results.mars_rubric.engagement_score != null ? `${Number(results.mars_rubric.engagement_score).toFixed(1)}/10` : '—'}</span>
+                    <span style={{ color: '#166534', fontWeight: 600 }}>{results.mars_rubric.engagement_score != null ? `${(Number(results.mars_rubric.engagement_score) * 10).toFixed(1)}/100` : '—'}</span>
                   </div>
                   {(() => {
                     const adj = inferContentAdjustmentFromResults(results);
@@ -3318,8 +3320,8 @@ function App() {
                     return (
                       <div style={{ gridColumn: '1 / -1', fontSize: '0.84rem', color: '#7c2d12', lineHeight: 1.45, padding: '0.5rem 0.65rem', background: 'rgba(239, 124, 0, 0.08)', borderRadius: '8px', border: '1px solid rgba(239, 124, 0, 0.25)' }}>
                         <strong>Content scoring note:</strong> rubric Content before Context-Aware penalty was{' '}
-                        <strong>{Number(adj.before_penalty).toFixed(1)}</strong>/10; after <strong>−{Number(adj.penalty_points).toFixed(0)}</strong> misalignment penalty, the value entering the overall MARS formula is{' '}
-                        <strong>{results.mars_rubric.content_score != null ? Number(results.mars_rubric.content_score).toFixed(1) : '—'}</strong>/10.
+                        <strong>{(Number(adj.before_penalty) * 10).toFixed(1)}</strong>/100; after <strong>−{(Math.round(Number(adj.penalty_points)) * 10).toFixed(0)}</strong> misalignment penalty, the value entering the overall MARS formula is{' '}
+                        <strong>{results.mars_rubric.content_score != null ? (Number(results.mars_rubric.content_score) * 10).toFixed(1) : '—'}</strong>/100.
                       </div>
                     );
                   })()}
@@ -3346,9 +3348,9 @@ function App() {
                       if (!adj || Number(adj.penalty_points || 0) < 0.01) return null;
                       return (
                         <div style={{ marginTop: '0.55rem', padding: '0.55rem 0.65rem', background: 'rgba(37, 99, 235, 0.06)', borderRadius: '8px', border: '1px solid rgba(37, 99, 235, 0.22)', color: '#1e3a8a' }}>
-                          <strong>Penalty:</strong> −{Number(adj.penalty_points).toFixed(0)} marks — the submitted lecture context does not align with what the transcript shows (Context-Aware adjustment).{' '}
-                          Rubric Content was <strong>{Number(adj.before_penalty).toFixed(2)}</strong>/10 → Content used in overall MARS is{' '}
-                          <strong>{Number(adj.after_penalty).toFixed(2)}</strong>/10.
+                          <strong>Penalty:</strong> −{(Math.round(Number(adj.penalty_points)) * 10).toFixed(0)} marks — the submitted lecture context does not align with what the transcript shows (Context-Aware adjustment).{' '}
+                          Rubric Content was <strong>{(Number(adj.before_penalty) * 10).toFixed(1)}</strong>/100 → Content used in overall MARS is{' '}
+                          <strong>{(Number(adj.after_penalty) * 10).toFixed(1)}</strong>/100.
                         </div>
                       );
                     })()}
@@ -3384,10 +3386,10 @@ function App() {
                             The submitted <strong>Lecture Context &amp; Supplementary Information</strong> does not line up well with what we hear in the transcript.
                           </div>
                           <div style={{ marginTop: '0.35rem' }}>
-                            <strong>Penalty applied:</strong> Content score is reduced by <strong>−{pen ? pen.toFixed(0) : 5}</strong> point(s)
+                            <strong>Penalty applied:</strong> Content score is reduced by <strong>−{(Math.round(Number(pen ? pen.toFixed(0) : 5)) * 10).toFixed(0)}</strong> point(s)
                             (before penalty:{' '}
-                            {adj?.before_penalty != null ? Number(adj.before_penalty).toFixed(2) : sub.content_before_penalty != null ? Number(sub.content_before_penalty).toFixed(2) : '—'}
-                            /10 → after penalty: {results.mars_rubric?.content_score != null ? Number(results.mars_rubric.content_score).toFixed(2) : '—'}/10).
+                            {adj?.before_penalty != null ? (Number(adj.before_penalty) * 10).toFixed(1) : sub.content_before_penalty != null ? (Number(sub.content_before_penalty) * 10).toFixed(1) : '—'}
+                            /100 → after penalty: {results.mars_rubric?.content_score != null ? (Number(results.mars_rubric.content_score) * 10).toFixed(1) : '—'}/100).
                           </div>
                         </>
                       )}

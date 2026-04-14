@@ -410,6 +410,13 @@ export function computeMarsOverallFromRubric(results) {
   return Math.round((0.2 * c + 0.4 * d + 0.4 * e) * 10) / 10;
 }
 
+/** Same as computeMarsOverallFromRubric, but displayed on a /100 scale. */
+export function computeMarsOverallFromRubricOutOf100(results) {
+  const v10 = computeMarsOverallFromRubric(results);
+  if (v10 == null || Number.isNaN(Number(v10))) return null;
+  return Math.round(Number(v10) * 100) / 10; // 1 decimal on /100
+}
+
 /**
  * Penalty-aware formula + substitution lines for the Score Calculation Breakdown card.
  * Uses mars_rubric pillar scores so the UI stays consistent even if calculation_breakdown is stale.
@@ -418,11 +425,13 @@ export function getFinalCalculationView(results) {
   const fromApi = results?.calculation_breakdown?.final_calculation;
   const rubric = results?.mars_rubric;
   if (!rubric) {
+    const result10 = fromApi?.result != null ? Number(fromApi.result) : Number(results?.overall_score) || 0;
+    const result100 = Math.round(result10 * 100) / 10;
     return {
-      formula: fromApi?.formula || 'MARS: 0.20×Content + 0.40×Delivery + 0.40×Engagement',
-      calculation: fromApi?.calculation || '',
+      formula: 'MARS (/100): 0.20×Content + 0.40×Delivery + 0.40×Engagement',
+      calculation: fromApi?.calculation ? `${fromApi.calculation} (scores shown on /10)` : '',
       calculation_note: fromApi?.calculation_note || null,
-      result: fromApi?.result != null ? Number(fromApi.result) : Number(results?.overall_score) || 0,
+      result: result100,
     };
   }
 
@@ -431,25 +440,32 @@ export function getFinalCalculationView(results) {
   const e = Number(rubric.engagement_score);
   const adj = inferContentAdjustmentFromResults(results);
   const recomputed = computeMarsOverallFromRubric(results);
-  const result = recomputed != null ? recomputed : Number(results?.overall_score) || 0;
+  const result10 = recomputed != null ? recomputed : Number(results?.overall_score) || 0;
+  const result100 = Math.round(Number(result10) * 100) / 10;
+  const c100 = Number.isFinite(c) ? c * 10 : 0;
+  const d100 = Number.isFinite(d) ? d * 10 : 0;
+  const e100 = Number.isFinite(e) ? e * 10 : 0;
 
   if (!adj) {
     return {
-      formula: 'MARS: 0.20×Content + 0.40×Delivery + 0.40×Engagement',
-      calculation: `0.20×${c.toFixed(2)} + 0.40×${d.toFixed(2)} + 0.40×${e.toFixed(2)}`,
+      formula: 'MARS (/100): 0.20×Content + 0.40×Delivery + 0.40×Engagement',
+      calculation: `0.20×${c100.toFixed(1)} + 0.40×${d100.toFixed(1)} + 0.40×${e100.toFixed(1)}`,
       calculation_note: fromApi?.calculation_note || null,
-      result,
+      result: result100,
     };
   }
 
   const penInt = Math.round(Number(adj.penalty_points));
   const before = Number(adj.before_penalty);
   const after = Number(adj.after_penalty);
+  const before100 = before * 10;
+  const after100 = after * 10;
+  const pen100 = penInt * 10;
   return {
-    formula: 'MARS: 0.20×(Content_rubric − Penalty) + 0.40×Delivery + 0.40×Engagement',
-    calculation: `0.20×(${before.toFixed(2)} − ${penInt}) + 0.40×${d.toFixed(2)} + 0.40×${e.toFixed(2)} = 0.20×${after.toFixed(2)} + 0.40×${d.toFixed(2)} + 0.40×${e.toFixed(2)}`,
+    formula: 'MARS (/100): 0.20×(Content_rubric − Penalty) + 0.40×Delivery + 0.40×Engagement',
+    calculation: `0.20×(${before100.toFixed(1)} − ${pen100}) + 0.40×${d100.toFixed(1)} + 0.40×${e100.toFixed(1)} = 0.20×${after100.toFixed(1)} + 0.40×${d100.toFixed(1)} + 0.40×${e100.toFixed(1)}`,
     calculation_note:
-      `Penalty is applied inside Content before the 20% weight: Content_used = max(0, Content_rubric − Penalty) = max(0, ${before.toFixed(2)} − ${penInt}) = ${after.toFixed(2)}/10.`,
-    result,
+      `Penalty is applied inside Content before the 20% weight: Content_used = max(0, Content_rubric − Penalty) = max(0, ${before100.toFixed(1)} − ${pen100}) = ${after100.toFixed(1)}/100.`,
+    result: result100,
   };
 }
