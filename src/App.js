@@ -137,9 +137,22 @@ function buildLocalFallbackSummary(results) {
   const ctx = (results.lecture_context || '').trim();
   const excerptForCtx = (results.full_transcript?.text || '').substring(0, 2000);
   const ctxLine = summaryFallbackContextLine(ctx, excerptForCtx);
+  const excerptRaw = (results.full_transcript?.text || '').trim().replace(/\s+/g, ' ');
+  const excerptHook = excerptRaw
+    ? `${excerptRaw.slice(0, 130)}${excerptRaw.length > 130 ? '…' : ''}`
+    : '';
+  const questions = results.interaction_engagement?.questions || results.high_level_questions || [];
+  const firstQ = questions[0] && (questions[0].question || questions[0].text || '').trim();
+  const firstQShort = firstQ
+    ? `${firstQ.replace(/"/g, "'").slice(0, 120)}${firstQ.length > 120 ? '…' : ''}`
+    : '';
   const p1 = `The lecture’s overall MARS score is ${overallScore}/10, with Content at ${scores.Content}/10, Delivery at ${scores.Delivery}/10, and Engagement at ${scores.Engagement}/10. The pattern suggests comparatively stronger performance in ${strongest[0]} and more limited impact in ${weakest[0]} for active learning in this recording.${ctxLine} ${qPart} ${rubricWeave}`.trim();
-  const p2 = `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
-  const p3 = `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
+  const p2 = excerptHook
+    ? `From the opening stretch of the transcript (“${excerptHook}”), ${strongest[0].toLower()} (${strongest[1]}/10) is where the clearest signal to learners currently sits—use that anchor when you decide what to deepen next.`
+    : `Strengths include ${strongest[0].toLower()} (${strongest[1]}/10), which supports a coherent and comprehensible learning experience when the spoken content matches the intended session aims.`;
+  const p3 = firstQShort
+    ? `For ${weakest[0].toLower()} (${weakest[1]}/10), try a tighter arc after prompts like ‘${firstQShort}’: name the reasoning step you want, pause for a short response, then build from what you hear—webcasts often under-represent audience talk.`
+    : `A constructive next step is to further strengthen ${weakest[0].toLower()} (${weakest[1]}/10), for example through more purposeful questioning, broader distribution of prompts across the session, and facilitation that makes learner thinking more visible—recognising that webcasts may not capture all classroom dialogue.`;
   return {
     personalized_feedback: `${p1}\n\n${p2}\n\n${p3}`,
     strongest_strength: null,
